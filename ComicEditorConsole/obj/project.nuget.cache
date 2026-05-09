@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "dgSpecHash": "MPOHtYrDy9Y=",
+  "success": true,
+  "projectFilePath": "/home/aurora7795/RiderProjects/Comic/ComicEditorConsole/ComicEditorConsole.csproj",
+  "expectedPackageFiles": [
+    "/home/aurora7795/.nuget/packages/sharpcompress/0.37.2/sharpcompress.0.37.2.nupkg.sha512",
+    "/home/aurora7795/.nuget/packages/zstdsharp.port/0.8.0/zstdsharp.port.0.8.0.nupkg.sha512",
+    "/home/aurora7795/.nuget/packages/microsoft.aspnetcore.app.ref/10.0.4/microsoft.aspnetcore.app.ref.10.0.4.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'SharpCompress' 0.37.2 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-6c8g-7p36-r338",
+      "projectPath": "/home/aurora7795/RiderProjects/Comic/ComicEditorConsole/ComicEditorConsole.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/aurora7795/RiderProjects/Comic/ComicEditorConsole/ComicEditorConsole.csproj",
+      "libraryId": "SharpCompress",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
+}
