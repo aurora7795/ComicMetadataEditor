@@ -1,5 +1,0 @@
-/home/aurora7795/Desktop/ComicMetadataEditor/obj/Debug/net8.0/ComicMetadataEditor.csproj.AssemblyReference.cache
-/home/aurora7795/Desktop/ComicMetadataEditor/obj/Debug/net8.0/ComicMetadataEditor.GeneratedMSBuildEditorConfig.editorconfig
-/home/aurora7795/Desktop/ComicMetadataEditor/obj/Debug/net8.0/ComicMetadataEditor.AssemblyInfoInputs.cache
-/home/aurora7795/Desktop/ComicMetadataEditor/obj/Debug/net8.0/ComicMetadataEditor.AssemblyInfo.cs
-/home/aurora7795/Desktop/ComicMetadataEditor/obj/Debug/net8.0/ComicMetadataEditor.csproj.CoreCompileInputs.cache
