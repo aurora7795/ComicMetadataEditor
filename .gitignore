@@ -1,0 +1,16 @@
+## Build folders
+[Db]in/
+[Oo]bj/
+
+## IDE and user settings
+.idea/
+*.user
+*.suo
+*.tmp
+.vs/
+*.userosscache
+*.sln.docstates
+
+## OS artifacts
+.DS_Store
+Thumbs.db

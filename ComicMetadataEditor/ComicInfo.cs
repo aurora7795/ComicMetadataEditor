@@ -15,10 +15,10 @@ public class ComicInfo
     public string? Number { get; set; }
 
     [XmlElement("Count")]
-    public int Count { get; set; }
+    public int? Count { get; set; }
 
     [XmlElement("Volume")]
-    public int Volume { get; set; }
+    public int? Volume { get; set; }
 
     [XmlElement("Summary")]
     public string? Summary { get; set; }
@@ -27,13 +27,13 @@ public class ComicInfo
     public string? Notes { get; set; }
 
     [XmlElement("Year")]
-    public int Year { get; set; }
+    public int? Year { get; set; }
 
     [XmlElement("Month")]
-    public int Month { get; set; }
+    public int? Month { get; set; }
 
     [XmlElement("Day")]
-    public int Day { get; set; }
+    public int? Day { get; set; }
 
     [XmlElement("Writer")]
     public string? Writer { get; set; }
@@ -72,7 +72,7 @@ public class ComicInfo
     public string? Web { get; set; }
 
     [XmlElement("PageCount")]
-    public int PageCount { get; set; }
+    public int? PageCount { get; set; }
 
     [XmlElement("LanguageISO")]
     public string? LanguageISO { get; set; }

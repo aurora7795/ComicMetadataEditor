@@ -1,7 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\ComicMetadataEditor\ComicMetadataEditor.csproj" />
+    <PackageReference Include="SharpCompress" Version="0.48.0" />
   </ItemGroup>
 
   <PropertyGroup>
