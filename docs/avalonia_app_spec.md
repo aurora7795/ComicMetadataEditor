@@ -263,3 +263,77 @@ AvaloniaApp/
 * Support automated numbering (`1, 2, 3...`) across selected records.
 * Support prepending/appending tags rather than replacing them.
 * Support editing raw loose files and folders containing a `ComicInfo.xml`.
+
+---
+
+## 9. Appendix: Core Library Reference API
+
+To ensure correct integration with the core `ComicMetadataEditor` library, the implementing model must use the following API schemas.
+
+### 9.1 `ComicInfo` Metadata Class (from `ComicMetadataEditor/ComicInfo.cs`)
+```csharp
+namespace ComicMetadataEditor;
+
+public class ComicInfo
+{
+    public string? Title { get; set; }
+    public string? Series { get; set; }
+    public string? Number { get; set; } // Issue number
+    public int? Count { get; set; }
+    public int? Volume { get; set; }
+    public string? Summary { get; set; }
+    public string? Notes { get; set; }
+    public int? Year { get; set; }
+    public int? Month { get; set; }
+    public int? Day { get; set; }
+    public string? Writer { get; set; }
+    public string? Penciller { get; set; }
+    public string? Inker { get; set; }
+    public string? Colorist { get; set; }
+    public string? Letterer { get; set; }
+    public string? CoverArtist { get; set; }
+    public string? Editor { get; set; }
+    public string? Publisher { get; set; }
+    public string? Imprint { get; set; }
+    public string? Genre { get; set; }
+    public string? Tags { get; set; }
+    public string? Web { get; set; }
+    public int? PageCount { get; set; }
+    public string? LanguageISO { get; set; }
+    public string? Format { get; set; }
+    public string? BlackAndWhite { get; set; } // "Yes", "No"
+    public string? Manga { get; set; } // "Yes" (RTL), "No" (LTR)
+    public string? Characters { get; set; }
+    public string? Teams { get; set; }
+    public string? Locations { get; set; }
+    public string? ScanInformation { get; set; }
+    public string? StoryArc { get; set; }
+    public string? SeriesGroup { get; set; }
+    public string? AgeRating { get; set; }
+}
+```
+
+### 9.2 `MetadataEditor` Class (from `ComicMetadataEditor/MetadataEditor.cs`)
+```csharp
+namespace ComicMetadataEditor;
+
+public class BulkEditReport
+{
+    public int TotalFound { get; set; }
+    public List<string> Successes { get; }
+    public List<(string Path, Exception Exception)> Failures { get; }
+}
+
+public class MetadataEditor
+{
+    // Bulk edit all files in a directory using an edit action
+    public BulkEditReport BulkEditMetadata(string directoryPath, Action<ComicInfo> editAction);
+
+    // Reads ComicInfo from a single CBZ/CBR file (returns empty ComicInfo if missing)
+    public ComicInfo ReadMetadata(string filePath);
+
+    // Edits ComicInfo for a single CBZ/CBR file, re-serializes, and repacks safely
+    public void EditMetadata(string filePath, Action<ComicInfo> editAction);
+}
+```
+

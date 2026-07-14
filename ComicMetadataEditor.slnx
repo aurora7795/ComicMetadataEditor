@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="ComicEditorConsole/ComicEditorConsole.csproj" />
   <Project Path="ComicMetadataEditor/ComicMetadataEditor.csproj" />
+  <Project Path="AvaloniaApp/AvaloniaApp.csproj" />
 </Solution>

@@ -49,7 +49,7 @@ public class MetadataEditor
         {
             try
             {
-                EditSingleFileMetadata(file, editAction);
+                EditMetadata(file, editAction);
                 report.Successes.Add(file);
             }
             catch (Exception ex)
@@ -61,7 +61,47 @@ public class MetadataEditor
         return report;
     }
 
-    private void EditSingleFileMetadata(string filePath, Action<ComicInfo> editAction)
+    public ComicInfo ReadMetadata(string filePath)
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            using (Stream stream = File.OpenRead(filePath))
+            using (var reader = ReaderFactory.OpenReader(stream, new ReaderOptions()))
+            {
+                while (reader.MoveToNextEntry())
+                {
+                    if (!reader.Entry.IsDirectory && 
+                        Path.GetFileName(reader.Entry.Key).Equals("ComicInfo.xml", StringComparison.OrdinalIgnoreCase))
+                    {
+                        reader.WriteEntryToDirectory(tempDir, new ExtractionOptions { Overwrite = true, ExtractFullPath = false });
+                    }
+                }
+            }
+
+            string xmlPath = Path.Combine(tempDir, "ComicInfo.xml");
+            if (File.Exists(xmlPath))
+            {
+                ValidateXml(xmlPath);
+                XmlSerializer serializer = new XmlSerializer(typeof(ComicInfo));
+                using (FileStream fs = new FileStream(xmlPath, FileMode.Open, FileAccess.Read))
+                {
+                    return (ComicInfo)serializer.Deserialize(fs)!;
+                }
+            }
+            return new ComicInfo();
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                try { Directory.Delete(tempDir, true); } catch { }
+            }
+        }
+    }
+
+    public void EditMetadata(string filePath, Action<ComicInfo> editAction)
     {
         string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tempDir);
@@ -69,7 +109,7 @@ public class MetadataEditor
         string? tempCbzPath = null;
         string? backupOriginalPath = null;
         string? backupTargetPath = null;
-        string originalExtension = Path.GetExtension(filePath);
+        string originalExtension = Path.GetExtension(filePath) ?? "";
         string targetPath = originalExtension.Equals(".cbr", StringComparison.OrdinalIgnoreCase) 
             ? Path.ChangeExtension(filePath, ".cbz") 
             : filePath;
@@ -91,12 +131,12 @@ public class MetadataEditor
 
             // 2. Find and deserialize / create ComicInfo.xml
             string xmlPath = Path.Combine(tempDir, "ComicInfo.xml");
-            // Validate the XML against the official schema before deserialization
-            ValidateXml(xmlPath);
             ComicInfo comicInfo;
 
             if (File.Exists(xmlPath))
             {
+                // Validate the XML against the official schema before deserialization
+                ValidateXml(xmlPath);
                 XmlSerializer serializer = new XmlSerializer(typeof(ComicInfo));
                 using (FileStream fs = new FileStream(xmlPath, FileMode.Open, FileAccess.Read))
                 {
