@@ -20,7 +20,7 @@ The project contains a core class library (`ComicMetadataEditor`), a CLI utility
 
 ```text
 ComicMetadataEditor/
-├── ComicMetadataEditor/         # Core Library (targets .NET Standard 2.0)
+├── ComicMetadataEditor/         # Core Library (targets .NET 10.0)
 │   ├── Schema/
 │   │   └── ComicInfo.xsd        # XML schema definition for validation
 │   ├── ComicInfo.cs             # Deserialization model (nullable properties)
