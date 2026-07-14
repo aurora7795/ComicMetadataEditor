@@ -8,6 +8,8 @@ using SharpCompress.Common;
 using SharpCompress.Readers;
 using SharpCompress.Writers;
 using SharpCompress.Writers.Zip;
+using System.Xml;
+using System.Xml.Schema;
 
 namespace ComicMetadataEditor;
 
@@ -89,6 +91,8 @@ public class MetadataEditor
 
             // 2. Find and deserialize / create ComicInfo.xml
             string xmlPath = Path.Combine(tempDir, "ComicInfo.xml");
+            // Validate the XML against the official schema before deserialization
+            ValidateXml(xmlPath);
             ComicInfo comicInfo;
 
             if (File.Exists(xmlPath))
@@ -248,4 +252,30 @@ public class MetadataEditor
 
         return relativePath.Replace('/', Path.DirectorySeparatorChar);
     }
+    // Validates an XML file against the embedded ComicInfo XSD.
+    private static void ValidateXml(string xmlPath)
+    {
+        // Resolve schema path relative to the executing assembly's base directory.
+        var schemaPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Schema", "ComicInfo.xsd");
+        if (!File.Exists(schemaPath))
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"Warning: XSD schema not found at '{schemaPath}'. Skipping validation.");
+            Console.ResetColor();
+            return;
+        }
+
+        var settings = new XmlReaderSettings();
+        settings.ValidationType = ValidationType.Schema;
+        settings.Schemas.Add(null, schemaPath);
+        settings.ValidationEventHandler += (sender, args) =>
+        {
+            throw new XmlSchemaValidationException($"XML validation error: {args.Message}", args.Exception);
+        };
+
+        using var reader = XmlReader.Create(xmlPath, settings);
+        // Read entire document to trigger validation.
+        while (reader.Read()) { }
+    }
 }
+
