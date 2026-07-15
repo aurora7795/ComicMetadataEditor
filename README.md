@@ -30,8 +30,14 @@ ComicMetadataEditor/
 │   ├── Program.cs               # Scans directory and runs bulk edits
 │   └── test_comics/             # Sample comics for testing validation
 │
-├── AvaloniaApp/                 # Cross-platform Desktop App (Work in Progress)
+├── AvaloniaApp/                 # Cross-platform Desktop App (Completed)
 │   ├── App.axaml
+│   ├── App.axaml.cs
+│   ├── Program.cs
+│   ├── Converters/
+│   ├── Services/
+│   ├── ViewModels/
+│   ├── Views/
 │   └── AvaloniaApp.csproj
 │
 └── docs/                        # Project reports and review logs
@@ -57,6 +63,12 @@ To execute bulk edits in a specific directory (by default, it sets the `Manga` p
 dotnet run --project ComicEditorConsole/ComicEditorConsole.csproj -- /path/to/your/comics
 ```
 If no directory path is provided, it defaults to the current working directory.
+
+### Running the Desktop Application
+To launch the graphical bulk metadata editor, run:
+```bash
+dotnet run --project AvaloniaApp/AvaloniaApp.csproj
+```
 
 ---
 
@@ -113,6 +125,6 @@ When editing a file:
 ---
 
 ## 🗺️ Roadmap
-* **Fix XSD validation edge case:** Ensure XSD validation is skipped or handled gracefully when creating new metadata for files that lack a pre-existing `ComicInfo.xml`.
-* **Complete Avalonia Desktop App:** Provide a modern user interface featuring a Grid View of comic files, inline editing, and visual bulk-apply tools.
+* **[x] Fix XSD validation edge case:** Handled gracefully on missing metadata files and converted XML schema warnings to non-fatal logs.
+* **[x] Complete Avalonia Desktop App:** Implemented a modern spreadsheet grid, side panels, lazy-loaded cover thumbs, validation, find-replace, and safe background saving.
 * **Enhance nested models:** Adjust properties on the sub-class `Page` in `ComicInfo.cs` to be nullable, preventing default numeric values from serializing into the output XML.
