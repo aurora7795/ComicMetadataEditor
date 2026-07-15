@@ -15,7 +15,7 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // MainWindow will be set here by the implementing agent
+            desktop.MainWindow = new Views.MainWindow();
         }
 
         base.OnFrameworkInitializationCompleted();

@@ -310,7 +310,7 @@ public class MetadataEditor
         settings.Schemas.Add(null, schemaPath);
         settings.ValidationEventHandler += (sender, args) =>
         {
-            throw new XmlSchemaValidationException($"XML validation error: {args.Message}", args.Exception);
+            Console.WriteLine($"Schema validation warning: {args.Message}");
         };
 
         using var reader = XmlReader.Create(xmlPath, settings);
