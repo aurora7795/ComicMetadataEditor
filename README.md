@@ -139,8 +139,25 @@ Uses `SharpCompress` (`0.48.0`) to read and write archives securely against dire
 
 ---
 
-## 🗺️ Roadmap
+## 🗺️ Roadmap & Future Vision
+
+### Completed Milestones
 * **[x] Fix XSD validation edge case:** Handled gracefully on missing metadata files.
 * **[x] Complete Avalonia Desktop App:** Implemented modern spreadsheet grid, side panels, lazy-loaded cover thumbs, validation, find-replace, and safe background saving.
 * **[x] Make Library AI-Agent Ready:** Added stdio MCP server, structured `--json` CLI subcommands, dynamic JSON patch API, cover art extraction, and agent skill package (`.agents/skills/comic-metadata-curator/`).
-* **[x] Enhance nested models:** Made properties on the sub-class `Page` in `ComicInfo.cs` nullable to prevent default numeric values from serializing into XML.
+* **[x] XML Serialization Safety:** Fixed nullability constraints on `ComicInfo` models to prevent unwanted default property emissions.
+
+### Upcoming Milestones
+
+#### 📦 Distribution & Packaging
+* **[ ] NuGet Package Publishing:** Publish core library (`ComicMetadataEditor`) to [NuGet.org](https://www.nuget.org).
+* **[ ] Global .NET Tool:** Package `ComicMetadataEditor.Mcp` as a global .NET tool (`dotnet tool install -g ComicMetadataEditor.Mcp`).
+* **[ ] Pre-Compiled Binary Releases:** Add GitHub Actions CI/CD to auto-generate standalone executables (`.exe`, Linux AppImage/binary, macOS DMG/binary).
+
+#### 🤖 AI Ecosystem & MCP Discoverability
+* **[ ] MCP Registry Indexing:** Submit MCP server to official `modelcontextprotocol/servers`, Smithery.ai, Glama.ai, and `mcp.so`.
+* **[ ] Visual Media Demos:** Add animated GIFs demonstrating Avalonia GUI grid editing and AI agent cover-art inspection in action.
+
+#### 🌐 Media Server & Online Database Integrations
+* **[ ] Komga & Kavita Sync:** Support direct API sync commands to push metadata updates directly to self-hosted Komga and Kavita comic servers.
+* **[ ] External Metadata Scraper Adapters:** Add optional integrations (e.g., ComicVine / Metron API) for auto-fetching missing writer, penciller, and issue metadata.
