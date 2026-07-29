@@ -8,8 +8,9 @@ This page outlines the MVVM framework and code blueprints for the `AvaloniaApp` 
 
 The desktop client follows the standard MVVM design pattern:
 
-* **Views** (`MainWindow.axaml`, `ErrorSummaryWindow.axaml`): Declares the layout structure and controls. Bindings hook UI element properties directly to ViewModel properties.
+* **Views** (`MainWindow.axaml`, `ErrorSummaryWindow.axaml`, `PromptWindow.axaml`): Declares the layout structure, modal close guards, and error display dialogs. Bindings hook UI element properties directly to ViewModel properties.
 * **ViewModels** (`MainWindowViewModel`, `ComicItemViewModel`): Holds the state of the UI and handles execution commands. Uses `CommunityToolkit.Mvvm` source generators (`[ObservableProperty]` and `[RelayCommand]`).
+* **Converters** (`IsDirtyToBrushConverter.cs`): Binds cell/row background colors to indicate unsaved changes visually inside the DataGrid.
 
 ---
 
