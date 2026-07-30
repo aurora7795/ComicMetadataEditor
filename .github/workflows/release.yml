@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -41,6 +43,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -59,7 +63,7 @@ jobs:
           chmod +x InkTag.app/Contents/MacOS/InkTag.Gui
 
       - name: Install create-dmg
-        run: brew install create-dmg
+        run: HOMEBREW_NO_AUTO_UPDATE=1 brew install create-dmg
 
       - name: Package InkTag-macOS-arm64.dmg
         run: |
@@ -85,6 +89,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Linux dependencies
         run: |
@@ -108,11 +114,12 @@ jobs:
         run: |
           mkdir -p AppDir/usr/bin
           cp -r publish/linux-x64/* AppDir/usr/bin/
+          rm -f AppDir/usr/bin/libcoreclrtraceptprovider.so
           chmod +x AppDir/usr/bin/InkTag.Gui
-          ./linuxdeploy-x86_64.AppImage --appimage-extract-and-run \
+          NO_STRIP=1 ./linuxdeploy-x86_64.AppImage --appimage-extract-and-run \
             --appdir AppDir \
             --desktop-file packaging/inktag.desktop \
-            --icon packaging/inktag.png \
+            --icon-file packaging/inktag.png \
             --executable AppDir/usr/bin/InkTag.Gui \
             --output appimage
           mv InkTag*.AppImage InkTag-Linux-x86_64.AppImage
@@ -133,6 +140,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download all platform artifacts
         uses: actions/download-artifact@v4
