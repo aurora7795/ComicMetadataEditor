@@ -10,6 +10,7 @@ The desktop client follows the standard MVVM design pattern:
 
 * **Views** (`MainWindow.axaml`, `ErrorSummaryWindow.axaml`, `PromptWindow.axaml`): Declares the layout structure, modal close guards, and error display dialogs. Bindings hook UI element properties directly to ViewModel properties.
 * **ViewModels** (`MainWindowViewModel`, `ComicItemViewModel`): Holds the state of the UI and handles execution commands. Uses `CommunityToolkit.Mvvm` source generators (`[ObservableProperty]` and `[RelayCommand]`).
+* **Services** (`ComicScannerService`, `ArchiveCoverService`): Background directory scanner service and async cover image loader with Skia/Avalonia bitmap caching.
 * **Converters** (`IsDirtyToBrushConverter.cs`): Binds cell/row background colors to indicate unsaved changes visually inside the DataGrid.
 
 ---

@@ -48,9 +48,9 @@ This file sets the build, test, and style guidelines for the InkTag repository, 
 
 ## 3. Wiki Maintenance Rules (Layer 2 Schema)
 
-As an AI Agent, you are responsible for maintaining the project's **Layer 2 Wiki** (located under [docs/wiki/](file:///home/aurora7795/AntiGravProjects/ComicMetadataEditor/docs/wiki/)). You must adhere to the following rules:
+As an AI Agent, you are responsible for maintaining the project's **Layer 2 Wiki** (located under [docs/wiki/](file:///home/aurora7795/AntiGravProjects/InkTag/docs/wiki/)). You must adhere to the following rules:
 
 1. **Auto-Update**: Whenever you modify code (e.g., adding a new metadata field, changing validation rules, introducing a new service), you must read and update the corresponding wiki file in `docs/wiki/` to reflect these changes.
 2. **Concept Cross-Linking**: Always cross-reference wiki pages using relative markdown paths (e.g., `[Metadata Editor](core_editor_api.md)`).
-3. **Index Registry**: If you create a new wiki page, you MUST register it inside [docs/wiki/index.md](file:///home/aurora7795/AntiGravProjects/ComicMetadataEditor/docs/wiki/index.md).
+3. **Index Registry**: If you create a new wiki page, you MUST register it inside [docs/wiki/index.md](file:///home/aurora7795/AntiGravProjects/InkTag/docs/wiki/index.md).
 4. **No Placeholders**: Never write placeholders, dummy comments, or TODOs in the wiki. Maintain complete, actual API surfaces, architectures, and guidelines.

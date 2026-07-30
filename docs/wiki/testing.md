@@ -34,8 +34,8 @@ This page details the testing strategy and validation checklists for verifying t
 
 ### Phase 3: Bulk Actions & Agent Tools
 1. **Selection & Apply**: Highlight multiple rows in the DataGrid. In the sidebar's Bulk Edit tab, check the `Publisher` box, enter `"DC Comics"`, and click *Apply*. Verify that all selected rows update in memory.
-2. **CLI JSON Execution**: Run `dotnet run --project src/InkTag.Cli -- schema --json` and verify clean JSON output.
-3. **MCP Stdio Communication**: Launch `src/InkTag.Mcp` and test tool calls (`read_comic_metadata`, `update_comic_metadata`, `extract_cover_image`).
+2. **CLI JSON Execution**: Run `dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- schema --json` and verify clean JSON output.
+3. **MCP Stdio Communication**: Launch `dotnet run --project src/InkTag.Mcp/InkTag.Mcp.csproj` and test tool calls (`read_comic_metadata`, `update_comic_metadata`, `extract_cover_image`, `scan_comics`, `get_comic_schema`).
 
 ### Phase 4: Save & Safety
 1. **Save Batch**: Click *Save All*. Verify saving runs sequentially in the background while updating the progress bar.
