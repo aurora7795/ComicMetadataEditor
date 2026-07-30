@@ -1,6 +1,6 @@
 # Core Metadata Editor API
 
-This page documents the API of the `ComicMetadataEditor` core project library.
+This page documents the API of the `InkTag.Core` domain library.
 
 ---
 
@@ -8,7 +8,7 @@ This page documents the API of the `ComicMetadataEditor` core project library.
 The `ComicInfo` class corresponds to the standard XML schema (`ComicInfo.xml`) used by major comic readers (e.g., ComicRack, YACReader).
 
 ### Key Fields & Types
-All fields are nullable to avoid writing default XML values when optional tags are omitted:
+Fields are nullable to avoid writing default XML values when optional tags are omitted:
 
 | Property Name | XML Tag | Data Type | Notes |
 | :--- | :--- | :--- | :--- |
@@ -30,27 +30,33 @@ All fields are nullable to avoid writing default XML values when optional tags a
 
 ## 2. `MetadataEditor.cs` (Engine)
 
-The core engine handles loading, modifying, and safely writing XML metadata back into compressed CBZ/CBR archives.
+The core engine handles loading, modifying, dynamic JSON patching, cover extraction, and safely writing XML metadata back into compressed CBZ/CBR archives.
 
-### Method Signatures
+### Core & Agent API Method Signatures
 
-#### `ReadMetadata`
+#### `ReadMetadata` / `ReadMetadataAsJson`
 * **Signature**: `public ComicInfo ReadMetadata(string filePath)`
-* **Description**: Extracts only `ComicInfo.xml` from the target archive into a temporary folder, validates it against the schema (`ComicInfo.xsd`), deserializes it to a `ComicInfo` object, and returns it. If `ComicInfo.xml` is missing from the archive, returns a new empty `ComicInfo` instance.
+* **Signature**: `public string ReadMetadataAsJson(string filePath)`
+* **Description**: Extracts `ComicInfo.xml` from the target archive into a temporary folder, validates it against `ComicInfo.xsd`, and returns the `ComicInfo` object or its JSON representation.
 
-#### `EditMetadata`
+#### `EditMetadata` / `EditMetadataFromJson`
 * **Signature**: `public void EditMetadata(string filePath, Action<ComicInfo> editAction)`
-* **Description**: Performs a single file edit. It unpacks the file, checks for `ComicInfo.xml` (deserializing it or initializing a new instance), executes the `editAction` lambda to modify the properties, serializes back to XML, compresses the temporary path to a `.tmp` file, validates it, and performs a safe backup swap.
+* **Signature**: `public void EditMetadataFromJson(string filePath, string jsonPatch)`
+* **Description**: Unpacks the file, deserializes existing metadata or creates a new instance, applies edits (via lambda or dynamic JSON patch), serializes back to XML, compresses to `.tmp`, validates, and performs an atomic backup swap.
 
-#### `BulkEditMetadata`
+#### `BulkEditMetadata` / `BulkEditMetadataFromJson`
 * **Signature**: `public BulkEditReport BulkEditMetadata(string directoryPath, Action<ComicInfo> editAction)`
-* **Description**: Discovers all `.cbz`/`.cbr` archives in the specified folder, executes `EditMetadata` sequentially on them, catches individual errors to prevent halting the entire batch, and generates a structured `BulkEditReport`.
+* **Signature**: `public BulkEditReport BulkEditMetadataFromJson(string directoryPath, string jsonPatch)`
+* **Description**: Executes metadata edits on all `.cbz`/`.cbr` archives in a directory, catching individual errors and returning a `BulkEditReport`.
 
-```csharp
-public class BulkEditReport
-{
-    public int TotalFound { get; set; }
-    public List<string> Successes { get; } = new();
-    public List<(string Path, Exception Exception)> Failures { get; } = new();
-}
-```
+#### `GetMetadataDiff`
+* **Signature**: `public List<MetadataDiffItem> GetMetadataDiff(string filePath, string jsonPatch)`
+* **Description**: Previews property-level before/after diffs between the archive's current metadata and a proposed JSON patch.
+
+#### `ExtractCoverImage`
+* **Signature**: `public string? ExtractCoverImage(string comicFilePath, string outputFilePath)`
+* **Description**: Extracts the front cover image or first page image from a `.cbz` or `.cbr` archive for visual inspection.
+
+#### `ExportJsonSchema`
+* **Signature**: `public static string ExportJsonSchema()`
+* **Description**: Returns the JSON Schema specification for `ComicInfo` objects.

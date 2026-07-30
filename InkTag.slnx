@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/InkTag.Cli/InkTag.Cli.csproj" />
+  <Project Path="src/InkTag.Core/InkTag.Core.csproj" />
+  <Project Path="src/InkTag.Mcp/InkTag.Mcp.csproj" />
+  <Project Path="src/InkTag.Gui/InkTag.Gui.csproj" />
+  <Project Path="tests/InkTag.Tests/InkTag.Tests.csproj" />
+</Solution>

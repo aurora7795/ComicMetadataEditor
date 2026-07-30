@@ -1,6 +1,6 @@
 # Avalonia UI & MVVM Design
 
-This page outlines the MVVM framework and code blueprints for the `AvaloniaApp` project.
+This page outlines the MVVM framework and code blueprints for the `InkTag.Gui` project.
 
 ---
 
@@ -41,7 +41,7 @@ The desktop client follows the standard MVVM design pattern:
   * `Comics`: `ObservableCollection<ComicItemViewModel>` (populates the DataGrid).
 * **Core Commands**:
   * `LoadDirectoryCommand`: Triggers directory scanning recursively or flat.
-  * `SaveAllCommand`: Asynchronously writes all `IsDirty` view models to disk using the core library's `EditMetadata`. Disabled if `Comics` contains active validation errors (`!CanSave`).
+  * `SaveAllCommand`: Asynchronously writes all `IsDirty` view models to disk using `InkTag.Core`'s `EditMetadata`. Disabled if `Comics` contains active validation errors (`!CanSave`).
   * `BulkApplyCommand`: Iterates selected grid items and applies sidebar-checked metadata fields.
   * `FindReplaceCommand`: Executes search-and-replace strings on selected items.
 

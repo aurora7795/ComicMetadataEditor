@@ -1,7 +1,0 @@
-<Solution>
-  <Project Path="ComicEditorConsole/ComicEditorConsole.csproj" />
-  <Project Path="ComicMetadataEditor/ComicMetadataEditor.csproj" />
-  <Project Path="ComicMetadataEditor.Mcp/ComicMetadataEditor.Mcp.csproj" />
-  <Project Path="ComicMetadataEditor.Tests/ComicMetadataEditor.Tests.csproj" />
-  <Project Path="AvaloniaApp/AvaloniaApp.csproj" />
-</Solution>

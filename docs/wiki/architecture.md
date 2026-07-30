@@ -1,21 +1,24 @@
 # System Architecture
 
-This page outlines the high-level architecture of the ComicMetadataEditor solution.
+This page outlines the high-level architecture of the InkTag solution.
 
 ---
 
 ## 🏗️ Solution Overview
 
-The solution consists of three main projects:
-1. **`ComicMetadataEditor` (Core Library)**: Provides the domain models (`ComicInfo`) and archive manipulation logic (`MetadataEditor` wrapping `SharpCompress`).
-2. **`ComicEditorConsole` (CLI Utility)**: Allows scanning folders and bulk-editing metadata values from the command line.
-3. **`AvaloniaApp` (Desktop Application)**: Offers a multi-platform visual spreadsheet and bulk-edit panel.
+The solution is organized into standard `src/` and `tests/` layers:
+1. **`InkTag.Core` (Domain Library)**: Provides the domain models (`ComicInfo`), dynamic JSON patching, cover art extraction, and archive manipulation logic (`MetadataEditor` wrapping `SharpCompress`).
+2. **`InkTag.Cli` (Agentic CLI Utility)**: Allows scanning folders, structured `--json` execution, reading, updating, cover extraction, and schema exporting from the command line.
+3. **`InkTag.Mcp` (MCP Server)**: Exposes stdio Model Context Protocol tools for AI agents (Claude Desktop, Cursor, Antigravity).
+4. **`InkTag.Gui` (Desktop Application)**: Offers a multi-platform visual spreadsheet and bulk-edit panel built with Avalonia UI.
+5. **`InkTag.Tests` (Test Suite)**: Automated unit tests using xUnit.
 
 ```mermaid
 graph TD
-    subgraph Client Applications
-        CLI[ComicEditorConsole]
-        UI[AvaloniaApp]
+    subgraph Client Applications & Interfaces
+        CLI[InkTag.Cli]
+        MCP[InkTag.Mcp]
+        GUI[InkTag.Gui]
     end
 
     subgraph Core Library
@@ -29,7 +32,8 @@ graph TD
     end
 
     CLI -->|Calls| ME
-    UI -->|Calls| ME
+    MCP -->|Calls| ME
+    GUI -->|Calls| ME
     ME -->|Loads/Saves| CI
     ME -->|Extracts/Repacks| CBZ
     ME -->|Reads/Repacks| CBR
