@@ -1,4 +1,4 @@
-# Technical Specification: Comic Metadata Editor (Avalonia App)
+# Technical Specification: InkTag GUI App (Avalonia)
 
 This document provides a highly detailed, file-by-file blueprint for implementing a cross-platform desktop application using Avalonia UI and MVVM. This specification is designed to be passed to an LLM to generate the entire implementation.
 
@@ -6,7 +6,7 @@ This document provides a highly detailed, file-by-file blueprint for implementin
 
 ## 1. Executive Summary & Goals
 * **Goal**: Provide a fast, reliable, and user-friendly desktop application to view and bulk-edit `ComicInfo.xml` metadata files embedded inside comic archives (`.cbz` and `.cbr`).
-* **Core Library Re-use**: The app MUST wrap and leverage the existing core library (`ComicMetadataEditor` / [ComicInfo.cs](file:///home/aurora7795/AntiGravProjects/ComicMetadataEditor/ComicMetadataEditor/ComicInfo.cs) and [MetadataEditor.cs](file:///home/aurora7795/AntiGravProjects/ComicMetadataEditor/ComicMetadataEditor/MetadataEditor.cs)).
+* **Core Library Re-use**: The app MUST wrap and leverage the existing core library (`InkTag.Core` / [ComicInfo.cs](file:///home/aurora7795/AntiGravProjects/ComicMetadataEditor/src/InkTag.Core/ComicInfo.cs) and [MetadataEditor.cs](file:///home/aurora7795/AntiGravProjects/ComicMetadataEditor/src/InkTag.Core/MetadataEditor.cs)).
 * **Target Audience**: Comic readers, archivists, and catalogers managing local collections.
 
 ---
@@ -19,7 +19,7 @@ This document provides a highly detailed, file-by-file blueprint for implementin
   * `CommunityToolkit.Mvvm` (v8.2.0+)
   * `Avalonia` (v11.0.0+)
   * `Avalonia.Themes.Fluent` (v11.0.0+)
-  * Project reference to `ComicMetadataEditor`
+  * Project reference to `InkTag.Core`
 * **Theming**: Fluent Theme (Dark mode default).
 
 ---

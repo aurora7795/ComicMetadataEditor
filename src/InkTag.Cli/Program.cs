@@ -334,8 +334,8 @@ static void PrintHelp(bool isJson)
     }
     else
     {
-        Console.WriteLine("ComicEditorConsole - AI-Agent Friendly CLI\n");
-        Console.WriteLine("Usage: dotnet run --project ComicEditorConsole -- <command> [options]\n");
+        Console.WriteLine("InkTag.Cli - AI-Agent Friendly CLI\n");
+        Console.WriteLine("Usage: dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- <command> [options]\n");
         Console.WriteLine("Commands:");
         foreach (var cmd in helpObj.subcommands)
         {
