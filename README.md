@@ -1,15 +1,15 @@
-# ComicMetadataEditor
+# InkTag
 
 A lightweight, robust C# utility, CLI tool, MCP Server, and desktop application designed to bulk-edit `ComicInfo.xml` metadata embedded inside comic book archives (`.cbz` and `.cbr`). 
 
-The project contains a core class library (`ComicMetadataEditor`), an AI-agent-friendly CLI (`ComicEditorConsole`), a Model Context Protocol server (`ComicMetadataEditor.Mcp`), and a desktop interface (`AvaloniaApp`).
+The project contains a core domain library (`InkTag.Core`), an AI-agent-friendly CLI (`InkTag.Cli`), a Model Context Protocol server (`InkTag.Mcp`), and an Avalonia desktop GUI interface (`InkTag.Gui`).
 
 ---
 
 ## 🚀 Key Features
 
 * **Dual-Format Processing:** Supports reading both `.cbz` (ZIP-based) and `.cbr` (RAR/RAR-like) archives.
-* **AI Agent Native:** Built-in Model Context Protocol (MCP) server over `stdio` and structured CLI with `--json` output mode and `--dry-run` safety checks.
+* **AI Agent Native:** Built-in Model Context Protocol (MCP) server (`InkTag.Mcp`) over `stdio` and structured CLI (`InkTag.Cli`) with `--json` output mode and `--dry-run` safety checks.
 * **Multimodal Cover Extraction:** Extracts front cover art for visual LLMs (Gemini, Claude, GPT-4o) to visually inspect titles, creators, and issue numbers.
 * **Dynamic JSON Patching:** Mutate metadata via JSON strings without compiling C# lambdas.
 * **Safe Replacement Strategy:** Minimizes risk of data loss by repacking to a temporary archive, validating readability, making backups, and swapping target paths on success.
@@ -20,26 +20,30 @@ The project contains a core class library (`ComicMetadataEditor`), an AI-agent-f
 ## 📁 Repository Structure
 
 ```text
-ComicMetadataEditor/
-├── ComicMetadataEditor/         # Core Library (targets .NET 10.0)
-│   ├── Schema/
-│   │   └── ComicInfo.xsd        # XML schema definition for validation
-│   ├── ComicInfo.cs             # Deserialization model (nullable properties)
-│   └── MetadataEditor.cs        # Core bulk-editing & repackaging logic
+InkTag/
+├── src/
+│   ├── InkTag.Core/          # Domain models, ComicInfo.xml parsing, metadata engines
+│   │   ├── Schema/
+│   │   │   └── ComicInfo.xsd # XML schema definition for validation
+│   │   ├── ComicInfo.cs      # Deserialization model
+│   │   └── MetadataEditor.cs # Core bulk-editing & repackaging logic
+│   │
+│   ├── InkTag.Cli/           # Command-line interface
+│   │   └── Program.cs        # Subcommands (read, update, scan, cover, schema)
+│   │
+│   ├── InkTag.Mcp/           # Model Context Protocol (MCP) Server
+│   │   └── Program.cs        # Stdio JSON-RPC tools for Claude, Cursor, Antigravity
+│   │
+│   └── InkTag.Gui/           # Avalonia UI desktop application
+│       └── ...               # MVVM Avalonia UI
 │
-├── ComicEditorConsole/          # CLI Application (Agent & Human friendly)
-│   └── Program.cs               # Subcommands (read, update, scan, cover, schema)
+├── tests/
+│   └── InkTag.Tests/         # Automated xUnit test suite
 │
-├── ComicMetadataEditor.Mcp/     # Model Context Protocol (MCP) Server
-│   └── Program.cs               # Stdio JSON-RPC tools for Claude, Cursor, Antigravity
+├── .agents/skills/           # Agent Skill package definitions
+│   └── comic-metadata-curator/
 │
-├── AvaloniaApp/                 # Cross-platform Desktop App (Completed)
-│   └── ...                      # MVVM Avalonia UI
-│
-├── .agents/skills/              # Agent Skill package definitions
-│   └── comic-metadata-curator/  # Curation workflow instructions for AI agents
-│
-└── docs/                        # Project reports and documentation
+└── docs/                     # Project wiki and design specifications
 ```
 
 ---
@@ -52,7 +56,7 @@ ComicMetadataEditor/
 ### Building the Project
 From the repository root, compile the entire solution:
 ```bash
-dotnet build
+dotnet build InkTag.slnx
 ```
 
 ---
@@ -63,7 +67,7 @@ dotnet build
 Run the MCP server to expose comic metadata tools directly to AI assistants (Claude Desktop, Cursor, Antigravity, VS Code):
 
 ```bash
-dotnet run --project ComicMetadataEditor.Mcp/ComicMetadataEditor.Mcp.csproj
+dotnet run --project src/InkTag.Mcp/InkTag.Mcp.csproj
 ```
 
 **Exposed MCP Tools:**
@@ -73,37 +77,37 @@ dotnet run --project ComicMetadataEditor.Mcp/ComicMetadataEditor.Mcp.csproj
 * `scan_comics`: Scan directory for files missing specific metadata fields.
 * `get_comic_schema`: Get JSON Schema for `ComicInfo`.
 
-### 2. Structured Agentic CLI (`ComicEditorConsole`)
+### 2. Structured Agentic CLI (`InkTag.Cli`)
 Run subcommands with `--json` for machine-parseable agent execution:
 
 ```bash
 # Read metadata as JSON
-dotnet run --project ComicEditorConsole -- read comic.cbz --json
+dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- read comic.cbz --json
 
 # Preview proposed metadata updates (Dry Run)
-dotnet run --project ComicEditorConsole -- update comic.cbz --patch '{"Writer": "Alan Moore"}' --dry-run --json
+dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- update comic.cbz --patch '{"Writer": "Alan Moore"}' --dry-run --json
 
 # Apply JSON patch updates to a file or directory
-dotnet run --project ComicEditorConsole -- update /path/to/comics --patch '{"Publisher": "Marvel"}' --json
+dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- update /path/to/comics --patch '{"Publisher": "Marvel"}' --json
 
 # Scan directory for comics missing required fields
-dotnet run --project ComicEditorConsole -- scan /path/to/comics --missing "Writer,Series,Year" --json
+dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- scan /path/to/comics --missing "Writer,Series,Year" --json
 
 # Extract cover image for visual inspection
-dotnet run --project ComicEditorConsole -- cover comic.cbz --output cover.jpg --json
+dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- cover comic.cbz --output cover.jpg --json
 
 # Export JSON schema specification
-dotnet run --project ComicEditorConsole -- schema --json
+dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- schema --json
 ```
 
 ---
 
 ## 💻 Library Usage Example
 
-You can integrate the core editor into your own projects by referencing `ComicMetadataEditor.csproj`.
+You can integrate the core domain library into your own projects by referencing `InkTag.Core.csproj`.
 
 ```csharp
-using ComicMetadataEditor;
+using InkTag.Core;
 
 var editor = new MetadataEditor();
 
@@ -145,13 +149,13 @@ Uses `SharpCompress` (`0.48.0`) to read and write archives securely against dire
 * **[x] Fix XSD validation edge case:** Handled gracefully on missing metadata files.
 * **[x] Complete Avalonia Desktop App:** Implemented modern spreadsheet grid, side panels, lazy-loaded cover thumbs, validation, find-replace, and safe background saving.
 * **[x] Make Library AI-Agent Ready:** Added stdio MCP server, structured `--json` CLI subcommands, dynamic JSON patch API, cover art extraction, and agent skill package (`.agents/skills/comic-metadata-curator/`).
-* **[x] XML Serialization Safety:** Fixed nullability constraints on `ComicInfo` models to prevent unwanted default property emissions.
+* **[x] Project Restructuring:** Renamed solution to **InkTag** with clean `src/` and `tests/` architecture (`InkTag.Core`, `InkTag.Cli`, `InkTag.Mcp`, `InkTag.Gui`, `InkTag.Tests`).
 
 ### Upcoming Milestones
 
 #### 📦 Distribution & Packaging
-* **[ ] NuGet Package Publishing:** Publish core library (`ComicMetadataEditor`) to [NuGet.org](https://www.nuget.org).
-* **[ ] Global .NET Tool:** Package `ComicMetadataEditor.Mcp` as a global .NET tool (`dotnet tool install -g ComicMetadataEditor.Mcp`).
+* **[ ] NuGet Package Publishing:** Publish core library (`InkTag.Core`) to [NuGet.org](https://www.nuget.org).
+* **[ ] Global .NET Tool:** Package `InkTag.Mcp` as a global .NET tool (`dotnet tool install -g InkTag.Mcp`).
 * **[ ] Pre-Compiled Binary Releases:** Add GitHub Actions CI/CD to auto-generate standalone executables (`.exe`, Linux AppImage/binary, macOS DMG/binary).
 
 #### 🤖 AI Ecosystem & MCP Discoverability

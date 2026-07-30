@@ -1,11 +1,11 @@
 ---
 name: comic-metadata-curator
-description: Standardized workflows and instructions for AI agents auditing, updating, normalizing, and extracting comic metadata (.cbz/.cbr) using ComicMetadataEditor CLI and MCP tools.
+description: Standardized workflows and instructions for AI agents auditing, updating, normalizing, and extracting comic metadata (.cbz/.cbr) using InkTag CLI and MCP tools.
 ---
 
 # Comic Metadata Curator Skill
 
-This skill guides AI agents on auditing, updating, and standardizing metadata embedded in `.cbz` and `.cbr` comic archives using **ComicMetadataEditor**.
+This skill guides AI agents on auditing, updating, and standardizing metadata embedded in `.cbz` and `.cbr` comic archives using **InkTag**.
 
 ---
 
@@ -13,9 +13,9 @@ This skill guides AI agents on auditing, updating, and standardizing metadata em
 
 AI agents can interact with the comic metadata library through three interfaces:
 
-1. **CLI Tool (`ComicEditorConsole`)**: Ideal for terminal subagent executions via shell execution.
-2. **MCP Server (`ComicMetadataEditor.Mcp`)**: Ideal for model-context-protocol stdio tool calls.
-3. **C# Library (`ComicMetadataEditor`)**: Ideal for programmatic .NET applications.
+1. **CLI Tool (`InkTag.Cli`)**: Ideal for terminal subagent executions via shell commands.
+2. **MCP Server (`InkTag.Mcp`)**: Ideal for model-context-protocol stdio tool calls.
+3. **C# Domain Library (`InkTag.Core`)**: Ideal for programmatic .NET applications.
 
 ---
 
@@ -26,7 +26,7 @@ Before modifying files, scan the target directory to locate incomplete or malfor
 
 **CLI Command:**
 ```bash
-dotnet run --project ComicEditorConsole/ComicEditorConsole.csproj -- scan /path/to/comics --missing "Writer,Series,Year,Genre" --json
+dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- scan /path/to/comics --missing "Writer,Series,Year,Genre" --json
 ```
 
 **MCP Tool Call:**
@@ -47,7 +47,7 @@ If metadata (like `Title`, `Series`, `Number`, `Writer`) is missing or uncertain
 
 **CLI Command:**
 ```bash
-dotnet run --project ComicEditorConsole/ComicEditorConsole.csproj -- cover /path/to/comics/issue1.cbz --output /tmp/issue1_cover.jpg --json
+dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- cover /path/to/comics/issue1.cbz --output /tmp/issue1_cover.jpg --json
 ```
 
 **MCP Tool Call:**
@@ -68,7 +68,7 @@ Always perform a dry-run before applying bulk modifications to verify target cha
 
 **CLI Command:**
 ```bash
-dotnet run --project ComicEditorConsole/ComicEditorConsole.csproj -- update /path/to/comics --patch '{"Publisher":"Marvel", "Manga":"No"}' --dry-run --json
+dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- update /path/to/comics --patch '{"Publisher":"Marvel", "Manga":"No"}' --dry-run --json
 ```
 
 **MCP Tool Call:**
@@ -90,7 +90,7 @@ Apply validated property changes back into comic archives. The library automatic
 
 **CLI Command:**
 ```bash
-dotnet run --project ComicEditorConsole/ComicEditorConsole.csproj -- update /path/to/comics/issue1.cbz --patch '{"Writer":"Stan Lee", "Penciller":"Steve Ditko", "Year":1962}' --json
+dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- update /path/to/comics/issue1.cbz --patch '{"Writer":"Stan Lee", "Penciller":"Steve Ditko", "Year":1962}' --json
 ```
 
 ---

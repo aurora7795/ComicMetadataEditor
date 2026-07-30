@@ -1,24 +1,20 @@
 # Testing & Verification Guide
 
-This page details the testing strategy and validation checklists for verifying the Comic Metadata Editor application.
+This page details the testing strategy and validation checklists for verifying the InkTag application.
 
 ---
 
 ## 🧪 Automated Testing Strategy
 
-### 1. Core Library Tests
-* **Target Assembly**: `ComicMetadataEditor.Tests`
+### 1. Unit Test Suite (`InkTag.Tests`)
+* **Target Project**: `tests/InkTag.Tests/InkTag.Tests.csproj`
 * **Coverage Scope**:
   * Deserialization of valid and invalid `ComicInfo.xml` schemas.
-  * Validation of schemas against the official XSD.
+  * Validation of schemas against official XSD (`ComicInfo.xsd`).
+  * Dynamic JSON patch application (`ApplyJsonPatch`).
+  * Property-level diff generation (`GetMetadataDiff`).
+  * JSON Schema generation (`ExportJsonSchema`).
   * Repacking safety: Verify renaming, rollbacks upon corrupted repacking streams, and backup file deletions.
-
-### 2. Desktop Application Tests
-* **Target Assembly**: `AvaloniaApp.Tests`
-* **Coverage Scope**:
-  * `ComicScannerService`: Verify that recursive and flat enumerations discover `.cbz` and `.cbr` extensions while ignoring other files.
-  * `ArchiveCoverService`: Mock file archives and check that cover extraction handles corrupted headers and empty image sets gracefully.
-  * `ComicItemViewModel` Validation: Unit test that validation attributes (`Year`, `Month`, `Volume`) fire events and restrict the parent view model from saving.
 
 ---
 
@@ -36,9 +32,10 @@ This page details the testing strategy and validation checklists for verifying t
    * The "Save All" button in the toolbar is disabled.
 3. **Manga Toggle**: Check/uncheck the Manga checkbox. Save and verify that the output XML tag `<Manga>` is updated to `"Yes"` or `"No"` respectively.
 
-### Phase 3: Bulk Actions
-1. **Selection & Apply**: Highlight multiple rows in the DataGrid. In the sidebar's Bulk Edit tab, check the `Publisher` box, enter `"DC Comics"`, and click *Apply*. Verify that all selected rows update in memory and indicate dirty status.
-2. **Find & Replace**: Select a block of rows. Set find to `"Vol. 1"` and replace to `"Volume 1"`. Execute on the `Title` column and verify text swaps immediately.
+### Phase 3: Bulk Actions & Agent Tools
+1. **Selection & Apply**: Highlight multiple rows in the DataGrid. In the sidebar's Bulk Edit tab, check the `Publisher` box, enter `"DC Comics"`, and click *Apply*. Verify that all selected rows update in memory.
+2. **CLI JSON Execution**: Run `dotnet run --project src/InkTag.Cli -- schema --json` and verify clean JSON output.
+3. **MCP Stdio Communication**: Launch `src/InkTag.Mcp` and test tool calls (`read_comic_metadata`, `update_comic_metadata`, `extract_cover_image`).
 
 ### Phase 4: Save & Safety
 1. **Save Batch**: Click *Save All*. Verify saving runs sequentially in the background while updating the progress bar.
