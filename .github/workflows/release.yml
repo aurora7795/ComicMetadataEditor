@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -24,15 +26,25 @@ jobs:
       - name: Publish InkTag.Gui for Windows
         run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r win-x64 --self-contained true -o publish/win-x64
 
-      - name: Compress publish folder into Zip
-        shell: pwsh
-        run: Compress-Archive -Path publish/win-x64/* -DestinationPath InkTag-Windows-x64.zip
+      - name: Publish InkTag.Mcp for Windows
+        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r win-x64 --self-contained true -o publish/win-x64
 
-      - name: Upload Windows Artifact
+      - name: Publish standalone InkTag.Mcp for Windows
+        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r win-x64 --self-contained true -o publish/win-x64-mcp
+
+      - name: Compress publish folders into Zips
+        shell: pwsh
+        run: |
+          Compress-Archive -Path publish/win-x64/* -DestinationPath InkTag-Windows-x64.zip
+          Compress-Archive -Path publish/win-x64-mcp/* -DestinationPath InkTag-Mcp-Windows-x64.zip
+
+      - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-artifact
-          path: InkTag-Windows-x64.zip
+          path: |
+            InkTag-Windows-x64.zip
+            InkTag-Mcp-Windows-x64.zip
           if-no-files-found: error
 
   build-macos:
@@ -41,6 +53,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -50,13 +64,40 @@ jobs:
       - name: Publish InkTag.Gui for macOS
         run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r osx-arm64 --self-contained true -o publish/osx-arm64
 
+      - name: Publish InkTag.Mcp for macOS
+        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r osx-arm64 --self-contained true -o publish/osx-arm64-mcp
+
+      - name: Package Standalone InkTag.Mcp Zip for macOS
+        run: |
+          chmod +x publish/osx-arm64-mcp/InkTag.Mcp
+          zip -r InkTag-Mcp-macOS-arm64.zip publish/osx-arm64-mcp/*
+
       - name: Assemble InkTag.app Bundle
         run: |
           mkdir -p InkTag.app/Contents/MacOS
           mkdir -p InkTag.app/Contents/Resources
           cp -r publish/osx-arm64/* InkTag.app/Contents/MacOS/
+          cp -r publish/osx-arm64-mcp/InkTag.Mcp InkTag.app/Contents/MacOS/InkTag.Mcp
           cp packaging/Info.plist InkTag.app/Contents/Info.plist
           chmod +x InkTag.app/Contents/MacOS/InkTag.Gui
+          chmod +x InkTag.app/Contents/MacOS/InkTag.Mcp
+
+          # Generate macOS .icns file for App Finder / Dock icon
+          mkdir -p InkTag.iconset
+          sips -z 16 16     packaging/inktag.png --out InkTag.iconset/icon_16x16.png
+          sips -z 32 32     packaging/inktag.png --out InkTag.iconset/icon_16x16@2x.png
+          sips -z 32 32     packaging/inktag.png --out InkTag.iconset/icon_32x32.png
+          sips -z 64 64     packaging/inktag.png --out InkTag.iconset/icon_32x32@2x.png
+          sips -z 128 128   packaging/inktag.png --out InkTag.iconset/icon_128x128.png
+          sips -z 256 256   packaging/inktag.png --out InkTag.iconset/icon_128x128@2x.png
+          sips -z 256 256   packaging/inktag.png --out InkTag.iconset/icon_256x256.png
+          sips -z 512 512   packaging/inktag.png --out InkTag.iconset/icon_256x256@2x.png
+          sips -z 512 512   packaging/inktag.png --out InkTag.iconset/icon_512x512.png
+          iconutil -c icns InkTag.iconset -o InkTag.app/Contents/Resources/InkTag.icns
+          rm -rf InkTag.iconset
+
+      - name: Ad-hoc Sign InkTag.app
+        run: codesign --force --deep -s - InkTag.app
 
       - name: Install create-dmg
         run: HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 brew install create-dmg
@@ -68,15 +109,18 @@ jobs:
             --window-pos 200 120 \
             --window-size 800 400 \
             --icon-size 100 \
+            --icon "InkTag.app" 200 185 \
             --app-drop-link 600 185 \
             "InkTag-macOS-arm64.dmg" \
             "InkTag.app" || hdiutil create -volname "InkTag" -srcfolder InkTag.app -ov -format UDZO InkTag-macOS-arm64.dmg
 
-      - name: Upload macOS Artifact
+      - name: Upload macOS Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-artifact
-          path: InkTag-macOS-arm64.dmg
+          path: |
+            InkTag-macOS-arm64.dmg
+            InkTag-Mcp-macOS-arm64.zip
           if-no-files-found: error
 
   build-linux:
@@ -85,6 +129,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Linux dependencies
         run: |
@@ -104,12 +150,24 @@ jobs:
       - name: Publish InkTag.Gui for Linux
         run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r linux-x64 --self-contained true -o publish/linux-x64
 
+      - name: Publish InkTag.Mcp for Linux
+        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r linux-x64 --self-contained true -o publish/linux-x64-mcp
+
+      - name: Package Standalone InkTag.Mcp Tarball for Linux
+        run: |
+          chmod +x publish/linux-x64-mcp/InkTag.Mcp
+          tar -czvf InkTag-Mcp-Linux-x86_64.tar.gz -C publish/linux-x64-mcp .
+
       - name: Assemble AppDir and Package AppImage
+        env:
+          VERSION: ${{ github.ref_name }}
         run: |
           mkdir -p AppDir/usr/bin
           cp -r publish/linux-x64/* AppDir/usr/bin/
+          cp -r publish/linux-x64-mcp/InkTag.Mcp AppDir/usr/bin/InkTag.Mcp
           rm -f AppDir/usr/bin/libcoreclrtraceptprovider.so
           chmod +x AppDir/usr/bin/InkTag.Gui
+          chmod +x AppDir/usr/bin/InkTag.Mcp
           NO_STRIP=1 ./linuxdeploy-x86_64.AppImage --appimage-extract-and-run \
             --appdir AppDir \
             --desktop-file packaging/inktag.desktop \
@@ -118,11 +176,13 @@ jobs:
             --output appimage
           mv InkTag*.AppImage InkTag-Linux-x86_64.AppImage
 
-      - name: Upload Linux Artifact
+      - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-artifact
-          path: InkTag-Linux-x86_64.AppImage
+          path: |
+            InkTag-Linux-x86_64.AppImage
+            InkTag-Mcp-Linux-x86_64.tar.gz
           if-no-files-found: error
 
   release:
@@ -134,6 +194,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download all platform artifacts
         uses: actions/download-artifact@v4
@@ -146,8 +208,26 @@ jobs:
         with:
           files: |
             InkTag-Windows-x64.zip
+            InkTag-Mcp-Windows-x64.zip
             InkTag-macOS-arm64.dmg
+            InkTag-Mcp-macOS-arm64.zip
             InkTag-Linux-x86_64.AppImage
+            InkTag-Mcp-Linux-x86_64.tar.gz
+          body: |
+            ## 📦 Downloads & Installation Notes
+
+            ### 🍏 macOS Installation Note
+            Because InkTag is currently unnotarized:
+            1. Drag `InkTag.app` into `/Applications`.
+            2. Run the following command in Terminal to clear the download quarantine:
+               ```bash
+               xattr -cr /Applications/InkTag.app
+               ```
+            *(Alternatively, go to **System Settings > Privacy & Security** and click **Open Anyway**).*
+
+            ### 🤖 Model Context Protocol (MCP) Server Usage
+            - **macOS (bundled)**: `/Applications/InkTag.app/Contents/MacOS/InkTag.Mcp`
+            - **Windows / Linux / macOS (standalone downloads)**: Use the dedicated `InkTag-Mcp-*` packages.
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -50,6 +50,15 @@ InkTag/
 
 ## 🛠️ Getting Started
 
+### macOS App Installation Note
+Because pre-built `.dmg` releases are open-source and unnotarized by Apple:
+1. Drag **InkTag.app** into `/Applications`.
+2. Clear the browser quarantine attribute via Terminal:
+   ```bash
+   xattr -cr /Applications/InkTag.app
+   ```
+*(Or go to **System Settings > Privacy & Security** and click **Open Anyway**).*
+
 ### Prerequisites
 * [.NET SDK 8.0 / 9.0 / 10.0](https://dotnet.microsoft.com/download)
 
