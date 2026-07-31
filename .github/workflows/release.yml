@@ -26,6 +26,9 @@ jobs:
       - name: Publish InkTag.Gui for Windows
         run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r win-x64 --self-contained true -o publish/win-x64
 
+      - name: Publish InkTag.Mcp for Windows
+        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r win-x64 --self-contained true -o publish/win-x64
+
       - name: Compress publish folder into Zip
         shell: pwsh
         run: Compress-Archive -Path publish/win-x64/* -DestinationPath InkTag-Windows-x64.zip
@@ -54,13 +57,18 @@ jobs:
       - name: Publish InkTag.Gui for macOS
         run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r osx-arm64 --self-contained true -o publish/osx-arm64
 
+      - name: Publish InkTag.Mcp for macOS
+        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r osx-arm64 --self-contained true -o publish/osx-arm64-mcp
+
       - name: Assemble InkTag.app Bundle
         run: |
           mkdir -p InkTag.app/Contents/MacOS
           mkdir -p InkTag.app/Contents/Resources
           cp -r publish/osx-arm64/* InkTag.app/Contents/MacOS/
+          cp -r publish/osx-arm64-mcp/InkTag.Mcp InkTag.app/Contents/MacOS/InkTag.Mcp
           cp packaging/Info.plist InkTag.app/Contents/Info.plist
           chmod +x InkTag.app/Contents/MacOS/InkTag.Gui
+          chmod +x InkTag.app/Contents/MacOS/InkTag.Mcp
 
           # Generate macOS .icns file for App Finder / Dock icon
           mkdir -p InkTag.iconset
