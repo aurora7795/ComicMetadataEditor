@@ -72,15 +72,15 @@ public class MetadataEditor
         try
         {
             using (Stream stream = File.OpenRead(filePath))
-            using (var reader = ReaderFactory.OpenReader(stream, new ReaderOptions()))
+            using (var archive = ArchiveFactory.OpenArchive(stream))
             {
-                while (reader.MoveToNextEntry())
+                foreach (var entry in archive.Entries)
                 {
-                    if (!reader.Entry.IsDirectory && 
-                        reader.Entry.Key != null &&
-                        Path.GetFileName(reader.Entry.Key).Equals("ComicInfo.xml", StringComparison.OrdinalIgnoreCase))
+                    if (!entry.IsDirectory && 
+                        entry.Key != null &&
+                        Path.GetFileName(entry.Key).Equals("ComicInfo.xml", StringComparison.OrdinalIgnoreCase))
                     {
-                        reader.WriteEntryToDirectory(tempDir, new ExtractionOptions { Overwrite = true, ExtractFullPath = false });
+                        entry.WriteToDirectory(tempDir, new ExtractionOptions { Overwrite = true, ExtractFullPath = false });
                     }
                 }
             }
@@ -123,13 +123,13 @@ public class MetadataEditor
         {
             // 1. Extract the archive contents
             using (Stream stream = File.OpenRead(filePath))
-            using (var reader = ReaderFactory.OpenReader(stream, new ReaderOptions()))
+            using (var archive = ArchiveFactory.OpenArchive(stream))
             {
-                while (reader.MoveToNextEntry())
+                foreach (var entry in archive.Entries)
                 {
-                    if (!reader.Entry.IsDirectory)
+                    if (!entry.IsDirectory)
                     {
-                        reader.WriteEntryToDirectory(tempDir, new ExtractionOptions());
+                        entry.WriteToDirectory(tempDir, new ExtractionOptions());
                     }
                 }
             }
@@ -183,19 +183,11 @@ public class MetadataEditor
                 throw new InvalidDataException("Generated temporary archive is empty or invalid.");
             }
 
-            // Verify readability using SharpCompress Reader
+            // Verify readability using SharpCompress ArchiveFactory
             using (Stream stream = File.OpenRead(tempCbzPath))
-            using (var reader = ReaderFactory.OpenReader(stream, new ReaderOptions()))
+            using (var archive = ArchiveFactory.OpenArchive(stream))
             {
-                bool hasEntries = false;
-                while (reader.MoveToNextEntry())
-                {
-                    if (!reader.Entry.IsDirectory)
-                    {
-                        hasEntries = true;
-                    }
-                }
-                if (!hasEntries)
+                if (!archive.Entries.Any(e => !e.IsDirectory))
                 {
                     throw new InvalidDataException("Generated temporary archive contains no entries.");
                 }
@@ -395,16 +387,16 @@ public class MetadataEditor
         try
         {
             using (Stream stream = File.OpenRead(comicFilePath))
-            using (var reader = ReaderFactory.OpenReader(stream, new ReaderOptions()))
+            using (var archive = ArchiveFactory.OpenArchive(stream))
             {
                 string? coverCandidatePath = null;
                 var imageFiles = new List<string>();
 
-                while (reader.MoveToNextEntry())
+                foreach (var entry in archive.Entries)
                 {
-                    if (reader.Entry.IsDirectory || reader.Entry.Key == null) continue;
+                    if (entry.IsDirectory || entry.Key == null) continue;
 
-                    string fileName = Path.GetFileName(reader.Entry.Key);
+                    string fileName = Path.GetFileName(entry.Key);
                     string ext = Path.GetExtension(fileName).ToLowerInvariant();
 
                     if (validExtensions.Contains(ext))
@@ -412,7 +404,7 @@ public class MetadataEditor
                         string targetPath = Path.Combine(tempDir, Guid.NewGuid().ToString() + ext);
                         using (var fs = File.OpenWrite(targetPath))
                         {
-                            reader.WriteEntryTo(fs);
+                            entry.WriteTo(fs);
                         }
                         imageFiles.Add(targetPath);
 
