@@ -123,6 +123,8 @@ jobs:
         run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r linux-x64 --self-contained true -o publish/linux-x64
 
       - name: Assemble AppDir and Package AppImage
+        env:
+          VERSION: ${{ github.ref_name }}
         run: |
           mkdir -p AppDir/usr/bin
           cp -r publish/linux-x64/* AppDir/usr/bin/
