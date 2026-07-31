@@ -32,6 +32,15 @@ jobs:
       - name: Publish standalone InkTag.Mcp for Windows
         run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-x64-mcp
 
+      - name: Install Velopack vpk tool
+        run: dotnet tool install -g vpk
+
+      - name: Pack Windows Release with Velopack
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart('v')
+          & "$env:USERPROFILE\.dotnet\tools\vpk.exe" pack --packId InkTagDesktop --packVersion $ver --packDir publish/win-x64 --mainExe InkTag.Gui.exe --icon packaging/inktag.ico -o releases-win
+
       - name: Compress publish folders into Zips
         shell: pwsh
         run: |
@@ -45,6 +54,7 @@ jobs:
           path: |
             InkTag-Windows-x64.zip
             InkTag-Mcp-Windows-x64.zip
+            releases-win/*
           if-no-files-found: error
 
   build-macos:
@@ -206,6 +216,7 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          fail_on_unmatched_files: false
           files: |
             InkTag-Windows-x64.zip
             InkTag-Mcp-Windows-x64.zip
@@ -213,6 +224,9 @@ jobs:
             InkTag-Mcp-macOS-arm64.zip
             InkTag-Linux-x86_64.AppImage
             InkTag-Mcp-Linux-x86_64.tar.gz
+            releases.*.json
+            *.nupkg
+            *Setup.exe
           body: |
             ## 📦 Downloads & Installation Notes
 
