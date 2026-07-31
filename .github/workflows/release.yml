@@ -39,7 +39,7 @@ jobs:
         shell: pwsh
         run: |
           $ver = "${{ github.ref_name }}".TrimStart('v')
-          vpk pack --packId InkTagDesktop --packVersion $ver --packDir publish/win-x64 --mainExe InkTag.Gui.exe --icon packaging/inktag.ico -o releases-win
+          & "$env:USERPROFILE\.dotnet\tools\vpk.exe" pack --packId InkTagDesktop --packVersion $ver --packDir publish/win-x64 --mainExe InkTag.Gui.exe --icon packaging/inktag.ico -o releases-win
 
       - name: Compress publish folders into Zips
         shell: pwsh
@@ -216,6 +216,7 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          fail_on_unmatched_files: false
           files: |
             InkTag-Windows-x64.zip
             InkTag-Mcp-Windows-x64.zip
