@@ -58,6 +58,23 @@ jobs:
           cp packaging/Info.plist InkTag.app/Contents/Info.plist
           chmod +x InkTag.app/Contents/MacOS/InkTag.Gui
 
+          # Generate macOS .icns file for App Finder / Dock icon
+          mkdir -p InkTag.iconset
+          sips -z 16 16     packaging/inktag.png --out InkTag.iconset/icon_16x16.png
+          sips -z 32 32     packaging/inktag.png --out InkTag.iconset/icon_16x16@2x.png
+          sips -z 32 32     packaging/inktag.png --out InkTag.iconset/icon_32x32.png
+          sips -z 64 64     packaging/inktag.png --out InkTag.iconset/icon_32x32@2x.png
+          sips -z 128 128   packaging/inktag.png --out InkTag.iconset/icon_128x128.png
+          sips -z 256 256   packaging/inktag.png --out InkTag.iconset/icon_128x128@2x.png
+          sips -z 256 256   packaging/inktag.png --out InkTag.iconset/icon_256x256.png
+          sips -z 512 512   packaging/inktag.png --out InkTag.iconset/icon_256x256@2x.png
+          sips -z 512 512   packaging/inktag.png --out InkTag.iconset/icon_512x512.png
+          iconutil -c icns InkTag.iconset -o InkTag.app/Contents/Resources/InkTag.icns
+          rm -rf InkTag.iconset
+
+      - name: Ad-hoc Sign InkTag.app
+        run: codesign --force --deep -s - InkTag.app
+
       - name: Install create-dmg
         run: HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 brew install create-dmg
 
@@ -68,6 +85,7 @@ jobs:
             --window-pos 200 120 \
             --window-size 800 400 \
             --icon-size 100 \
+            --icon "InkTag.app" 200 185 \
             --app-drop-link 600 185 \
             "InkTag-macOS-arm64.dmg" \
             "InkTag.app" || hdiutil create -volname "InkTag" -srcfolder InkTag.app -ov -format UDZO InkTag-macOS-arm64.dmg
@@ -148,6 +166,17 @@ jobs:
             InkTag-Windows-x64.zip
             InkTag-macOS-arm64.dmg
             InkTag-Linux-x86_64.AppImage
+          body: |
+            ## 📦 Downloads & Installation Notes
+
+            ### 🍏 macOS Installation Note
+            Because InkTag is currently unnotarized:
+            1. Drag `InkTag.app` into `/Applications`.
+            2. Run the following command in Terminal to clear the download quarantine:
+               ```bash
+               xattr -cr /Applications/InkTag.app
+               ```
+            *(Alternatively, go to **System Settings > Privacy & Security** and click **Open Anyway**).*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
