@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=InkTag
+Name=InkTag Desktop
 Comment=Comic Metadata Editor and Tagging Tool
 Exec=InkTag.Gui
 Icon=inktag
