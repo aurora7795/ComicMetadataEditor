@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=InkTag
+Comment=Comic Metadata Editor and Tagging Tool
+Exec=InkTag.Gui
+Icon=inktag
+Categories=Graphics;Utility;
+Terminal=false

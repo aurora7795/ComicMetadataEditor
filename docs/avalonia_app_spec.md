@@ -6,7 +6,7 @@ This document provides a highly detailed, file-by-file blueprint for implementin
 
 ## 1. Executive Summary & Goals
 * **Goal**: Provide a fast, reliable, and user-friendly desktop application to view and bulk-edit `ComicInfo.xml` metadata files embedded inside comic archives (`.cbz` and `.cbr`).
-* **Core Library Re-use**: The app MUST wrap and leverage the existing core library (`InkTag.Core` / [ComicInfo.cs](file:///home/aurora7795/AntiGravProjects/ComicMetadataEditor/src/InkTag.Core/ComicInfo.cs) and [MetadataEditor.cs](file:///home/aurora7795/AntiGravProjects/ComicMetadataEditor/src/InkTag.Core/MetadataEditor.cs)).
+* **Core Library Re-use**: The app MUST wrap and leverage the existing core library (`InkTag.Core` / [ComicInfo.cs](file:///home/aurora7795/AntiGravProjects/InkTag/src/InkTag.Core/ComicInfo.cs) and [MetadataEditor.cs](file:///home/aurora7795/AntiGravProjects/InkTag/src/InkTag.Core/MetadataEditor.cs)).
 * **Target Audience**: Comic readers, archivists, and catalogers managing local collections.
 
 ---
@@ -84,12 +84,12 @@ This document provides a highly detailed, file-by-file blueprint for implementin
 
 ## 5. Detailed Component & Class Definitions
 
-The Avalonia project is located in [AvaloniaApp/](file:///home/aurora7795/AntiGravProjects/ComicMetadataEditor/AvaloniaApp) and relies on `CommunityToolkit.Mvvm`. Below is the file-by-file structure and interface specification.
+The Avalonia project is located in [src/InkTag.Gui/](file:///home/aurora7795/AntiGravProjects/InkTag/src/InkTag.Gui) and relies on `CommunityToolkit.Mvvm`. Below is the file-by-file structure and interface specification.
 
 ### 5.1 Project Structure Overview
 ```text
-AvaloniaApp/
-├── AvaloniaApp.csproj
+src/InkTag.Gui/
+├── InkTag.Gui.csproj
 ├── App.axaml
 ├── App.axaml.cs
 ├── Program.cs
@@ -268,11 +268,11 @@ AvaloniaApp/
 
 ## 9. Appendix: Core Library Reference API
 
-To ensure correct integration with the core `ComicMetadataEditor` library, the implementing model must use the following API schemas.
+To ensure correct integration with the core `InkTag.Core` library, the implementing model must use the following API schemas.
 
-### 9.1 `ComicInfo` Metadata Class (from `ComicMetadataEditor/ComicInfo.cs`)
+### 9.1 `ComicInfo` Metadata Class (from `src/InkTag.Core/ComicInfo.cs`)
 ```csharp
-namespace ComicMetadataEditor;
+namespace InkTag.Core;
 
 public class ComicInfo
 {
@@ -313,9 +313,9 @@ public class ComicInfo
 }
 ```
 
-### 9.2 `MetadataEditor` Class (from `ComicMetadataEditor/MetadataEditor.cs`)
+### 9.2 `MetadataEditor` Class (from `src/InkTag.Core/MetadataEditor.cs`)
 ```csharp
-namespace ComicMetadataEditor;
+namespace InkTag.Core;
 
 public class BulkEditReport
 {

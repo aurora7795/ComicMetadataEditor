@@ -1,0 +1,153 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows (x64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish InkTag.Gui for Windows
+        run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r win-x64 --self-contained true -o publish/win-x64
+
+      - name: Compress publish folder into Zip
+        shell: pwsh
+        run: Compress-Archive -Path publish/win-x64/* -DestinationPath InkTag-Windows-x64.zip
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifact
+          path: InkTag-Windows-x64.zip
+          if-no-files-found: error
+
+  build-macos:
+    name: Build macOS (ARM64)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish InkTag.Gui for macOS
+        run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r osx-arm64 --self-contained true -o publish/osx-arm64
+
+      - name: Assemble InkTag.app Bundle
+        run: |
+          mkdir -p InkTag.app/Contents/MacOS
+          mkdir -p InkTag.app/Contents/Resources
+          cp -r publish/osx-arm64/* InkTag.app/Contents/MacOS/
+          cp packaging/Info.plist InkTag.app/Contents/Info.plist
+          chmod +x InkTag.app/Contents/MacOS/InkTag.Gui
+
+      - name: Install create-dmg
+        run: HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 brew install create-dmg
+
+      - name: Package InkTag-macOS-arm64.dmg
+        run: |
+          create-dmg \
+            --volname "InkTag" \
+            --window-pos 200 120 \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --app-drop-link 600 185 \
+            "InkTag-macOS-arm64.dmg" \
+            "InkTag.app" || hdiutil create -volname "InkTag" -srcfolder InkTag.app -ov -format UDZO InkTag-macOS-arm64.dmg
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifact
+          path: InkTag-macOS-arm64.dmg
+          if-no-files-found: error
+
+  build-linux:
+    name: Build Linux (x86_64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fuse libfuse2 wget
+
+      - name: Download linuxdeploy
+        run: |
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish InkTag.Gui for Linux
+        run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r linux-x64 --self-contained true -o publish/linux-x64
+
+      - name: Assemble AppDir and Package AppImage
+        run: |
+          mkdir -p AppDir/usr/bin
+          cp -r publish/linux-x64/* AppDir/usr/bin/
+          rm -f AppDir/usr/bin/libcoreclrtraceptprovider.so
+          chmod +x AppDir/usr/bin/InkTag.Gui
+          NO_STRIP=1 ./linuxdeploy-x86_64.AppImage --appimage-extract-and-run \
+            --appdir AppDir \
+            --desktop-file packaging/inktag.desktop \
+            --icon-file packaging/inktag.png \
+            --executable AppDir/usr/bin/InkTag.Gui \
+            --output appimage
+          mv InkTag*.AppImage InkTag-Linux-x86_64.AppImage
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifact
+          path: InkTag-Linux-x86_64.AppImage
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-artifact'
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            InkTag-Windows-x64.zip
+            InkTag-macOS-arm64.dmg
+            InkTag-Linux-x86_64.AppImage
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
