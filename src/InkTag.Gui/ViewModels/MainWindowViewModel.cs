@@ -20,9 +20,17 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly ComicScannerService _scannerService = new();
     private readonly ArchiveCoverService _coverService = new();
+    private readonly UpdateService _updateService = new();
     private readonly List<ComicItemViewModel> _selectedComics = new();
     private CancellationTokenSource? _scanCts;
     private CancellationTokenSource? _saveCts;
+    private Velopack.UpdateInfo? _pendingUpdateInfo;
+
+    [ObservableProperty]
+    private string _updateStatusText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isUpdateAvailable;
 
     [ObservableProperty]
     private string _selectedDirectory = string.Empty;
@@ -356,5 +364,47 @@ public partial class MainWindowViewModel : ViewModelBase
             return $"\"{val.Replace("\"", "\"\"")}\"";
         }
         return val;
+    }
+
+    [RelayCommand]
+    public async Task CheckForUpdatesAsync(bool userInitiated = true)
+    {
+        try
+        {
+            UpdateStatusText = "Checking for updates...";
+            _pendingUpdateInfo = await _updateService.CheckForUpdatesAsync(userInitiated);
+            if (_pendingUpdateInfo != null)
+            {
+                IsUpdateAvailable = true;
+                UpdateStatusText = $"New update available! ({_pendingUpdateInfo.TargetFullRelease.Version})";
+            }
+            else
+            {
+                IsUpdateAvailable = false;
+                UpdateStatusText = userInitiated ? "InkTag Desktop is up to date." : string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            UpdateStatusText = $"Update check failed: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    public async Task ApplyUpdateAsync()
+    {
+        if (_pendingUpdateInfo == null) return;
+        try
+        {
+            UpdateStatusText = "Downloading update...";
+            await _updateService.DownloadAndApplyUpdateAsync(_pendingUpdateInfo, progress =>
+            {
+                Dispatcher.UIThread.Post(() => UpdateStatusText = $"Downloading update: {progress}%");
+            });
+        }
+        catch (Exception ex)
+        {
+            UpdateStatusText = $"Failed to apply update: {ex.Message}";
+        }
     }
 }

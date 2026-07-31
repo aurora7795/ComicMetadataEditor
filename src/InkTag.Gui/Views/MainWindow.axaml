@@ -31,8 +31,17 @@
           <Button Content="Export CSV" Click="ExportCsv_Click" Padding="15,6" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1"/>
         </StackPanel>
 
+        <Separator Grid.Column="3" Width="1" Margin="15,0" Background="#3F3F46" VerticalAlignment="Stretch"/>
+
+        <!-- Update Controls -->
+        <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="4">
+          <Button Content="Check for Updates" Command="{Binding CheckForUpdatesCommand}" Padding="12,6" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1"/>
+          <Button Content="Install &amp; Restart" Command="{Binding ApplyUpdateCommand}" IsVisible="{Binding IsUpdateAvailable}" Padding="12,6" Background="#28A745" Foreground="White"/>
+          <TextBlock Text="{Binding UpdateStatusText}" Foreground="#4EC9B0" VerticalAlignment="Center" FontSize="12" Margin="5,0,0,0"/>
+        </StackPanel>
+
         <!-- Progress Tracker -->
-        <StackPanel Orientation="Horizontal" Spacing="15" Grid.Column="4" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,20,0">
+        <StackPanel Orientation="Horizontal" Spacing="15" Grid.Column="5" HorizontalAlignment="Right" VerticalAlignment="Center">
           <TextBlock Text="{Binding ProgressText}" Foreground="#D4D4D4" VerticalAlignment="Center" FontSize="12"/>
           <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Width="150" Height="10" 
                        IsVisible="{Binding !!ProgressValue}" VerticalAlignment="Center"/>
