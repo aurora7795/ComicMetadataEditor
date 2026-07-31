@@ -26,7 +26,7 @@ public class UpdateService
 
         try
         {
-            var source = new GithubSource(GithubRepoUrl);
+            var source = new GithubSource(GithubRepoUrl, null, false);
             var manager = new UpdateManager(source);
 
             if (!manager.IsInstalled)
@@ -54,7 +54,7 @@ public class UpdateService
     {
         try
         {
-            var source = new GithubSource(GithubRepoUrl);
+            var source = new GithubSource(GithubRepoUrl, null, false);
             var manager = new UpdateManager(source);
 
             if (!manager.IsInstalled) return;
