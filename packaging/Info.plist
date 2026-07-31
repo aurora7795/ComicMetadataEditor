@@ -11,7 +11,9 @@
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>InkTag</string>
+    <string>InkTag Desktop</string>
+    <key>CFBundleDisplayName</key>
+    <string>InkTag Desktop</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
