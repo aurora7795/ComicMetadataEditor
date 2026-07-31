@@ -27,10 +27,10 @@ jobs:
         run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r win-x64 --self-contained true -o publish/win-x64
 
       - name: Publish InkTag.Mcp for Windows
-        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r win-x64 --self-contained true -o publish/win-x64
+        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-x64
 
       - name: Publish standalone InkTag.Mcp for Windows
-        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r win-x64 --self-contained true -o publish/win-x64-mcp
+        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-x64-mcp
 
       - name: Compress publish folders into Zips
         shell: pwsh
@@ -65,7 +65,7 @@ jobs:
         run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r osx-arm64 --self-contained true -o publish/osx-arm64
 
       - name: Publish InkTag.Mcp for macOS
-        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r osx-arm64 --self-contained true -o publish/osx-arm64-mcp
+        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r osx-arm64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o publish/osx-arm64-mcp
 
       - name: Package Standalone InkTag.Mcp Zip for macOS
         run: |
@@ -151,7 +151,7 @@ jobs:
         run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r linux-x64 --self-contained true -o publish/linux-x64
 
       - name: Publish InkTag.Mcp for Linux
-        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r linux-x64 --self-contained true -o publish/linux-x64-mcp
+        run: dotnet publish src/InkTag.Mcp/InkTag.Mcp.csproj -c Release -r linux-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o publish/linux-x64-mcp
 
       - name: Package Standalone InkTag.Mcp Tarball for Linux
         run: |
