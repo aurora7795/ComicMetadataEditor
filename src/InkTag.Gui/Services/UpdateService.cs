@@ -20,7 +20,10 @@ public record UpdateCheckResult(
     string Message = ""
 );
 
-public class UpdateService
+/// <summary>
+/// Static service managing application update checking and Velopack deployment.
+/// </summary>
+public static class UpdateService
 {
     private const string GithubRepoUrl = "https://github.com/aurora7795/InkTag";
     private static UpdateInfo? _cachedUpdateInfo;
@@ -31,7 +34,7 @@ public class UpdateService
     /// Checks for available application updates via Velopack and GitHub Releases.
     /// Queries GitHub Releases API across all platforms and logs diagnostic details.
     /// </summary>
-    public async Task<UpdateCheckResult> CheckForUpdatesAsync(bool forceCheck = false)
+    public static async Task<UpdateCheckResult> CheckForUpdatesAsync(bool forceCheck = false)
     {
         if (!forceCheck && _cachedUpdateInfo != null && (DateTime.UtcNow - _lastCheckTime) < MinCheckInterval)
         {
@@ -71,7 +74,7 @@ public class UpdateService
     /// <summary>
     /// Downloads pending update delta packages and restarts the app with the new version.
     /// </summary>
-    public async Task DownloadAndApplyUpdateAsync(UpdateInfo updateInfo, Action<int>? progress = null)
+    public static async Task DownloadAndApplyUpdateAsync(UpdateInfo updateInfo, Action<int>? progress = null)
     {
         try
         {

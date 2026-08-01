@@ -12,6 +12,7 @@ using SharpCompress.Writers;
 using SharpCompress.Writers.Zip;
 using System.Xml;
 using System.Xml.Schema;
+using InkTag.Core.Logging;
 
 namespace InkTag.Core;
 
@@ -277,41 +278,38 @@ public class MetadataEditor
 
     private static string GetRelativePath(string relativeTo, string path)
     {
-        if (string.IsNullOrEmpty(relativeTo)) throw new ArgumentNullException(nameof(relativeTo));
-        if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path));
-
-        Uri uri1 = new Uri(relativeTo + (relativeTo.EndsWith(Path.DirectorySeparatorChar.ToString()) ? "" : Path.DirectorySeparatorChar.ToString()));
-        Uri uri2 = new Uri(path);
-
-        Uri relativeUri = uri1.MakeRelativeUri(uri2);
-
-        string relativePath = Uri.UnescapeDataString(relativeUri.ToString());
-
-        return relativePath.Replace('/', Path.DirectorySeparatorChar);
+        return Path.GetRelativePath(relativeTo, path);
     }
+
     // Validates an XML file against the embedded ComicInfo XSD.
     private static void ValidateXml(string xmlPath)
     {
-        // Resolve schema path relative to the executing assembly's base directory.
         var schemaPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Schema", "ComicInfo.xsd");
         if (!File.Exists(schemaPath))
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"Warning: XSD schema not found at '{schemaPath}'. Skipping validation.");
-            Console.ResetColor();
+            AppLogger.LogWarning($"XSD schema not found at '{schemaPath}'. Skipping validation.");
             return;
         }
 
-        var settings = new XmlReaderSettings();
-        settings.ValidationType = ValidationType.Schema;
+        var settings = new XmlReaderSettings
+        {
+            ValidationType = ValidationType.Schema
+        };
         settings.Schemas.Add(null, schemaPath);
         settings.ValidationEventHandler += (sender, args) =>
         {
-            Console.WriteLine($"Schema validation warning: {args.Message}");
+            if (args.Severity == XmlSeverityType.Error)
+            {
+                AppLogger.LogError($"Schema validation error in {xmlPath}: {args.Message}", args.Exception);
+                throw new XmlSchemaValidationException($"Schema validation error: {args.Message}", args.Exception);
+            }
+            else
+            {
+                AppLogger.LogWarning($"Schema validation warning in {xmlPath}: {args.Message}");
+            }
         };
 
         using var reader = XmlReader.Create(xmlPath, settings);
-        // Read entire document to trigger validation.
         while (reader.Read()) { }
     }
 
@@ -348,7 +346,7 @@ public class MetadataEditor
     public List<MetadataDiffItem> GetMetadataDiff(string filePath, string jsonPatch)
     {
         var current = ReadMetadata(filePath);
-        var updated = ReadMetadata(filePath);
+        var updated = current.Clone();
         ApplyJsonPatch(updated, jsonPatch);
 
         var diffs = new List<MetadataDiffItem>();
@@ -381,66 +379,36 @@ public class MetadataEditor
 
         string[] validExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp" };
 
-        string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(tempDir);
-
-        try
+        using (Stream stream = File.OpenRead(comicFilePath))
+        using (var archive = ArchiveFactory.OpenArchive(stream))
         {
-            using (Stream stream = File.OpenRead(comicFilePath))
-            using (var archive = ArchiveFactory.OpenArchive(stream))
+            var imageEntries = archive.Entries
+                .Where(e => !e.IsDirectory && e.Key != null && validExtensions.Contains(Path.GetExtension(e.Key).ToLowerInvariant()))
+                .ToList();
+
+            if (imageEntries.Count == 0)
             {
-                string? coverCandidatePath = null;
-                var imageFiles = new List<string>();
-
-                foreach (var entry in archive.Entries)
-                {
-                    if (entry.IsDirectory || entry.Key == null) continue;
-
-                    string fileName = Path.GetFileName(entry.Key);
-                    string ext = Path.GetExtension(fileName).ToLowerInvariant();
-
-                    if (validExtensions.Contains(ext))
-                    {
-                        string targetPath = Path.Combine(tempDir, Guid.NewGuid().ToString() + ext);
-                        using (var fs = File.OpenWrite(targetPath))
-                        {
-                            entry.WriteTo(fs);
-                        }
-                        imageFiles.Add(targetPath);
-
-                        if (fileName.Contains("cover", StringComparison.OrdinalIgnoreCase) && coverCandidatePath == null)
-                        {
-                            coverCandidatePath = targetPath;
-                        }
-                    }
-                }
-
-                if (coverCandidatePath == null && imageFiles.Count > 0)
-                {
-                    coverCandidatePath = imageFiles.OrderBy(f => f).First();
-                }
-
-                if (coverCandidatePath != null)
-                {
-                    string? dir = Path.GetDirectoryName(outputFilePath);
-                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                    {
-                        Directory.CreateDirectory(dir);
-                    }
-
-                    File.Copy(coverCandidatePath, outputFilePath, true);
-                    return outputFilePath;
-                }
-
                 return null;
             }
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
+
+            var bestEntry = imageEntries.FirstOrDefault(e => Path.GetFileName(e.Key!).Contains("cover", StringComparison.OrdinalIgnoreCase));
+            if (bestEntry == null)
             {
-                try { Directory.Delete(tempDir, true); } catch { }
+                bestEntry = imageEntries.OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase).First();
             }
+
+            string? dir = Path.GetDirectoryName(outputFilePath);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            using (var fs = File.Create(outputFilePath))
+            {
+                bestEntry.WriteTo(fs);
+            }
+
+            return outputFilePath;
         }
     }
 
