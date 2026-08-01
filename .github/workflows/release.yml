@@ -109,6 +109,14 @@ jobs:
       - name: Ad-hoc Sign InkTag.app
         run: codesign --force --deep -s - InkTag.app
 
+      - name: Install Velopack vpk tool
+        run: dotnet tool install -g vpk
+
+      - name: Pack macOS Release with Velopack
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          vpk pack --packId InkTagDesktop --packVersion $VERSION --packDir InkTag.app --mainExe Contents/MacOS/InkTag.Gui --icon InkTag.app/Contents/Resources/InkTag.icns -o releases-osx
+
       - name: Install create-dmg
         run: HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 brew install create-dmg
 
@@ -131,6 +139,7 @@ jobs:
           path: |
             InkTag-macOS-arm64.dmg
             InkTag-Mcp-macOS-arm64.zip
+            releases-osx/*
           if-no-files-found: error
 
   build-linux:
