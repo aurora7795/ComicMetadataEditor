@@ -12,7 +12,7 @@
       <Image Source="avares://InkTag.Gui/Assets/inktag.png" Width="80" Height="80" VerticalAlignment="Top"/>
       <StackPanel Spacing="6" VerticalAlignment="Top">
         <TextBlock Text="InkTag Desktop" FontSize="20" FontWeight="Bold" Foreground="White"/>
-        <TextBlock Text="Version 0.2.2" FontSize="13" Foreground="#4EC9B0" FontWeight="SemiBold"/>
+        <TextBlock Text="Version 0.2.3" FontSize="13" Foreground="#4EC9B0" FontWeight="SemiBold"/>
         <TextBlock Text="Bulk ComicInfo.xml metadata editor, CLI &amp; MCP tool suite." 
                    TextWrapping="Wrap" FontSize="12" Foreground="#D4D4D4" Margin="0,4,0,0"/>
         <TextBlock Text="Developed with Google Antigravity" FontSize="11" Foreground="#808080" Margin="0,2,0,0"/>
