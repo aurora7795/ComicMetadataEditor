@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="InkTag.Gui.Views.AboutWindow"
+        Title="About InkTag Desktop"
+        Width="440" Height="250"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        RequestedThemeVariant="Dark"
+        Background="#1E1E1E">
+  <Grid RowDefinitions="*, Auto" Margin="25">
+    <StackPanel Orientation="Horizontal" Spacing="20" Grid.Row="0">
+      <Image Source="avares://InkTag.Gui/Assets/inktag.png" Width="80" Height="80" VerticalAlignment="Top"/>
+      <StackPanel Spacing="6" VerticalAlignment="Top">
+        <TextBlock Text="InkTag Desktop" FontSize="20" FontWeight="Bold" Foreground="White"/>
+        <TextBlock Text="Version 0.1.8" FontSize="13" Foreground="#4EC9B0" FontWeight="SemiBold"/>
+        <TextBlock Text="Bulk ComicInfo.xml metadata editor, CLI &amp; MCP tool suite." 
+                   TextWrapping="Wrap" FontSize="12" Foreground="#D4D4D4" Margin="0,4,0,0"/>
+        <TextBlock Text="Developed with Google Antigravity" FontSize="11" Foreground="#808080" Margin="0,2,0,0"/>
+      </StackPanel>
+    </StackPanel>
+
+    <Button Content="Close" Click="CloseClick" Grid.Row="1" HorizontalAlignment="Right" 
+            Padding="20,6" Background="#0E639C" Foreground="White" Width="90" HorizontalContentAlignment="Center"/>
+  </Grid>
+</Window>
