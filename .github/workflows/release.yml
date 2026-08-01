@@ -115,7 +115,7 @@ jobs:
       - name: Pack macOS Release with Velopack
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          vpk pack --packId InkTagDesktop --packVersion $VERSION --packDir publish/osx-arm64 --mainExe InkTag.Gui --icon packaging/inktag.png -o releases-osx
+          vpk pack --packId InkTagDesktop --packVersion $VERSION --packDir publish/osx-arm64 --mainExe InkTag.Gui --icon InkTag.app/Contents/Resources/InkTag.icns -o releases-osx
 
       - name: Install create-dmg
         run: HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 brew install create-dmg
