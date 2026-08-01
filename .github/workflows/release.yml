@@ -119,6 +119,8 @@ jobs:
           cp -r publish/osx-arm64-mcp/InkTag.Mcp InkTag.app/Contents/MacOS/InkTag.Mcp
           cp packaging/Info.plist InkTag.app/Contents/Info.plist
           cp InkTag.icns InkTag.app/Contents/Resources/InkTag.icns
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "$VERSION" > InkTag.app/Contents/Resources/sq.version
           chmod +x InkTag.app/Contents/MacOS/InkTag.Gui
           chmod +x InkTag.app/Contents/MacOS/InkTag.Mcp
 

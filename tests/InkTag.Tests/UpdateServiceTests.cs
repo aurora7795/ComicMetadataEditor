@@ -31,4 +31,11 @@ public class UpdateServiceTests
         Assert.False(success);
         Assert.True(ver == null || ver == new Version(0, 0, 0));
     }
+
+    [Fact]
+    public void IsInstalledMode_ReturnsFalseForUninstalledEnvironment()
+    {
+        bool isInstalled = UpdateService.IsInstalledMode(null);
+        Assert.False(isInstalled);
+    }
 }

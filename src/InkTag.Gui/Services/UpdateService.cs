@@ -36,7 +36,26 @@ public static class UpdateService
     private static UpdateCheckResult? _cachedPortableResult;
     private static DateTime _lastCheckTime = DateTime.MinValue;
     private static readonly TimeSpan MinCheckInterval = TimeSpan.FromMinutes(15);
-    public static readonly Version CurrentAppVersion = new(0, 4, 0);
+    public static readonly Version CurrentAppVersion = new(0, 4, 1);
+
+    /// <summary>
+    /// Checks if the application is running in installed mode (Velopack installed or macOS .app bundle).
+    /// </summary>
+    public static bool IsInstalledMode(UpdateManager? manager = null)
+    {
+        try
+        {
+            if (manager != null && manager.IsInstalled) return true;
+        }
+        catch { }
+
+        if (OperatingSystem.IsMacOS() && AppDomain.CurrentDomain.BaseDirectory.Contains(".app/Contents/"))
+        {
+            return true;
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// Checks for available application updates. Uses Velopack when installed, or queries GitHub Releases API directly in portable mode.
@@ -58,25 +77,42 @@ public static class UpdateService
         try
         {
             AppLogger.LogInfo($"Checking for updates (Current app version: {CurrentAppVersion})");
-            var source = new GithubSource(GithubRepoUrl, null, false);
-            var manager = new UpdateManager(source);
 
-            if (manager.IsInstalled)
+            UpdateManager? manager = null;
+            try
             {
-                AppLogger.LogInfo("Application is running in Velopack installed mode. Querying Velopack manager...");
-                _cachedUpdateInfo = await manager.CheckForUpdatesAsync();
-                _lastCheckTime = DateTime.UtcNow;
+                var source = new GithubSource(GithubRepoUrl, null, false);
+                manager = new UpdateManager(source);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.LogInfo($"Velopack initialization notice ({ex.Message}). Operating in portable mode.");
+            }
 
-                if (_cachedUpdateInfo != null)
+            if (manager != null && IsInstalledMode(manager))
+            {
+                try
                 {
-                    string targetVer = _cachedUpdateInfo.TargetFullRelease.Version.ToString();
-                    AppLogger.LogInfo($"Velopack update check completed successfully: New version found ({targetVer}).");
-                    return new UpdateCheckResult(UpdateStatusKind.UpdateAvailable, _cachedUpdateInfo, $"New update available! ({targetVer})");
+                    AppLogger.LogInfo("Application is running in installed / .app mode. Querying Velopack manager...");
+                    _cachedUpdateInfo = await manager.CheckForUpdatesAsync();
+                    _lastCheckTime = DateTime.UtcNow;
+
+                    if (_cachedUpdateInfo != null)
+                    {
+                        string targetVer = _cachedUpdateInfo.TargetFullRelease.Version.ToString();
+                        AppLogger.LogInfo($"Velopack update check completed successfully: New version found ({targetVer}).");
+                        return new UpdateCheckResult(UpdateStatusKind.UpdateAvailable, _cachedUpdateInfo, $"New update available! ({targetVer})");
+                    }
+                    else
+                    {
+                        AppLogger.LogInfo("Velopack update check completed: Application is up to date.");
+                        return new UpdateCheckResult(UpdateStatusKind.UpToDate, null, "InkTag Desktop is up to date.");
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    AppLogger.LogInfo("Velopack update check completed: Application is up to date.");
-                    return new UpdateCheckResult(UpdateStatusKind.UpToDate, null, "InkTag Desktop is up to date.");
+                    AppLogger.LogWarning($"Velopack reported error ({ex.Message}). Falling back to GitHub Releases API...");
+                    return await CheckGitHubReleasesFallbackAsync();
                 }
             }
             else
@@ -148,22 +184,33 @@ public static class UpdateService
     {
         try
         {
-            var source = new GithubSource(GithubRepoUrl, null, false);
-            var manager = new UpdateManager(source);
+            UpdateManager? manager = null;
+            try
+            {
+                var source = new GithubSource(GithubRepoUrl, null, false);
+                manager = new UpdateManager(source);
+            }
+            catch { }
 
-            if (manager.IsInstalled && updateInfo != null)
+            if (updateInfo != null && manager != null && IsInstalledMode(manager))
             {
-                AppLogger.LogInfo($"Starting Velopack update download for version: {updateInfo.TargetFullRelease.Version}");
-                await manager.DownloadUpdatesAsync(updateInfo, progress);
-                AppLogger.LogInfo("Updates downloaded successfully. Applying update and restarting...");
-                manager.ApplyUpdatesAndRestart(updateInfo);
+                try
+                {
+                    AppLogger.LogInfo($"Starting Velopack update download for version: {updateInfo.TargetFullRelease.Version}");
+                    await manager.DownloadUpdatesAsync(updateInfo, progress);
+                    AppLogger.LogInfo("Updates downloaded successfully. Applying update and restarting...");
+                    manager.ApplyUpdatesAndRestart(updateInfo);
+                    return;
+                }
+                catch (Exception velopackEx)
+                {
+                    AppLogger.LogWarning($"Velopack in-place update failed ({velopackEx.Message}). Falling back to browser release URL...");
+                }
             }
-            else
-            {
-                string url = releaseUrl ?? $"{GithubRepoUrl}/releases/latest";
-                AppLogger.LogInfo($"Opening GitHub Release page in browser: {url}");
-                OpenUrlInBrowser(url);
-            }
+
+            string url = releaseUrl ?? $"{GithubRepoUrl}/releases/latest";
+            AppLogger.LogInfo($"Opening GitHub Release page in browser: {url}");
+            OpenUrlInBrowser(url);
         }
         catch (Exception ex)
         {
