@@ -8,7 +8,8 @@ The project contains a core domain library (`InkTag.Core`), an AI-agent-friendly
 
 ## 🚀 Key Features
 
-* **Dual-Format Processing:** Supports reading both `.cbz` (ZIP-based) and `.cbr` (RAR/RAR-like) archives.
+* **Dual-Format Processing:** Supports reading both `.cbz` (ZIP-based) and `.cbr` (RAR/RAR-like) archives using random-access `ArchiveFactory.OpenArchive()`.
+* **Velopack Auto-Updater:** Cross-platform silent background updates and delta patches directly integrated into **InkTag Desktop** via GitHub Releases.
 * **AI Agent Native:** Built-in Model Context Protocol (MCP) server (`InkTag.Mcp`) over `stdio` and structured CLI (`InkTag.Cli`) with `--json` output mode and `--dry-run` safety checks.
 * **Multimodal Cover Extraction:** Extracts front cover art for visual LLMs (Gemini, Claude, GPT-4o) to visually inspect titles, creators, and issue numbers.
 * **Dynamic JSON Patching:** Mutate metadata via JSON strings without compiling C# lambdas.
@@ -140,8 +141,11 @@ string? coverPath = editor.ExtractCoverImage("/path/to/comic.cbz", "/tmp/cover.j
 
 ## ⚙️ Technical Details & Design Choices
 
-### Upgraded Archive Handler
-Uses `SharpCompress` (`0.48.0`) to read and write archives securely against directory traversal vulnerabilities.
+### Upgraded Random-Access Archive Engine
+Uses `SharpCompress` (`0.48.0`) with `ArchiveFactory.OpenArchive()` to parse archive structures via random-access entry streams instead of linear readers. This guarantees full compatibility with `.cbr` (RAR v4 / RAR v5) archives and non-standard or streamed `.cbz` files while preventing directory traversal vulnerabilities.
+
+### Cross-Platform Auto-Updating
+Integrates `Velopack` (v1.2.0) into **InkTag Desktop**, providing rate-limited update polling against GitHub Releases, background delta downloading, and seamless binary swapping on Windows (`.exe` setup), macOS (`.app`/`.pkg`), and Linux (`.AppImage`).
 
 ### Atomic-Like File Swapping
 1. Contents extracted to unique GUID temporary folder.
@@ -156,8 +160,9 @@ Uses `SharpCompress` (`0.48.0`) to read and write archives securely against dire
 
 ### Completed Milestones
 * **[x] Fix XSD validation edge case:** Handled gracefully on missing metadata files.
-* **[x] Complete Avalonia Desktop App:** Implemented modern spreadsheet grid, side panels, lazy-loaded cover thumbs, validation, find-replace, and safe background saving.
-* **[x] Make Library AI-Agent Ready:** Added stdio MCP server, structured `--json` CLI subcommands, dynamic JSON patch API, cover art extraction, and agent skill package (`.agents/skills/comic-metadata-curator/`).
+* **[x] Complete Avalonia Desktop App (InkTag Desktop):** Implemented modern spreadsheet grid, side panels, lazy-loaded cover thumbs, validation, find-replace, and safe background saving.
+* **[x] Make Library AI-Agent Ready:** Added stdio MCP server, single-file bundling, structured `--json` CLI subcommands, dynamic JSON patch API, cover art extraction, and agent skill package (`.agents/skills/comic-metadata-curator/`).
+* **[x] Velopack Auto-Updater & CI/CD Pipelines:** Automated cross-platform GitHub Actions workflows producing Windows installers (`vpk`), macOS `.dmg`, Linux `.AppImage`, and standalone MCP binaries with silent update support.
 * **[x] Project Restructuring:** Renamed solution to **InkTag** with clean `src/` and `tests/` architecture (`InkTag.Core`, `InkTag.Cli`, `InkTag.Mcp`, `InkTag.Gui`, `InkTag.Tests`).
 
 ### Upcoming Milestones
@@ -165,7 +170,6 @@ Uses `SharpCompress` (`0.48.0`) to read and write archives securely against dire
 #### 📦 Distribution & Packaging
 * **[ ] NuGet Package Publishing:** Publish core library (`InkTag.Core`) to [NuGet.org](https://www.nuget.org).
 * **[ ] Global .NET Tool:** Package `InkTag.Mcp` as a global .NET tool (`dotnet tool install -g InkTag.Mcp`).
-* **[ ] Pre-Compiled Binary Releases:** Add GitHub Actions CI/CD to auto-generate standalone executables (`.exe`, Linux AppImage/binary, macOS DMG/binary).
 
 #### 🤖 AI Ecosystem & MCP Discoverability
 * **[ ] MCP Registry Indexing:** Submit MCP server to official `modelcontextprotocol/servers`, Smithery.ai, Glama.ai, and `mcp.so`.
