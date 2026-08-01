@@ -36,7 +36,7 @@ public static class UpdateService
     private static UpdateCheckResult? _cachedPortableResult;
     private static DateTime _lastCheckTime = DateTime.MinValue;
     private static readonly TimeSpan MinCheckInterval = TimeSpan.FromMinutes(15);
-    public static readonly Version CurrentAppVersion = new(0, 3, 1);
+    public static readonly Version CurrentAppVersion = new(0, 4, 0);
 
     /// <summary>
     /// Checks for available application updates. Uses Velopack when installed, or queries GitHub Releases API directly in portable mode.

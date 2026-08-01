@@ -67,6 +67,50 @@ public partial class MainWindow : Window
         }
     }
 
+    private void SelectAll_Click(object? sender, RoutedEventArgs e)
+    {
+        ComicsGrid.SelectAll();
+    }
+
+    private void ClearSelection_Click(object? sender, RoutedEventArgs e)
+    {
+        ComicsGrid.SelectedItems.Clear();
+    }
+
+    private void OpenAbout_Click(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new AboutWindow();
+        dialog.ShowDialog(this);
+    }
+
+    private void Exit_Click(object? sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void NativeOpenFolder_Click(object? sender, EventArgs e) => OpenFolder_Click(sender, new RoutedEventArgs());
+    private async void NativeSaveAll_Click(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm) await vm.SaveAllCommand.ExecuteAsync(null);
+    }
+    private void NativeExportCsv_Click(object? sender, EventArgs e) => ExportCsv_Click(sender, new RoutedEventArgs());
+    private void NativeExit_Click(object? sender, EventArgs e) => Close();
+    private void NativeSelectAll_Click(object? sender, EventArgs e) => SelectAll_Click(sender, new RoutedEventArgs());
+    private void NativeClearSelection_Click(object? sender, EventArgs e) => ClearSelection_Click(sender, new RoutedEventArgs());
+    private async void NativeRefreshGrid_Click(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm) await vm.RefreshGridCommand.ExecuteAsync(null);
+    }
+    private void NativeOpenLogs_Click(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm) vm.OpenLogsCommand.Execute(null);
+    }
+    private async void NativeCheckForUpdates_Click(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm) await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+    }
+    private void NativeAbout_Click(object? sender, EventArgs e) => OpenAbout_Click(sender, new RoutedEventArgs());
+
     private void DataGrid_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is DataGrid grid && DataContext is MainWindowViewModel vm)
@@ -79,7 +123,6 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainWindowViewModel vm && vm.HasDirtyItems)
         {
-            // Cancel closing immediately to await the dialog window asynchronously
             e.Cancel = true;
 
             var dialog = new PromptWindow();
@@ -88,10 +131,8 @@ public partial class MainWindow : Window
             if (dialog.Result == PromptWindow.PromptResult.Save)
             {
                 await vm.SaveAllCommand.ExecuteAsync(null);
-                // If saved successfully with no remaining failures, proceed to close
                 if (!vm.SaveFailures.Any())
                 {
-                    // Mark all clean to prevent entering this block again
                     foreach (var item in vm.Comics)
                     {
                         item.IsDirty = false;
@@ -101,14 +142,12 @@ public partial class MainWindow : Window
             }
             else if (dialog.Result == PromptWindow.PromptResult.Discard)
             {
-                // Mark all clean and close
                 foreach (var item in vm.Comics)
                 {
                     item.IsDirty = false;
                 }
                 Close();
             }
-            // If PromptResult is Cancel, do nothing (closing remains cancelled)
         }
         else
         {

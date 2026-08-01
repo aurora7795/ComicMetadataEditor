@@ -43,6 +43,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isRecursive;
 
     [ObservableProperty]
+    private bool _isInspectorVisible = true;
+
+    [ObservableProperty]
     private ObservableCollection<ComicItemViewModel> _comics = new();
 
     private ComicItemViewModel? _activeComic;
@@ -420,5 +423,20 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         AppLogger.LogInfo("User requested opening log directory from UI.");
         AppLogger.OpenLogFolder();
+    }
+
+    [RelayCommand]
+    public async Task RefreshGridAsync()
+    {
+        if (!string.IsNullOrEmpty(SelectedDirectory) && System.IO.Directory.Exists(SelectedDirectory))
+        {
+            await LoadDirectoryCommand.ExecuteAsync(null);
+        }
+    }
+
+    [RelayCommand]
+    public void ToggleInspector()
+    {
+        IsInspectorVisible = !IsInspectorVisible;
     }
 }

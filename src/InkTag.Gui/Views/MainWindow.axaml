@@ -14,41 +14,90 @@
     <conv:IsDirtyToBrushConverter x:Key="IsDirtyToBrushConverter"/>
   </Window.Resources>
 
+  <NativeMenu.Menu>
+    <NativeMenu>
+      <NativeMenuItem Header="File">
+        <NativeMenu>
+          <NativeMenuItem Header="Open Folder..." Gesture="Ctrl+O" Click="NativeOpenFolder_Click"/>
+          <NativeMenuItem Header="Save All" Gesture="Ctrl+S" Click="NativeSaveAll_Click"/>
+          <NativeMenuItem Header="Export CSV..." Click="NativeExportCsv_Click"/>
+          <NativeMenuItemSeparator/>
+          <NativeMenuItem Header="Exit" Gesture="Ctrl+Q" Click="NativeExit_Click"/>
+        </NativeMenu>
+      </NativeMenuItem>
+      <NativeMenuItem Header="Edit">
+        <NativeMenu>
+          <NativeMenuItem Header="Select All" Gesture="Ctrl+A" Click="NativeSelectAll_Click"/>
+          <NativeMenuItem Header="Clear Selection" Click="NativeClearSelection_Click"/>
+        </NativeMenu>
+      </NativeMenuItem>
+      <NativeMenuItem Header="View">
+        <NativeMenu>
+          <NativeMenuItem Header="Refresh Grid" Gesture="F5" Click="NativeRefreshGrid_Click"/>
+        </NativeMenu>
+      </NativeMenuItem>
+      <NativeMenuItem Header="Tools">
+        <NativeMenu>
+          <NativeMenuItem Header="Open Logs Directory" Click="NativeOpenLogs_Click"/>
+        </NativeMenu>
+      </NativeMenuItem>
+      <NativeMenuItem Header="Help">
+        <NativeMenu>
+          <NativeMenuItem Header="Check for Updates" Click="NativeCheckForUpdates_Click"/>
+          <NativeMenuItem Header="About InkTag Desktop" Click="NativeAbout_Click"/>
+        </NativeMenu>
+      </NativeMenuItem>
+    </NativeMenu>
+  </NativeMenu.Menu>
+
   <Grid RowDefinitions="Auto, *, Auto">
     
-    <!-- Top Toolbar -->
-    <Border Grid.Row="0" Background="#252526" BorderBrush="#3F3F46" BorderThickness="0,0,0,1" Padding="10">
-      <Grid ColumnDefinitions="Auto, Auto, Auto, Auto, *, Auto">
-        <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="0">
-          <Button Content="Open Folder" Click="OpenFolder_Click" Padding="15,6" Background="#0E639C" Foreground="White" HotKey="Ctrl+O"/>
-          <CheckBox Content="Scan recursively" IsChecked="{Binding IsRecursive}" VerticalAlignment="Center" Margin="5,0,0,0"/>
-        </StackPanel>
-        
-        <Separator Grid.Column="1" Width="1" Margin="15,0" Background="#3F3F46" VerticalAlignment="Stretch"/>
+    <!-- Top MenuBar -->
+    <Menu Grid.Row="0" Background="#252526" BorderBrush="#3F3F46" BorderThickness="0,0,0,1">
+      <!-- File Menu -->
+      <MenuItem Header="_File">
+        <MenuItem Header="_Open Folder..." InputGesture="Ctrl+O" Click="OpenFolder_Click"/>
+        <MenuItem Header="_Save All" InputGesture="Ctrl+S" Command="{Binding SaveAllCommand}"/>
+        <MenuItem Header="_Export CSV..." Click="ExportCsv_Click"/>
+        <Separator/>
+        <MenuItem Header="E_xit" InputGesture="Ctrl+Q" Click="Exit_Click"/>
+      </MenuItem>
 
-        <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="2">
-          <Button Content="Save All" Command="{Binding SaveAllCommand}" Padding="15,6" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1" HotKey="Ctrl+S"/>
-          <Button Content="Export CSV" Click="ExportCsv_Click" Padding="15,6" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1"/>
-        </StackPanel>
+      <!-- Edit Menu -->
+      <MenuItem Header="_Edit">
+        <MenuItem Header="Select _All" InputGesture="Ctrl+A" Click="SelectAll_Click"/>
+        <MenuItem Header="_Clear Selection" Click="ClearSelection_Click"/>
+      </MenuItem>
 
-        <Separator Grid.Column="3" Width="1" Margin="15,0" Background="#3F3F46" VerticalAlignment="Stretch"/>
+      <!-- View Menu -->
+      <MenuItem Header="_View">
+        <MenuItem Header="Scan _Recursively">
+          <MenuItem.Icon>
+            <CheckBox IsChecked="{Binding IsRecursive}" VerticalAlignment="Center"/>
+          </MenuItem.Icon>
+        </MenuItem>
+        <MenuItem Header="_Inspector Panel">
+          <MenuItem.Icon>
+            <CheckBox IsChecked="{Binding IsInspectorVisible}" VerticalAlignment="Center"/>
+          </MenuItem.Icon>
+        </MenuItem>
+        <Separator/>
+        <MenuItem Header="_Refresh Grid" InputGesture="F5" Command="{Binding RefreshGridCommand}"/>
+      </MenuItem>
 
-        <!-- Update Controls -->
-        <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="4">
-          <Button Content="Check for Updates" Command="{Binding CheckForUpdatesCommand}" Padding="12,6" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1"/>
-          <Button Content="Install &amp; Restart" Command="{Binding ApplyUpdateCommand}" IsVisible="{Binding IsUpdateAvailable}" Padding="12,6" Background="#28A745" Foreground="White"/>
-          <Button Content="Open Logs" Command="{Binding OpenLogsCommand}" Padding="12,6" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1" ToolTip.Tip="Open application log directory in system file manager"/>
-          <TextBlock Text="{Binding UpdateStatusText}" Foreground="#4EC9B0" VerticalAlignment="Center" FontSize="12" Margin="5,0,0,0"/>
-        </StackPanel>
+      <!-- Tools Menu -->
+      <MenuItem Header="_Tools">
+        <MenuItem Header="Open _Logs Directory" Command="{Binding OpenLogsCommand}"/>
+      </MenuItem>
 
-        <!-- Progress Tracker -->
-        <StackPanel Orientation="Horizontal" Spacing="15" Grid.Column="5" HorizontalAlignment="Right" VerticalAlignment="Center">
-          <TextBlock Text="{Binding ProgressText}" Foreground="#D4D4D4" VerticalAlignment="Center" FontSize="12"/>
-          <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Width="150" Height="10" 
-                       IsVisible="{Binding !!ProgressValue}" VerticalAlignment="Center"/>
-        </StackPanel>
-      </Grid>
-    </Border>
+      <!-- Help Menu -->
+      <MenuItem Header="_Help">
+        <MenuItem Header="_Check for Updates" Command="{Binding CheckForUpdatesCommand}"/>
+        <MenuItem Header="Install &amp; Restart Update" Command="{Binding ApplyUpdateCommand}" IsVisible="{Binding IsUpdateAvailable}"/>
+        <Separator/>
+        <MenuItem Header="_About InkTag Desktop" Click="OpenAbout_Click"/>
+      </MenuItem>
+    </Menu>
 
     <!-- Main Workspace Split Area -->
     <Grid Grid.Row="1" ColumnDefinitions="*, 350">
@@ -64,26 +113,23 @@
               <Setter Property="Background" Value="{Binding IsDirty, Converter={StaticResource IsDirtyToBrushConverter}}" />
             </Style>
           </DataGrid.Styles>
-          
           <DataGrid.Columns>
-            <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" IsReadOnly="True" Width="180"/>
+            <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" IsReadOnly="True" Width="200"/>
             <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="180"/>
-            <DataGridTextColumn Header="Series" Binding="{Binding Series}" Width="150"/>
-            <DataGridTextColumn Header="Number" Binding="{Binding Number}" Width="80"/>
+            <DataGridTextColumn Header="Series" Binding="{Binding Series}" Width="160"/>
+            <DataGridTextColumn Header="Issue #" Binding="{Binding Number}" Width="80"/>
             <DataGridTextColumn Header="Volume" Binding="{Binding Volume}" Width="80"/>
-            <DataGridTextColumn Header="Publisher" Binding="{Binding Publisher}" Width="120"/>
-            <DataGridTextColumn Header="Year" Binding="{Binding Year}" Width="80"/>
+            <DataGridTextColumn Header="Publisher" Binding="{Binding Publisher}" Width="140"/>
+            <DataGridTextColumn Header="Year" Binding="{Binding Year}" Width="70"/>
+            <DataGridTextColumn Header="Writer" Binding="{Binding Writer}" Width="140"/>
             <DataGridTextColumn Header="Genre" Binding="{Binding Genre}" Width="120"/>
-            <DataGridTextColumn Header="Tags" Binding="{Binding Tags}" Width="150"/>
-            <DataGridTextColumn Header="Writer" Binding="{Binding Writer}" Width="150"/>
-            <DataGridTextColumn Header="Language" Binding="{Binding LanguageISO}" Width="80"/>
             <DataGridCheckBoxColumn Header="Manga (RTL)" Binding="{Binding Manga}" Width="100"/>
           </DataGrid.Columns>
         </DataGrid>
       </Grid>
 
       <!-- Right Column: Details & Bulk Tools Sidebar -->
-      <Border Grid.Column="1" Background="#252526" BorderBrush="#3F3F46" BorderThickness="1,0,0,0" Padding="15">
+      <Border Grid.Column="1" Background="#252526" BorderBrush="#3F3F46" BorderThickness="1,0,0,0" Padding="15" IsVisible="{Binding IsInspectorVisible}">
         <TabControl Theme="{StaticResource {x:Type TabControl}}">
           
           <!-- Tab 1: Single Comic Inspector -->
@@ -183,18 +229,17 @@
               <!-- Manga -->
               <Grid ColumnDefinitions="Auto, *">
                 <CheckBox IsChecked="{Binding BulkMangaEnabled}" Grid.Column="0" VerticalAlignment="Center"/>
-                <CheckBox Content="Manga (RTL)" IsChecked="{Binding BulkManga}" IsEnabled="{Binding BulkMangaEnabled}" Grid.Column="1" Margin="5,0,0,0"/>
+                <CheckBox Content="Manga (Read Right-to-Left)" IsChecked="{Binding BulkManga}" IsEnabled="{Binding BulkMangaEnabled}" Grid.Column="1" VerticalAlignment="Center"/>
               </Grid>
 
-              <Button Content="Apply to Selected" Command="{Binding BulkApplyCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,15,0,0" Padding="10" Background="#0E639C" Foreground="White"/>
-              <TextBlock Text="Tip: If no rows are selected, bulk apply modifies all loaded items." Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0"/>
+              <Button Content="Apply to Selected Rows" Command="{Binding BulkApplyCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,15,0,0" Padding="10" Background="#0E639C" Foreground="White"/>
             </StackPanel>
           </TabItem>
-          
-          <!-- Tab 3: Find and Replace -->
+
+          <!-- Tab 3: Batch Find & Replace -->
           <TabItem Header="Find &amp; Replace" FontSize="13">
             <StackPanel Spacing="12" Margin="0,15,0,0">
-              <TextBlock Text="Find and replace text in fields:" FontWeight="Bold" FontSize="12" Margin="0,0,0,5"/>
+              <TextBlock Text="Find &amp; Replace Text" FontWeight="Bold" FontSize="12"/>
 
               <TextBlock Text="Target Column" Foreground="Gray" FontSize="11"/>
               <ComboBox ItemsSource="{Binding ReplaceColumns}" SelectedItem="{Binding SelectedReplaceColumn}" HorizontalAlignment="Stretch" Background="#1E1E1E"/>
@@ -215,14 +260,27 @@
     </Grid>
 
     <!-- Bottom Status Bar -->
-    <Border Grid.Row="2" Background="#007ACC" Padding="6,4">
-      <Grid ColumnDefinitions="*, Auto">
-        <StackPanel Orientation="Horizontal" Spacing="15" Grid.Column="0">
+    <Border Grid.Row="2" Background="#007ACC" Padding="8,4">
+      <Grid ColumnDefinitions="Auto, Auto, *, Auto">
+        <StackPanel Orientation="Horizontal" Spacing="12" Grid.Column="0" VerticalAlignment="Center">
           <TextBlock Text="Status: Running" Foreground="White" FontSize="12" FontWeight="SemiBold"/>
           <Separator Width="1" Background="#55FFFFFF" Height="10" VerticalAlignment="Center"/>
           <TextBlock Text="{Binding Comics.Count, StringFormat='{}{0} files loaded'}" Foreground="White" FontSize="12"/>
         </StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="1">
+
+        <!-- Progress Tracker in Status Bar -->
+        <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="1" VerticalAlignment="Center" Margin="15,0,0,0">
+          <Separator Width="1" Background="#55FFFFFF" Height="10" VerticalAlignment="Center" IsVisible="{Binding !!ProgressValue}"/>
+          <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Width="120" Height="10" 
+                       IsVisible="{Binding !!ProgressValue}" VerticalAlignment="Center"/>
+          <TextBlock Text="{Binding ProgressText}" Foreground="#E0F2FE" VerticalAlignment="Center" FontSize="11"/>
+        </StackPanel>
+
+        <!-- Update Status Text -->
+        <TextBlock Grid.Column="2" Text="{Binding UpdateStatusText}" Foreground="#E0F2FE" VerticalAlignment="Center" FontSize="11" HorizontalAlignment="Right" Margin="0,0,15,0"/>
+
+        <!-- Version Label -->
+        <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="3" VerticalAlignment="Center">
           <TextBlock Text="{Binding AppVersionText}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
         </StackPanel>
       </Grid>
