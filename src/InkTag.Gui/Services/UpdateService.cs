@@ -29,7 +29,7 @@ public class UpdateService
 
     /// <summary>
     /// Checks for available application updates via Velopack and GitHub Releases.
-    /// Handles local dev runs and GitHub API rate-limiting gracefully while logging full diagnostic details.
+    /// Queries GitHub Releases API across all platforms and logs diagnostic details.
     /// </summary>
     public async Task<UpdateCheckResult> CheckForUpdatesAsync(bool forceCheck = false)
     {
@@ -45,13 +45,7 @@ public class UpdateService
             var source = new GithubSource(GithubRepoUrl, null, false);
             var manager = new UpdateManager(source);
 
-            if (!manager.IsInstalled)
-            {
-                AppLogger.LogWarning("Update check skipped: InkTag is running in uninstalled mode (dev/debug build or standalone binary). Updates require a Velopack installation.");
-                return new UpdateCheckResult(UpdateStatusKind.UninstalledDevBuild, null, "Update check unavailable (Uninstalled dev build)");
-            }
-
-            AppLogger.LogInfo("Querying Velopack for latest release...");
+            AppLogger.LogInfo($"Querying Velopack for latest release (IsInstalled: {manager.IsInstalled})...");
             _cachedUpdateInfo = await manager.CheckForUpdatesAsync();
             _lastCheckTime = DateTime.UtcNow;
 
@@ -84,12 +78,6 @@ public class UpdateService
             AppLogger.LogInfo($"Starting update download and installation for version: {updateInfo.TargetFullRelease.Version}");
             var source = new GithubSource(GithubRepoUrl, null, false);
             var manager = new UpdateManager(source);
-
-            if (!manager.IsInstalled)
-            {
-                AppLogger.LogWarning("Cannot apply updates in uninstalled mode.");
-                throw new InvalidOperationException("Application is not running from a Velopack installation.");
-            }
 
             await manager.DownloadUpdatesAsync(updateInfo, progress);
             AppLogger.LogInfo("Updates downloaded successfully. Applying update and restarting...");
