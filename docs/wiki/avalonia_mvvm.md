@@ -8,9 +8,9 @@ This page outlines the MVVM framework and code blueprints for the `InkTag.Gui` p
 
 The desktop client follows the standard MVVM design pattern:
 
-* **Views** (`MainWindow.axaml`, `ErrorSummaryWindow.axaml`, `PromptWindow.axaml`): Declares the layout structure, modal close guards, and error display dialogs. Bindings hook UI element properties directly to ViewModel properties.
+* **Views** (`MainWindow.axaml`, `AboutWindow.axaml`, `ThirdPartyLicensesWindow.axaml`, `ErrorSummaryWindow.axaml`, `PromptWindow.axaml`): Declares the layout structure, cross-platform MenuBar & native macOS menu integration (`NativeMenu.Menu`), modal close guards, and error display dialogs. Bindings hook UI element properties directly to ViewModel properties.
 * **ViewModels** (`MainWindowViewModel`, `ComicItemViewModel`): Holds the state of the UI and handles execution commands. Uses `CommunityToolkit.Mvvm` source generators (`[ObservableProperty]` and `[RelayCommand]`).
-* **Services** (`ComicScannerService`, `ArchiveCoverService`, `UpdateService`): Background directory scanner, async cover image loader with Skia/Avalonia bitmap caching, and Velopack cross-platform auto-updater manager.
+* **Services** (`ComicScannerService`, `ArchiveCoverService`, `UpdateService`): Background directory scanner, async cover image loader with size-capped LRU bitmap disposal, and dual-mode updater manager (Velopack in-place + direct GitHub API fallback for portable builds).
 * **Converters** (`IsDirtyToBrushConverter.cs`): Binds cell/row background colors to indicate unsaved changes visually inside the DataGrid.
 
 ---
@@ -29,7 +29,7 @@ The desktop client follows the standard MVVM design pattern:
 | `Year` | `int?` | `[Range(1000, 9999)]` | Must be a 4-digit number |
 | `Month` | `int?` | `[Range(1, 12)]` | Must be between 1 and 12 |
 | `Volume` | `int?` | `[Range(0, int.MaxValue)]` | Must be positive |
-| `Manga` | `bool` | *None* | Checked maps to `"Yes"`, Unchecked to `"No"` |
+| `Manga` | `bool` | *None* | Checked maps to `MangaDirection.Yes`, Unchecked to `MangaDirection.No` |
 
 * **Validation Flow**:
   * Setters must invoke `ValidateProperty(value, nameof(PropertyName))`.
@@ -45,8 +45,11 @@ The desktop client follows the standard MVVM design pattern:
   * `SaveAllCommand`: Asynchronously writes all `IsDirty` view models to disk using `InkTag.Core`'s `EditMetadata`. Disabled if `Comics` contains active validation errors (`!CanSave`).
   * `BulkApplyCommand`: Iterates selected grid items and applies sidebar-checked metadata fields.
   * `FindReplaceCommand`: Executes search-and-replace strings on selected items.
-  * `CheckForUpdatesCommand`: Asynchronously queries GitHub Releases via Velopack `UpdateService` (with rate-limiting and local dev safeguards).
-  * `ApplyUpdateCommand`: Downloads pending delta packages asynchronously and restarts the app with the new release version.
+  * `RefreshGridCommand`: Re-scans active directory (`F5`).
+  * `ToggleInspectorCommand`: Toggles visibility of the right-hand details/bulk inspector sidebar (`IsInspectorVisible`).
+  * `CheckForUpdatesCommand`: Asynchronously queries GitHub Releases via `UpdateService` (with portable mode API fallback).
+  * `ApplyUpdateCommand`: Downloads pending delta packages in-place, or launches default system browser to GitHub Release URL in portable mode.
+  * `OpenLogsCommand`: Opens log directory in system file manager.
 
 ---
 
@@ -56,8 +59,16 @@ The main interface is split into three main regions:
 
 ```text
 +----------------------------------------------------------------------------------------------------------------+
-|  Top Toolbar: [Open Folder]  [x] Scan Subfolders  [Save All]  [Export CSV] | [Check for Updates] [Install & Restart]|
+|  Top MenuBar: File  Edit  View  Tools  Help  (NativeMenu on macOS)                                            |
 +--------------------------------------------------+-------------------------------------------------------------+
+|                                                  | Right Inspector Panel (Collapsible via View Menu):           |
+| Left Column: Spreadsheet DataGrid                |  - Tab 1: Details (Cover Art, Metadata Editor)              |
+| (Resizable columns, row dirty status indicators) |  - Tab 2: Bulk Edit (Batch Metadata Multi-Apply)            |
+|                                                  |  - Tab 3: Find & Replace (Batch String Substitution)        |
++--------------------------------------------------+-------------------------------------------------------------+
+| Bottom Status Bar: Status: Running | X files loaded | [ProgressBar] ProgressText | UpdateStatus | InkTag v0.4.0  |
++----------------------------------------------------------------------------------------------------------------+
+```
 |                                                  |  Sidebar (TabControl):                                      |
 |                                                  |  +---------------------------+                              |
 |                                                  |  | Active Details | Bulk Edit|                              |

@@ -9,12 +9,13 @@ The project contains a core domain library (`InkTag.Core`), an AI-agent-friendly
 ## 🚀 Key Features
 
 * **Dual-Format Processing:** Supports reading both `.cbz` (ZIP-based) and `.cbr` (RAR/RAR-like) archives using random-access `ArchiveFactory.OpenArchive()`.
-* **Velopack Auto-Updater:** Cross-platform silent background updates and delta patches directly integrated into **InkTag Desktop** via GitHub Releases.
+* **Cross-Platform MenuBar & NativeMenu:** Full `File`, `Edit`, `View`, `Tools`, and `Help` navigation with hotkeys (`Ctrl+O`, `Ctrl+S`, `F5`, `Ctrl+Q`) and native macOS screen top MenuBar integration.
+* **Velopack Auto-Updater & Fallback:** Cross-platform auto-updates via Velopack with direct GitHub API release checking fallback for portable builds (Linux AppImages / macOS DMGs).
 * **AI Agent Native:** Built-in Model Context Protocol (MCP) server (`InkTag.Mcp`) over `stdio` and structured CLI (`InkTag.Cli`) with `--json` output mode and `--dry-run` safety checks.
 * **Multimodal Cover Extraction:** Extracts front cover art for visual LLMs (Gemini, Claude, GPT-4o) to visually inspect titles, creators, and issue numbers.
 * **Dynamic JSON Patching:** Mutate metadata via JSON strings without compiling C# lambdas.
 * **Safe Replacement Strategy:** Minimizes risk of data loss by repacking to a temporary archive, validating readability, making backups, and swapping target paths on success.
-* **Metadata Schema Validation:** Validates `ComicInfo.xml` files against official XML (`ComicInfo.xsd`) and exports JSON Schema specifications.
+* **Open Source Attributions:** Full license attributions for third-party tools ([THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)).
 
 ---
 
