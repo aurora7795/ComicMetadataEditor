@@ -1,9 +1,24 @@
 using System;
 using System.Threading.Tasks;
+using InkTag.Core.Logging;
 using Velopack;
 using Velopack.Sources;
 
 namespace InkTag.Gui.Services;
+
+public enum UpdateStatusKind
+{
+    UpdateAvailable,
+    UpToDate,
+    UninstalledDevBuild,
+    Failed
+}
+
+public record UpdateCheckResult(
+    UpdateStatusKind Kind,
+    UpdateInfo? UpdateInfo = null,
+    string Message = ""
+);
 
 public class UpdateService
 {
@@ -14,36 +29,48 @@ public class UpdateService
 
     /// <summary>
     /// Checks for available application updates via Velopack and GitHub Releases.
-    /// Handles local dev runs and GitHub API rate-limiting gracefully.
+    /// Handles local dev runs and GitHub API rate-limiting gracefully while logging full diagnostic details.
     /// </summary>
-    public async Task<UpdateInfo?> CheckForUpdatesAsync(bool forceCheck = false)
+    public async Task<UpdateCheckResult> CheckForUpdatesAsync(bool forceCheck = false)
     {
-        // Rate-limiting safeguard: skip check if checked recently unless forced by user button
         if (!forceCheck && _cachedUpdateInfo != null && (DateTime.UtcNow - _lastCheckTime) < MinCheckInterval)
         {
-            return _cachedUpdateInfo;
+            AppLogger.LogInfo("Update check requested within check interval; returning cached update info.");
+            return new UpdateCheckResult(UpdateStatusKind.UpdateAvailable, _cachedUpdateInfo, $"New update available! ({_cachedUpdateInfo.TargetFullRelease.Version})");
         }
 
         try
         {
+            AppLogger.LogInfo($"Checking for updates via GitHub Release source: {GithubRepoUrl}");
             var source = new GithubSource(GithubRepoUrl, null, false);
             var manager = new UpdateManager(source);
 
             if (!manager.IsInstalled)
             {
-                // Running uninstalled (e.g. dotnet run or local debug build)
-                return null;
+                AppLogger.LogWarning("Update check skipped: InkTag is running in uninstalled mode (dev/debug build or standalone binary). Updates require a Velopack installation.");
+                return new UpdateCheckResult(UpdateStatusKind.UninstalledDevBuild, null, "Update check unavailable (Uninstalled dev build)");
             }
 
+            AppLogger.LogInfo("Querying Velopack for latest release...");
             _cachedUpdateInfo = await manager.CheckForUpdatesAsync();
             _lastCheckTime = DateTime.UtcNow;
-            return _cachedUpdateInfo;
+
+            if (_cachedUpdateInfo != null)
+            {
+                string targetVer = _cachedUpdateInfo.TargetFullRelease.Version.ToString();
+                AppLogger.LogInfo($"Update check completed successfully: New version found ({targetVer}).");
+                return new UpdateCheckResult(UpdateStatusKind.UpdateAvailable, _cachedUpdateInfo, $"New update available! ({targetVer})");
+            }
+            else
+            {
+                AppLogger.LogInfo("Update check completed successfully: Application is up to date.");
+                return new UpdateCheckResult(UpdateStatusKind.UpToDate, null, "InkTag Desktop is up to date.");
+            }
         }
         catch (Exception ex)
         {
-            // Silently swallow network / API rate limit exceptions in dev/offline mode
-            System.Diagnostics.Debug.WriteLine($"Update check failed: {ex.Message}");
-            return null;
+            AppLogger.LogError("Update check failed due to exception.", ex);
+            return new UpdateCheckResult(UpdateStatusKind.Failed, null, $"Update check failed: {ex.Message}");
         }
     }
 
@@ -54,17 +81,23 @@ public class UpdateService
     {
         try
         {
+            AppLogger.LogInfo($"Starting update download and installation for version: {updateInfo.TargetFullRelease.Version}");
             var source = new GithubSource(GithubRepoUrl, null, false);
             var manager = new UpdateManager(source);
 
-            if (!manager.IsInstalled) return;
+            if (!manager.IsInstalled)
+            {
+                AppLogger.LogWarning("Cannot apply updates in uninstalled mode.");
+                throw new InvalidOperationException("Application is not running from a Velopack installation.");
+            }
 
             await manager.DownloadUpdatesAsync(updateInfo, progress);
+            AppLogger.LogInfo("Updates downloaded successfully. Applying update and restarting...");
             manager.ApplyUpdatesAndRestart(updateInfo);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to apply update: {ex.Message}");
+            AppLogger.LogError("Failed to download or apply application update.", ex);
             throw;
         }
     }

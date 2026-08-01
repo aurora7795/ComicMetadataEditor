@@ -1,5 +1,6 @@
 using System;
 using Avalonia;
+using InkTag.Core.Logging;
 using Velopack;
 
 namespace InkTag.Gui;
@@ -12,6 +13,7 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        AppLogger.Initialize();
         VelopackApp.Build().Run();
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }

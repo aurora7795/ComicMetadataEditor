@@ -13,6 +13,7 @@ using InkTag.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using InkTag.Gui.Services;
+using InkTag.Core.Logging;
 
 namespace InkTag.Gui.ViewModels;
 
@@ -372,20 +373,14 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             UpdateStatusText = "Checking for updates...";
-            _pendingUpdateInfo = await _updateService.CheckForUpdatesAsync(forceCheck: true);
-            if (_pendingUpdateInfo != null)
-            {
-                IsUpdateAvailable = true;
-                UpdateStatusText = $"New update available! ({_pendingUpdateInfo.TargetFullRelease.Version})";
-            }
-            else
-            {
-                IsUpdateAvailable = false;
-                UpdateStatusText = "InkTag Desktop is up to date.";
-            }
+            var result = await _updateService.CheckForUpdatesAsync(forceCheck: true);
+            _pendingUpdateInfo = result.UpdateInfo;
+            IsUpdateAvailable = result.Kind == UpdateStatusKind.UpdateAvailable;
+            UpdateStatusText = result.Message;
         }
         catch (Exception ex)
         {
+            AppLogger.LogError("Error in CheckForUpdatesAsync command handler.", ex);
             UpdateStatusText = $"Update check failed: {ex.Message}";
         }
     }
@@ -404,7 +399,15 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            AppLogger.LogError("Error in ApplyUpdateAsync command handler.", ex);
             UpdateStatusText = $"Failed to apply update: {ex.Message}";
         }
+    }
+
+    [RelayCommand]
+    public void OpenLogs()
+    {
+        AppLogger.LogInfo("User requested opening log directory from UI.");
+        AppLogger.OpenLogFolder();
     }
 }

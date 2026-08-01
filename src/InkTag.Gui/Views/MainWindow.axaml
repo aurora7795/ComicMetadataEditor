@@ -37,6 +37,7 @@
         <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="4">
           <Button Content="Check for Updates" Command="{Binding CheckForUpdatesCommand}" Padding="12,6" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1"/>
           <Button Content="Install &amp; Restart" Command="{Binding ApplyUpdateCommand}" IsVisible="{Binding IsUpdateAvailable}" Padding="12,6" Background="#28A745" Foreground="White"/>
+          <Button Content="Open Logs" Command="{Binding OpenLogsCommand}" Padding="12,6" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1" ToolTip.Tip="Open application log directory in system file manager"/>
           <TextBlock Text="{Binding UpdateStatusText}" Foreground="#4EC9B0" VerticalAlignment="Center" FontSize="12" Margin="5,0,0,0"/>
         </StackPanel>
 
@@ -221,7 +222,10 @@
           <Separator Width="1" Background="#55FFFFFF" Height="10" VerticalAlignment="Center"/>
           <TextBlock Text="{Binding Comics.Count, StringFormat='{}{0} files loaded'}" Foreground="White" FontSize="12"/>
         </StackPanel>
-        <TextBlock Text="InkTag Desktop UI" Foreground="White" FontSize="12" Grid.Column="1"/>
+        <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="1">
+          <Button Content="Open Logs" Command="{Binding OpenLogsCommand}" Padding="8,2" Background="#005A9E" Foreground="White" BorderThickness="0" FontSize="11" ToolTip.Tip="Open application log directory in system file manager"/>
+          <TextBlock Text="InkTag Desktop UI" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+        </StackPanel>
       </Grid>
     </Border>
 
