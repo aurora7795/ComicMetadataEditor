@@ -195,6 +195,14 @@ jobs:
             --output appimage
           mv InkTag*.AppImage InkTag-Linux-x86_64.AppImage
 
+      - name: Install Velopack vpk tool
+        run: dotnet tool install -g vpk
+
+      - name: Pack Linux Release with Velopack
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          vpk pack --packId InkTagDesktop --packVersion $VERSION --packDir publish/linux-x64 --mainExe InkTag.Gui --icon packaging/inktag.png -o releases-linux
+
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -202,6 +210,7 @@ jobs:
           path: |
             InkTag-Linux-x86_64.AppImage
             InkTag-Mcp-Linux-x86_64.tar.gz
+            releases-linux/*
           if-no-files-found: error
 
   release:
