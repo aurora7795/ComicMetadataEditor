@@ -56,3 +56,22 @@ Because comic archives are compressed zip or rar files, modifying `ComicInfo.xml
    * The `.tmp` archive is moved into the target filename slot.
    * If any step fails, the system executes a rollback, restoring the original archive from `.bak`.
    * On complete success, the `.bak` files are deleted.
+
+---
+
+## 🪵 Logging & Diagnostics
+
+InkTag includes a centralized, cross-platform thread-safe logging infrastructure (`AppLogger` in `InkTag.Core.Logging`).
+
+### Log Locations Across Platforms
+- **Linux**: `~/.local/share/InkTag/logs/InkTag.log`
+- **Windows**: `%LocalAppData%\InkTag\logs\InkTag.log`
+- **macOS**: `~/Library/Application Support/InkTag/logs/InkTag.log`
+
+Velopack auto-updater system logs are stored in the parent `InkTag` directory (e.g., `~/.local/share/InkTag/Velopack.log` on Linux).
+
+### Diagnostics & Auto-Updater Diagnostics
+- `UpdateService` logs update check requests, GitHub release queries, rate limiting status, and download progress.
+- `UpdateService.CheckForUpdatesAsync()` returns structured `UpdateCheckResult` detailing status (`UpdateAvailable`, `UpToDate`, `UninstalledDevBuild`, or `Failed`).
+- Running uninstalled/dev builds explicitly logs warnings and displays *"Update check unavailable (Uninstalled dev build)"* to prevent confusion with failed network checks.
+
