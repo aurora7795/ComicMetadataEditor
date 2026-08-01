@@ -25,6 +25,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private CancellationTokenSource? _scanCts;
     private CancellationTokenSource? _saveCts;
     private Velopack.UpdateInfo? _pendingUpdateInfo;
+    private string? _pendingReleaseUrl;
 
     [ObservableProperty]
     private string _updateStatusText = string.Empty;
@@ -373,6 +374,7 @@ public partial class MainWindowViewModel : ViewModelBase
             UpdateStatusText = "Checking for updates...";
             var result = await UpdateService.CheckForUpdatesAsync(forceCheck: true);
             _pendingUpdateInfo = result.UpdateInfo;
+            _pendingReleaseUrl = result.ReleaseUrl;
             IsUpdateAvailable = result.Kind == UpdateStatusKind.UpdateAvailable;
             UpdateStatusText = result.Message;
         }
@@ -386,11 +388,19 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     public async Task ApplyUpdateAsync()
     {
-        if (_pendingUpdateInfo == null) return;
+        if (_pendingUpdateInfo == null && string.IsNullOrEmpty(_pendingReleaseUrl)) return;
         try
         {
-            UpdateStatusText = "Downloading update...";
-            await UpdateService.DownloadAndApplyUpdateAsync(_pendingUpdateInfo, progress =>
+            if (_pendingUpdateInfo != null)
+            {
+                UpdateStatusText = "Downloading update...";
+            }
+            else
+            {
+                UpdateStatusText = "Opening GitHub Releases page...";
+            }
+
+            await UpdateService.DownloadAndApplyUpdateAsync(_pendingUpdateInfo, _pendingReleaseUrl, progress =>
             {
                 Dispatcher.UIThread.Post(() => UpdateStatusText = $"Downloading update: {progress}%");
             });
