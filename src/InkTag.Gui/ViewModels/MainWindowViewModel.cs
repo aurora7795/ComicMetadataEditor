@@ -28,6 +28,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private string? _pendingReleaseUrl;
 
     [ObservableProperty]
+    private string _appVersionText = $"InkTag Desktop v{UpdateService.CurrentAppVersion.ToString(3)}";
+
+    [ObservableProperty]
     private string _updateStatusText = string.Empty;
 
     [ObservableProperty]
