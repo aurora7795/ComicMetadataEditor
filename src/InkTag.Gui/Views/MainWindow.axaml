@@ -223,7 +223,6 @@
           <TextBlock Text="{Binding Comics.Count, StringFormat='{}{0} files loaded'}" Foreground="White" FontSize="12"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="1">
-          <Button Content="Open Logs" Command="{Binding OpenLogsCommand}" Padding="8,2" Background="#005A9E" Foreground="White" BorderThickness="0" FontSize="11" ToolTip.Tip="Open application log directory in system file manager"/>
           <TextBlock Text="{Binding AppVersionText}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
         </StackPanel>
       </Grid>
