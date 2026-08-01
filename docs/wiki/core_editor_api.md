@@ -38,7 +38,7 @@ All properties are nullable to avoid writing default XML tags when optional meta
 | `LanguageISO` | `<LanguageISO>` | `string?` | ISO language code (e.g. "en", "ja") |
 | `Format` | `<Format>` | `string?` | Publication format |
 | `BlackAndWhite` | `<BlackAndWhite>` | `string?` | `"Yes"` or `"No"` |
-| `Manga` | `<Manga>` | `string?` | `"Yes"` (right-to-left) or `"No"` |
+| `Manga` | `<Manga>` | `MangaDirection?` | Enum: `Unknown`, `No`, `Yes`, `YesAndRightToLeft` |
 | `Characters` | `<Characters>` | `string?` | Featured characters |
 | `Teams` | `<Teams>` | `string?` | Featured super teams |
 | `Locations` | `<Locations>` | `string?` | Featured story locations |

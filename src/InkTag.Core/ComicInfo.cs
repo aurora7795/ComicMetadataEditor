@@ -1,6 +1,16 @@
+using System;
+using System.Linq;
 using System.Xml.Serialization;
 
 namespace InkTag.Core;
+
+public enum MangaDirection
+{
+    Unknown,
+    No,
+    Yes,
+    YesAndRightToLeft
+}
 
 [XmlRoot("ComicInfo")]
 public class ComicInfo
@@ -16,9 +26,11 @@ public class ComicInfo
 
     [XmlElement("Count")]
     public int? Count { get; set; }
+    public bool ShouldSerializeCount() => Count.HasValue;
 
     [XmlElement("Volume")]
     public int? Volume { get; set; }
+    public bool ShouldSerializeVolume() => Volume.HasValue;
 
     [XmlElement("Summary")]
     public string? Summary { get; set; }
@@ -28,12 +40,15 @@ public class ComicInfo
 
     [XmlElement("Year")]
     public int? Year { get; set; }
+    public bool ShouldSerializeYear() => Year.HasValue;
 
     [XmlElement("Month")]
     public int? Month { get; set; }
+    public bool ShouldSerializeMonth() => Month.HasValue;
 
     [XmlElement("Day")]
     public int? Day { get; set; }
+    public bool ShouldSerializeDay() => Day.HasValue;
 
     [XmlElement("Writer")]
     public string? Writer { get; set; }
@@ -73,6 +88,7 @@ public class ComicInfo
 
     [XmlElement("PageCount")]
     public int? PageCount { get; set; }
+    public bool ShouldSerializePageCount() => PageCount.HasValue;
 
     [XmlElement("LanguageISO")]
     public string? LanguageISO { get; set; }
@@ -84,7 +100,8 @@ public class ComicInfo
     public string? BlackAndWhite { get; set; }
 
     [XmlElement("Manga")]
-    public string? Manga { get; set; } // "Yes" for right-to-left, "No" for left-to-right
+    public MangaDirection? Manga { get; set; }
+    public bool ShouldSerializeManga() => Manga.HasValue;
 
     [XmlElement("Characters")]
     public string? Characters { get; set; }
@@ -109,6 +126,32 @@ public class ComicInfo
 
     [XmlElement("Pages")]
     public PageCollection? Pages { get; set; }
+
+    /// <summary>
+    /// Creates a deep copy of this ComicInfo object.
+    /// </summary>
+    public ComicInfo Clone()
+    {
+        var copy = (ComicInfo)MemberwiseClone();
+        if (Pages?.Page != null)
+        {
+            copy.Pages = new PageCollection
+            {
+                Page = Pages.Page.Select(p => new Page
+                {
+                    Image = p.Image,
+                    Type = p.Type,
+                    DoublePage = p.DoublePage,
+                    ImageSize = p.ImageSize,
+                    Key = p.Key,
+                    Bookmark = p.Bookmark,
+                    ImageWidth = p.ImageWidth,
+                    ImageHeight = p.ImageHeight
+                }).ToArray()
+            };
+        }
+        return copy;
+    }
 }
 
 public class PageCollection

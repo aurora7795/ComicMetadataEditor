@@ -89,7 +89,7 @@ public partial class ComicItemViewModel : ObservableValidator
             Tags = _model.Tags;
             Writer = _model.Writer;
             LanguageISO = _model.LanguageISO;
-            Manga = _model.Manga == "Yes";
+            Manga = _model.Manga == MangaDirection.Yes || _model.Manga == MangaDirection.YesAndRightToLeft;
 
             ValidateAllProperties();
             IsDirty = false;
@@ -118,7 +118,7 @@ public partial class ComicItemViewModel : ObservableValidator
         target.Tags = Tags;
         target.Writer = Writer;
         target.LanguageISO = LanguageISO;
-        target.Manga = Manga ? "Yes" : "No";
+        target.Manga = Manga ? MangaDirection.Yes : MangaDirection.No;
     }
 
     public async Task LoadCoverAsync(ArchiveCoverService coverService, CancellationToken cancellationToken)

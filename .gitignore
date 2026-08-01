@@ -14,3 +14,7 @@
 ## OS artifacts
 .DS_Store
 Thumbs.db
+
+## Test & temporary folders
+temp_test_cbz/
+comicinfo/

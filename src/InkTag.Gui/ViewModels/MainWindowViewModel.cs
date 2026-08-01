@@ -21,7 +21,6 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly ComicScannerService _scannerService = new();
     private readonly ArchiveCoverService _coverService = new();
-    private readonly UpdateService _updateService = new();
     private readonly List<ComicItemViewModel> _selectedComics = new();
     private CancellationTokenSource? _scanCts;
     private CancellationTokenSource? _saveCts;
@@ -290,7 +289,6 @@ public partial class MainWindowViewModel : ViewModelBase
                     {
                         editor.EditMetadata(item.FilePath, comicInfo =>
                         {
-                            item.ApplyChangesToModel();
                             item.ApplyChangesToModel(comicInfo);
                         });
 
@@ -373,7 +371,7 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             UpdateStatusText = "Checking for updates...";
-            var result = await _updateService.CheckForUpdatesAsync(forceCheck: true);
+            var result = await UpdateService.CheckForUpdatesAsync(forceCheck: true);
             _pendingUpdateInfo = result.UpdateInfo;
             IsUpdateAvailable = result.Kind == UpdateStatusKind.UpdateAvailable;
             UpdateStatusText = result.Message;
@@ -392,7 +390,7 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             UpdateStatusText = "Downloading update...";
-            await _updateService.DownloadAndApplyUpdateAsync(_pendingUpdateInfo, progress =>
+            await UpdateService.DownloadAndApplyUpdateAsync(_pendingUpdateInfo, progress =>
             {
                 Dispatcher.UIThread.Post(() => UpdateStatusText = $"Downloading update: {progress}%");
             });

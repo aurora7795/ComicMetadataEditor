@@ -23,6 +23,9 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Run unit tests
+        run: dotnet test tests/InkTag.Tests/InkTag.Tests.csproj -c Release
+
       - name: Publish InkTag.Gui for Windows
         run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r win-x64 --self-contained true -o publish/win-x64
 
@@ -70,6 +73,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+
+      - name: Run unit tests
+        run: dotnet test tests/InkTag.Tests/InkTag.Tests.csproj -c Release
 
       - name: Publish InkTag.Gui for macOS
         run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r osx-arm64 --self-contained true -o publish/osx-arm64
@@ -167,6 +173,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+
+      - name: Run unit tests
+        run: dotnet test tests/InkTag.Tests/InkTag.Tests.csproj -c Release
 
       - name: Publish InkTag.Gui for Linux
         run: dotnet publish src/InkTag.Gui/InkTag.Gui.csproj -c Release -r linux-x64 --self-contained true -o publish/linux-x64

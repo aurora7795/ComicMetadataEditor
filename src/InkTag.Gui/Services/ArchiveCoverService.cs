@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -9,9 +9,16 @@ using SharpCompress.Archives;
 
 namespace InkTag.Gui.Services;
 
+/// <summary>
+/// Service for extracting and caching cover images from comic archives.
+/// Implements single-pass archive scanning and size-capped LRU bitmap cache eviction.
+/// </summary>
 public class ArchiveCoverService
 {
-    private readonly ConcurrentDictionary<string, Bitmap> _coverCache = new();
+    private const int MaxCacheCapacity = 50;
+    private readonly object _cacheLock = new();
+    private readonly Dictionary<string, Bitmap> _coverCache = new();
+    private readonly LinkedList<string> _lruOrder = new();
 
     public async Task<Bitmap?> LoadCoverAsync(string archivePath, CancellationToken cancellationToken)
     {
@@ -20,59 +27,69 @@ public class ArchiveCoverService
             return null;
         }
 
-        if (_coverCache.TryGetValue(archivePath, out var cachedBitmap))
+        lock (_cacheLock)
         {
-            return cachedBitmap;
+            if (_coverCache.TryGetValue(archivePath, out var cachedBitmap))
+            {
+                _lruOrder.Remove(archivePath);
+                _lruOrder.AddLast(archivePath);
+                return cachedBitmap;
+            }
         }
 
         return await Task.Run(() =>
         {
             try
             {
-                // First pass: scan entry keys to find the alphabetically first image file
-                string? bestImageKey = null;
-                
-                using (var stream = File.OpenRead(archivePath))
-                using (var reader = SharpCompress.Readers.ReaderFactory.OpenReader(stream, new SharpCompress.Readers.ReaderOptions()))
-                {
-                    while (reader.MoveToNextEntry())
-                    {
-                        if (!reader.Entry.IsDirectory && reader.Entry.Key != null && IsImageFile(reader.Entry.Key))
-                        {
-                            if (bestImageKey == null || string.Compare(reader.Entry.Key, bestImageKey, StringComparison.OrdinalIgnoreCase) < 0)
-                            {
-                                bestImageKey = reader.Entry.Key;
-                            }
-                        }
-                    }
-                }
+                using var stream = File.OpenRead(archivePath);
+                using var archive = ArchiveFactory.OpenArchive(stream);
 
-                if (bestImageKey == null)
+                var imageEntries = archive.Entries
+                    .Where(e => !e.IsDirectory && e.Key != null && IsImageFile(e.Key!))
+                    .ToList();
+
+                if (imageEntries.Count == 0)
                 {
                     return null;
                 }
 
-                // Second pass: extract the stream for the best image key
-                using (var stream = File.OpenRead(archivePath))
-                using (var reader = SharpCompress.Readers.ReaderFactory.OpenReader(stream, new SharpCompress.Readers.ReaderOptions()))
+                var bestEntry = imageEntries.FirstOrDefault(e => Path.GetFileName(e.Key!).Contains("cover", StringComparison.OrdinalIgnoreCase));
+                if (bestEntry == null)
                 {
-                    while (reader.MoveToNextEntry())
-                    {
-                        if (!reader.Entry.IsDirectory && reader.Entry.Key == bestImageKey)
-                        {
-                            using var entryStream = reader.OpenEntryStream();
-                            using var memoryStream = new MemoryStream();
-                            entryStream.CopyTo(memoryStream);
-                            memoryStream.Position = 0;
-
-                            var bitmap = new Bitmap(memoryStream);
-                            _coverCache[archivePath] = bitmap;
-                            return bitmap;
-                        }
-                    }
+                    bestEntry = imageEntries.OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase).First();
                 }
 
-                return null;
+                using var memoryStream = new MemoryStream();
+                bestEntry.OpenEntryStream().CopyTo(memoryStream);
+                memoryStream.Position = 0;
+
+                var bitmap = new Bitmap(memoryStream);
+
+                lock (_cacheLock)
+                {
+                    if (_coverCache.TryGetValue(archivePath, out var existing))
+                    {
+                        existing.Dispose();
+                        _lruOrder.Remove(archivePath);
+                    }
+                    else if (_coverCache.Count >= MaxCacheCapacity)
+                    {
+                        var oldestKey = _lruOrder.First?.Value;
+                        if (oldestKey != null)
+                        {
+                            _lruOrder.RemoveFirst();
+                            if (_coverCache.Remove(oldestKey, out var evictedBitmap))
+                            {
+                                evictedBitmap.Dispose();
+                            }
+                        }
+                    }
+
+                    _coverCache[archivePath] = bitmap;
+                    _lruOrder.AddLast(archivePath);
+                }
+
+                return bitmap;
             }
             catch
             {
@@ -86,6 +103,6 @@ public class ArchiveCoverService
         var ext = Path.GetExtension(path);
         if (string.IsNullOrEmpty(ext)) return false;
         ext = ext.ToLowerInvariant();
-        return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".gif";
+        return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".gif" || ext == ".bmp";
     }
 }

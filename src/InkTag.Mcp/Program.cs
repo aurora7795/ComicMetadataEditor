@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using InkTag.Core;
+using InkTag.Core.Logging;
 
 namespace InkTag.Mcp;
 
@@ -14,6 +15,10 @@ internal class Program
 
     private static void Main(string[] args)
     {
+        // Redirect standard Console.Out to Console.Error to protect stdout for stdio JSON-RPC stream
+        Console.SetOut(Console.Error);
+        AppLogger.Initialize();
+
         // Stdio communication line-by-line
         using var stdin = Console.OpenStandardInput();
         using var stdout = Console.OpenStandardOutput();
@@ -24,6 +29,9 @@ internal class Program
         while ((line = reader.ReadLine()) != null)
         {
             if (string.IsNullOrWhiteSpace(line)) continue;
+
+            JsonElement id = default;
+            bool hasId = false;
 
             try
             {
@@ -36,8 +44,7 @@ internal class Program
                 }
 
                 string method = methodProp.GetString() ?? "";
-                JsonElement id = default;
-                bool hasId = root.TryGetProperty("id", out id);
+                hasId = root.TryGetProperty("id", out id);
 
                 switch (method)
                 {
@@ -68,9 +75,39 @@ internal class Program
                         break;
                 }
             }
-            catch (Exception)
+            catch (JsonException ex)
             {
-                // Silently ignore malformed json
+                AppLogger.LogWarning($"MCP JSON parse error: {ex.Message}");
+                if (hasId)
+                {
+                    SendError(writer, id, -32700, $"Parse error: {ex.Message}");
+                }
+                else
+                {
+                    var response = new
+                    {
+                        jsonrpc = "2.0",
+                        error = new { code = -32700, message = $"Parse error: {ex.Message}" }
+                    };
+                    writer.WriteLine(JsonSerializer.Serialize(response));
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.LogError("MCP server internal error", ex);
+                if (hasId)
+                {
+                    SendError(writer, id, -32603, $"Internal error: {ex.Message}");
+                }
+                else
+                {
+                    var response = new
+                    {
+                        jsonrpc = "2.0",
+                        error = new { code = -32603, message = $"Internal error: {ex.Message}" }
+                    };
+                    writer.WriteLine(JsonSerializer.Serialize(response));
+                }
             }
         }
     }
