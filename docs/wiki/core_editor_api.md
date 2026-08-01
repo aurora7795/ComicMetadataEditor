@@ -59,12 +59,12 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 #### `ReadMetadata` / `ReadMetadataAsJson`
 * **Signature**: `public ComicInfo ReadMetadata(string filePath)`
 * **Signature**: `public string ReadMetadataAsJson(string filePath)`
-* **Description**: Extracts `ComicInfo.xml` from the target archive into a temporary folder, validates it against `ComicInfo.xsd`, and returns the `ComicInfo` object or its JSON representation.
+* **Description**: Parses `ComicInfo.xml` from the target `.cbz` or `.cbr` (RAR format) archive using random-access `ArchiveFactory.OpenArchive(stream)`, validates it against `ComicInfo.xsd`, and returns the `ComicInfo` object or its JSON representation.
 
 #### `EditMetadata` / `EditMetadataFromJson`
 * **Signature**: `public void EditMetadata(string filePath, Action<ComicInfo> editAction)`
 * **Signature**: `public void EditMetadataFromJson(string filePath, string jsonPatch)`
-* **Description**: Unpacks the file, deserializes existing metadata or creates a new instance, applies edits (via lambda or dynamic JSON patch), serializes back to XML, compresses to `.tmp`, validates, and performs an atomic backup swap.
+* **Description**: Unpacks the file using random-access `ArchiveFactory.OpenArchive(stream)`, deserializes existing metadata or creates a new instance, applies edits (via lambda or dynamic JSON patch), serializes back to XML, compresses to `.tmp`, validates, and performs an atomic backup swap.
 
 #### `BulkEditMetadata` / `BulkEditMetadataFromJson`
 * **Signature**: `public BulkEditReport BulkEditMetadata(string directoryPath, Action<ComicInfo> editAction)`
@@ -81,7 +81,7 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 
 #### `ExtractCoverImage`
 * **Signature**: `public string? ExtractCoverImage(string comicFilePath, string outputFilePath)`
-* **Description**: Extracts the front cover image or first page image from a `.cbz` or `.cbr` archive for visual inspection.
+* **Description**: Extracts the front cover image or first page image from a `.cbz` or `.cbr` (RAR format) archive using random-access `ArchiveFactory.OpenArchive(stream)` for visual inspection.
 
 #### `ExportJsonSchema`
 * **Signature**: `public static string ExportJsonSchema()`
