@@ -10,7 +10,7 @@ The desktop client follows the standard MVVM design pattern:
 
 * **Views** (`MainWindow.axaml`, `ErrorSummaryWindow.axaml`, `PromptWindow.axaml`): Declares the layout structure, modal close guards, and error display dialogs. Bindings hook UI element properties directly to ViewModel properties.
 * **ViewModels** (`MainWindowViewModel`, `ComicItemViewModel`): Holds the state of the UI and handles execution commands. Uses `CommunityToolkit.Mvvm` source generators (`[ObservableProperty]` and `[RelayCommand]`).
-* **Services** (`ComicScannerService`, `ArchiveCoverService`): Background directory scanner service and async cover image loader with Skia/Avalonia bitmap caching.
+* **Services** (`ComicScannerService`, `ArchiveCoverService`, `UpdateService`): Background directory scanner, async cover image loader with Skia/Avalonia bitmap caching, and Velopack cross-platform auto-updater manager.
 * **Converters** (`IsDirtyToBrushConverter.cs`): Binds cell/row background colors to indicate unsaved changes visually inside the DataGrid.
 
 ---
@@ -45,6 +45,8 @@ The desktop client follows the standard MVVM design pattern:
   * `SaveAllCommand`: Asynchronously writes all `IsDirty` view models to disk using `InkTag.Core`'s `EditMetadata`. Disabled if `Comics` contains active validation errors (`!CanSave`).
   * `BulkApplyCommand`: Iterates selected grid items and applies sidebar-checked metadata fields.
   * `FindReplaceCommand`: Executes search-and-replace strings on selected items.
+  * `CheckForUpdatesCommand`: Asynchronously queries GitHub Releases via Velopack `UpdateService` (with rate-limiting and local dev safeguards).
+  * `ApplyUpdateCommand`: Downloads pending delta packages asynchronously and restarts the app with the new release version.
 
 ---
 
@@ -53,20 +55,20 @@ The desktop client follows the standard MVVM design pattern:
 The main interface is split into three main regions:
 
 ```text
-+------------------------------------------------------------------------------------+
-|  Top Toolbar: [Open Folder]  [x] Scan Subfolders  [Save All]  [Export CSV]  [Progress] |
-+--------------------------------------------------+---------------------------------+
-|                                                  |  Sidebar (TabControl):          |
-|                                                  |  +---------------------------+  |
-|                                                  |  | Active Details | Bulk Edit|  |
-|                                                  |  +---------------------------+  |
-|  Main DataGrid (Left Column)                     |  |  [Cover Image Thumbnail]  |  |
-|  - Virtualized spreadsheet                       |  |                           |  |
-|  - Columns: File Name, Title, Series, Issue,     |  |  Title: [Marvel Comics ]  |  |
-|    Volume, Publisher, Year, Genre, Tags, Writer, |  |  Publisher: [Marvel    ]  |  |
-|    Language, Manga orientation.                 |  |                           |  |
-|                                                  |  +---------------------------+  |
-+--------------------------------------------------+---------------------------------+
-|  Status Bar: Ready | 42 files loaded | 3 unsaved changes                          |
-+------------------------------------------------------------------------------------+
++----------------------------------------------------------------------------------------------------------------+
+|  Top Toolbar: [Open Folder]  [x] Scan Subfolders  [Save All]  [Export CSV] | [Check for Updates] [Install & Restart]|
++--------------------------------------------------+-------------------------------------------------------------+
+|                                                  |  Sidebar (TabControl):                                      |
+|                                                  |  +---------------------------+                              |
+|                                                  |  | Active Details | Bulk Edit|                              |
+|                                                  |  +---------------------------+                              |
+|  Main DataGrid (Left Column)                     |  |  [Cover Image Thumbnail]  |                              |
+|  - Virtualized spreadsheet                       |  |                           |                              |
+|  - Columns: File Name, Title, Series, Issue,     |  |  Title: [Marvel Comics ]  |                              |
+|    Volume, Publisher, Year, Genre, Tags, Writer, |  |  Publisher: [Marvel    ]  |                              |
+|    Language, Manga orientation.                 |  |                           |                              |
+|                                                  |  +---------------------------+                              |
++--------------------------------------------------+-------------------------------------------------------------+
+|  Status Bar: Ready | 42 files loaded | 3 unsaved changes                                                      |
++----------------------------------------------------------------------------------------------------------------+
 ```
