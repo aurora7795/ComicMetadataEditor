@@ -3,6 +3,11 @@
              x:Class="InkTag.Gui.App"
              Name="InkTag Desktop"
              RequestedThemeVariant="Dark">
+  <NativeMenu.Menu>
+    <NativeMenu>
+      <NativeMenuItem Header="About InkTag Desktop" Click="About_Click" />
+    </NativeMenu>
+  </NativeMenu.Menu>
   <Application.Styles>
     <FluentTheme />
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />

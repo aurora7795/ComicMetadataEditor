@@ -20,4 +20,13 @@ public partial class App : Application
 
         base.OnFrameworkInitializationCompleted();
     }
+
+    private void About_Click(object? sender, System.EventArgs e)
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
+        {
+            var aboutWindow = new Views.AboutWindow();
+            aboutWindow.ShowDialog(desktop.MainWindow);
+        }
+    }
 }

@@ -367,12 +367,12 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public async Task CheckForUpdatesAsync(bool userInitiated = true)
+    public async Task CheckForUpdatesAsync()
     {
         try
         {
             UpdateStatusText = "Checking for updates...";
-            _pendingUpdateInfo = await _updateService.CheckForUpdatesAsync(userInitiated);
+            _pendingUpdateInfo = await _updateService.CheckForUpdatesAsync(forceCheck: true);
             if (_pendingUpdateInfo != null)
             {
                 IsUpdateAvailable = true;
@@ -381,7 +381,7 @@ public partial class MainWindowViewModel : ViewModelBase
             else
             {
                 IsUpdateAvailable = false;
-                UpdateStatusText = userInitiated ? "InkTag Desktop is up to date." : string.Empty;
+                UpdateStatusText = "InkTag Desktop is up to date.";
             }
         }
         catch (Exception ex)
