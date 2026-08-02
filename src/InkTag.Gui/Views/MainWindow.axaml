@@ -263,8 +263,6 @@
     <Border Grid.Row="2" Background="#007ACC" Padding="8,4">
       <Grid ColumnDefinitions="Auto, Auto, *, Auto">
         <StackPanel Orientation="Horizontal" Spacing="12" Grid.Column="0" VerticalAlignment="Center">
-          <TextBlock Text="Status: Running" Foreground="White" FontSize="12" FontWeight="SemiBold"/>
-          <Separator Width="1" Background="#55FFFFFF" Height="10" VerticalAlignment="Center"/>
           <TextBlock Text="{Binding Comics.Count, StringFormat='{}{0} files loaded'}" Foreground="White" FontSize="12"/>
         </StackPanel>
 

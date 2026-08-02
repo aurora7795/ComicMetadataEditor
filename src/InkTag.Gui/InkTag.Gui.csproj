@@ -12,10 +12,11 @@
     <AvaloniaResource Include="Assets\*" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.0.0" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.0.0" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.0" />
-    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.0" />
+    <PackageReference Include="Avalonia" Version="11.2.5" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.5" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.5" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.2.5" />
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.94.2" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
     <PackageReference Include="Velopack" Version="1.2.0" />
   </ItemGroup>
