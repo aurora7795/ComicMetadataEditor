@@ -257,4 +257,42 @@ public class MetadataEditorTests
             if (File.Exists(tempCbz)) File.Delete(tempCbz);
         }
     }
+
+    [Fact]
+    public void ApplyJsonPatch_ReturnsWarningsForUnknownProperties()
+    {
+        var comic = new ComicInfo();
+        string jsonPatch = JsonSerializer.Serialize(new
+        {
+            Title = "Valid Title",
+            UnknownProp1 = "Value1",
+            Writter = "Typo Writer"
+        });
+
+        var warnings = MetadataEditor.ApplyJsonPatch(comic, jsonPatch);
+
+        Assert.Equal("Valid Title", comic.Title);
+        Assert.Equal(2, warnings.Count);
+        Assert.Contains(warnings, w => w.Contains("UnknownProp1"));
+        Assert.Contains(warnings, w => w.Contains("Writter"));
+    }
+
+    [Fact]
+    public void ComicItemViewModel_PreservesYesAndRightToLeftMangaDirection()
+    {
+        var model = new ComicInfo
+        {
+            Title = "Manga Test",
+            Manga = MangaDirection.YesAndRightToLeft
+        };
+
+        var vm = new InkTag.Gui.ViewModels.ComicItemViewModel("test.cbz", model);
+
+        Assert.True(vm.Manga);
+
+        var updatedModel = new ComicInfo();
+        vm.ApplyChangesToModel(updatedModel);
+
+        Assert.Equal(MangaDirection.YesAndRightToLeft, updatedModel.Manga);
+    }
 }

@@ -168,11 +168,25 @@ public class Page
     [XmlAttribute("Type")]
     public string? Type { get; set; }
 
+    [XmlIgnore]
+    public bool? DoublePage { get; set; }
     [XmlAttribute("DoublePage")]
-    public bool DoublePage { get; set; }
+    public bool DoublePageValue
+    {
+        get => DoublePage ?? false;
+        set => DoublePage = value;
+    }
+    public bool ShouldSerializeDoublePageValue() => DoublePage.HasValue;
 
+    [XmlIgnore]
+    public long? ImageSize { get; set; }
     [XmlAttribute("ImageSize")]
-    public long ImageSize { get; set; }
+    public long ImageSizeValue
+    {
+        get => ImageSize ?? 0;
+        set => ImageSize = value;
+    }
+    public bool ShouldSerializeImageSizeValue() => ImageSize.HasValue;
 
     [XmlAttribute("Key")]
     public string? Key { get; set; }
@@ -180,9 +194,23 @@ public class Page
     [XmlAttribute("Bookmark")]
     public string? Bookmark { get; set; }
 
+    [XmlIgnore]
+    public int? ImageWidth { get; set; }
     [XmlAttribute("ImageWidth")]
-    public int ImageWidth { get; set; }
+    public int ImageWidthValue
+    {
+        get => ImageWidth ?? 0;
+        set => ImageWidth = value;
+    }
+    public bool ShouldSerializeImageWidthValue() => ImageWidth.HasValue;
 
+    [XmlIgnore]
+    public int? ImageHeight { get; set; }
     [XmlAttribute("ImageHeight")]
-    public int ImageHeight { get; set; }
+    public int ImageHeightValue
+    {
+        get => ImageHeight ?? 0;
+        set => ImageHeight = value;
+    }
+    public bool ShouldSerializeImageHeightValue() => ImageHeight.HasValue;
 }

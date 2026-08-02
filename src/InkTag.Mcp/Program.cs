@@ -241,11 +241,15 @@ internal class Program
                         if (File.Exists(path))
                         {
                             var diffs = _editor.GetMetadataDiff(path, patchJson);
+                            var warnings = MetadataEditor.ApplyJsonPatch(new ComicInfo(), patchJson);
                             if (!dryRun)
                             {
                                 _editor.EditMetadataFromJson(path, patchJson);
                             }
-                            string resJson = JsonSerializer.Serialize(new { path, dryRun, modifiedFields = diffs.Count, diffs }, new JsonSerializerOptions { WriteIndented = true });
+                            object resObj = warnings.Count > 0
+                                ? new { path, dryRun, modifiedFields = diffs.Count, diffs, warnings }
+                                : new { path, dryRun, modifiedFields = diffs.Count, diffs };
+                            string resJson = JsonSerializer.Serialize(resObj, new JsonSerializerOptions { WriteIndented = true });
                             return FormatTextResult(resJson);
                         }
                         else if (Directory.Exists(path))
