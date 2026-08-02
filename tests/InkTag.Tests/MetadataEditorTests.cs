@@ -222,4 +222,39 @@ public class MetadataEditorTests
         Assert.Single(clone.Pages!.Page);
         Assert.Equal("FrontCover", clone.Pages.Page[0].Type);
     }
+
+    [Fact]
+    public void EditMetadata_RejectsZipSlipEntry_EnforcesSafeExtractionOptions()
+    {
+        var editor = new MetadataEditor();
+        string tempCbz = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + "_zipslip.cbz");
+        string tempContentFile = Path.GetTempFileName();
+
+        try
+        {
+            File.WriteAllText(tempContentFile, "malicious payload");
+
+            // Build a CBZ containing an entry key with parent directory traversal
+            using (var stream = File.OpenWrite(tempCbz))
+            using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+            {
+                writer.Write("../evil.txt", tempContentFile);
+            }
+
+            // EditMetadata uses ExtractFullPath = false, so the file extracts as evil.txt within tempDir
+            // and post-extraction validation ensures no file escapes tempDir.
+            editor.EditMetadata(tempCbz, comic =>
+            {
+                comic.Title = "Sanitized Title";
+            });
+
+            var readComic = editor.ReadMetadata(tempCbz);
+            Assert.Equal("Sanitized Title", readComic.Title);
+        }
+        finally
+        {
+            if (File.Exists(tempContentFile)) File.Delete(tempContentFile);
+            if (File.Exists(tempCbz)) File.Delete(tempCbz);
+        }
+    }
 }

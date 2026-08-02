@@ -8,6 +8,7 @@ using InkTag.Core;
 
 bool isJsonOutput = args.Any(a => a.Equals("--json", StringComparison.OrdinalIgnoreCase));
 bool isDryRun = args.Any(a => a.Equals("--dry-run", StringComparison.OrdinalIgnoreCase));
+bool isVerbose = args.Any(a => a.Equals("--verbose", StringComparison.OrdinalIgnoreCase));
 
 var positionalArgs = args.Where(a => !a.StartsWith("--")).ToList();
 string command = positionalArgs.Count > 0 ? positionalArgs[0].ToLowerInvariant() : "help";
@@ -55,7 +56,9 @@ catch (Exception ex)
 {
     if (isJsonOutput)
     {
-        var errObj = new { success = false, error = ex.Message, stackTrace = ex.StackTrace };
+        object errObj = isVerbose
+            ? new { success = false, error = ex.Message, stackTrace = ex.StackTrace }
+            : (object)new { success = false, error = ex.Message };
         Console.WriteLine(JsonSerializer.Serialize(errObj, new JsonSerializerOptions { WriteIndented = true }));
     }
     else
@@ -324,7 +327,8 @@ static void PrintHelp(bool isJson)
         globalFlags = new[]
         {
             new { flag = "--json", description = "Output structured machine-parseable JSON." },
-            new { flag = "--dry-run", description = "Preview changes without writing files to disk." }
+            new { flag = "--dry-run", description = "Preview changes without writing files to disk." },
+            new { flag = "--verbose", description = "Include detailed stack traces in error outputs." }
         }
     };
 

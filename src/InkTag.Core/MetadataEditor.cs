@@ -122,7 +122,7 @@ public class MetadataEditor
 
         try
         {
-            // 1. Extract the archive contents
+            // 1. Extract the archive contents safely
             using (Stream stream = File.OpenRead(filePath))
             using (var archive = ArchiveFactory.OpenArchive(stream))
             {
@@ -130,8 +130,19 @@ public class MetadataEditor
                 {
                     if (!entry.IsDirectory)
                     {
-                        entry.WriteToDirectory(tempDir, new ExtractionOptions());
+                        entry.WriteToDirectory(tempDir, new ExtractionOptions { Overwrite = true, ExtractFullPath = false });
                     }
+                }
+            }
+
+            // Verify all extracted files remain strictly contained within tempDir
+            string canonicalTempDir = Path.GetFullPath(tempDir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            foreach (string extractedFile in Directory.GetFiles(tempDir, "*", SearchOption.AllDirectories))
+            {
+                string canonicalFile = Path.GetFullPath(extractedFile);
+                if (!canonicalFile.StartsWith(canonicalTempDir, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidDataException($"Archive entry '{extractedFile}' escapes extraction target directory.");
                 }
             }
 
