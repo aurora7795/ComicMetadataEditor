@@ -95,7 +95,7 @@ public partial class MainWindowViewModel : ViewModelBase
         "Title", "Series", "Publisher", "Writer", "Genre", "Tags", "LanguageISO"
     };
 
-    public bool CanSave => Comics.Any(c => c.IsDirty) && !Comics.Any(c => c.HasErrors);
+    public bool CanSave => Comics.Any(c => c.IsDirty && !c.HasReadError) && !Comics.Any(c => c.HasErrors);
     public bool HasDirtyItems => Comics.Any(c => c.IsDirty);
 
     // Save report list
@@ -202,7 +202,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void BulkApply()
     {
-        var targets = _selectedComics.Any() ? _selectedComics : Comics.ToList();
+        var targets = (_selectedComics.Any() ? _selectedComics : Comics.ToList())
+            .Where(c => !c.HasReadError).ToList();
         if (!targets.Any()) return;
 
         foreach (var item in targets)
@@ -221,7 +222,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private void FindReplace()
     {
         if (string.IsNullOrEmpty(FindText)) return;
-        var targets = _selectedComics.Any() ? _selectedComics : Comics.ToList();
+        var targets = (_selectedComics.Any() ? _selectedComics : Comics.ToList())
+            .Where(c => !c.HasReadError).ToList();
         if (!targets.Any()) return;
 
         int modifiedCount = 0;
@@ -261,7 +263,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task SaveAllAsync()
     {
-        var dirtyItems = Comics.Where(c => c.IsDirty).ToList();
+        var dirtyItems = Comics.Where(c => c.IsDirty && !c.HasReadError).ToList();
         if (!dirtyItems.Any()) return;
 
         IsSaving = true;
@@ -286,6 +288,9 @@ public partial class MainWindowViewModel : ViewModelBase
                     
                     var currentCompleted = completed;
                     var currentPath = item.FileName;
+                    string originalPath = item.FilePath;
+                    bool isCbr = Path.GetExtension(originalPath).Equals(".cbr", StringComparison.OrdinalIgnoreCase);
+
                     Dispatcher.UIThread.Post(() =>
                     {
                         ProgressValue = (double)currentCompleted / total * 100;
@@ -294,13 +299,21 @@ public partial class MainWindowViewModel : ViewModelBase
 
                     try
                     {
-                        editor.EditMetadata(item.FilePath, comicInfo =>
+                        editor.EditMetadata(originalPath, comicInfo =>
                         {
                             item.ApplyChangesToModel(comicInfo);
                         });
 
+                        string targetPath = isCbr ? Path.ChangeExtension(originalPath, ".cbz") : originalPath;
+
                         Dispatcher.UIThread.Post(() =>
                         {
+                            if (isCbr && File.Exists(targetPath))
+                            {
+                                string oldName = item.FileName;
+                                item.UpdateFilePath(targetPath);
+                                ProgressText = $"Converted {oldName} → {item.FileName}";
+                            }
                             item.IsDirty = false;
                         });
                     }

@@ -452,9 +452,11 @@ public class MetadataEditor
 
     /// <summary>
     /// Mutates a ComicInfo object in-place using key-value pairs in a JSON patch string.
+    /// Returns a list of warning messages for unrecognized or unwriteable property names.
     /// </summary>
-    public static void ApplyJsonPatch(ComicInfo comicInfo, string jsonPatch)
+    public static List<string> ApplyJsonPatch(ComicInfo comicInfo, string jsonPatch)
     {
+        var warnings = new List<string>();
         using var doc = JsonDocument.Parse(jsonPatch);
         var root = doc.RootElement;
         if (root.ValueKind != JsonValueKind.Object)
@@ -472,7 +474,13 @@ public class MetadataEditor
                 var value = ConvertJsonElement(jsonProp.Value, prop.PropertyType);
                 prop.SetValue(comicInfo, value);
             }
+            else
+            {
+                warnings.Add($"Unknown or unwriteable property '{jsonProp.Name}'");
+            }
         }
+
+        return warnings;
     }
 
     private static object? ConvertJsonElement(JsonElement element, Type targetType)

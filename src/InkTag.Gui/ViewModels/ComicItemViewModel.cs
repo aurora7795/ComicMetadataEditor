@@ -15,9 +15,19 @@ public partial class ComicItemViewModel : ObservableValidator
 {
     private readonly ComicInfo _model;
     private bool _isInitializing;
+    private MangaDirection? _originalMangaDirection;
 
-    public string FilePath { get; }
-    public string FileName { get; }
+    [ObservableProperty]
+    private string _filePath = string.Empty;
+
+    [ObservableProperty]
+    private string _fileName = string.Empty;
+
+    [ObservableProperty]
+    private bool _hasReadError;
+
+    [ObservableProperty]
+    private string? _readErrorMessage;
 
     [ObservableProperty]
     private bool _isDirty;
@@ -73,6 +83,12 @@ public partial class ComicItemViewModel : ObservableValidator
         LoadFromModel();
     }
 
+    public void UpdateFilePath(string newPath)
+    {
+        FilePath = newPath;
+        FileName = Path.GetFileName(newPath);
+    }
+
     public void LoadFromModel()
     {
         _isInitializing = true;
@@ -89,6 +105,7 @@ public partial class ComicItemViewModel : ObservableValidator
             Tags = _model.Tags;
             Writer = _model.Writer;
             LanguageISO = _model.LanguageISO;
+            _originalMangaDirection = _model.Manga;
             Manga = _model.Manga == MangaDirection.Yes || _model.Manga == MangaDirection.YesAndRightToLeft;
 
             ValidateAllProperties();
@@ -118,7 +135,17 @@ public partial class ComicItemViewModel : ObservableValidator
         target.Tags = Tags;
         target.Writer = Writer;
         target.LanguageISO = LanguageISO;
-        target.Manga = Manga ? MangaDirection.Yes : MangaDirection.No;
+
+        if (Manga)
+        {
+            target.Manga = (_originalMangaDirection == MangaDirection.YesAndRightToLeft) 
+                ? MangaDirection.YesAndRightToLeft 
+                : MangaDirection.Yes;
+        }
+        else
+        {
+            target.Manga = MangaDirection.No;
+        }
     }
 
     public async Task LoadCoverAsync(ArchiveCoverService coverService, CancellationToken cancellationToken)

@@ -20,12 +20,12 @@ Harden InkTag's archive-handling safety, close correctness gaps in the GUI, redu
   - [x] **P1-B**: `--verbose` flag and CLI JSON `stackTrace` gating in `Program.cs`
   - [x] Unit test: `EditMetadata_RejectsZipSlipEntry_EnforcesSafeExtractionOptions` (57 tests passing)
 
-- [ ] **Stage 2: Data Integrity & GUI Correctness** (Branch: `fix/gui-data-integrity`) — *PENDING*
-  - [ ] **P2-A**: CBR→CBZ path update in UI DataGrid after save
-  - [ ] **P2-B**: `MangaDirection` enum fidelity preservation (`YesAndRightToLeft`)
-  - [ ] **P2-C**: Unrecognized JSON patch key warnings
-  - [ ] **P2-D**: Scanner read-error flags (`HasReadError`)
-  - [ ] **P2-E**: Nullable `Page` attributes for clean XML round-trips
+- [x] **Stage 2: Data Integrity & GUI Correctness** (Branch: `fix/gui-data-integrity`) — **COMPLETED**
+  - [x] **P2-A**: CBR→CBZ path update in UI DataGrid after save
+  - [x] **P2-B**: `MangaDirection` enum fidelity preservation (`YesAndRightToLeft`)
+  - [x] **P2-C**: Unrecognized JSON patch key warnings
+  - [x] **P2-D**: Scanner read-error flags (`HasReadError`)
+  - [x] **P2-E**: Nullable `Page` attributes for clean XML round-trips
 
 - [ ] **Stage 3: CLI & MCP Refactoring & Parity** (Branch: `refactor/cli-mcp-deduplication`) — *PENDING*
   - [ ] **P3-A**: Deduplicate CLI/MCP scan/update handlers into `InkTag.Core`

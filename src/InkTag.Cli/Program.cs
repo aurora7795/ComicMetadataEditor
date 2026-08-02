@@ -117,6 +117,7 @@ static void HandleUpdateCommand(string[] rawArgs, List<string> positionalArgs, b
     if (File.Exists(targetPath))
     {
         var diffs = editor.GetMetadataDiff(targetPath, patchJson);
+        var warnings = MetadataEditor.ApplyJsonPatch(new ComicInfo(), patchJson);
 
         if (!isDryRun)
         {
@@ -125,7 +126,9 @@ static void HandleUpdateCommand(string[] rawArgs, List<string> positionalArgs, b
 
         if (isJson)
         {
-            var result = new { success = true, path = targetPath, dryRun = isDryRun, diffs = diffs };
+            var result = warnings.Count > 0
+                ? (object)new { success = true, path = targetPath, dryRun = isDryRun, diffs = diffs, warnings = warnings }
+                : (object)new { success = true, path = targetPath, dryRun = isDryRun, diffs = diffs };
             Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
         }
         else

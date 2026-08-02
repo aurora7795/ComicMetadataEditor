@@ -41,10 +41,12 @@ public class ComicScannerService
                     var viewModel = new ComicItemViewModel(file, model);
                     results.Add(viewModel);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Fallback to empty model if file reading fails, allowing recovery/new creation
+                    // Fallback to empty model if file reading fails, marking read error for UI feedback
                     var viewModel = new ComicItemViewModel(file, new ComicInfo());
+                    viewModel.HasReadError = true;
+                    viewModel.ReadErrorMessage = ex.Message;
                     results.Add(viewModel);
                 }
             }
