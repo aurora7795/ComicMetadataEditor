@@ -33,6 +33,9 @@
       </NativeMenuItem>
       <NativeMenuItem Header="View">
         <NativeMenu>
+          <NativeMenuItem Header="Scan Recursively" ToggleType="CheckBox" IsChecked="{Binding IsRecursive}"/>
+          <NativeMenuItem Header="Inspector Panel" ToggleType="CheckBox" IsChecked="{Binding IsInspectorVisible}"/>
+          <NativeMenuItemSeparator/>
           <NativeMenuItem Header="Refresh Grid" Gesture="F5" Click="NativeRefreshGrid_Click"/>
         </NativeMenu>
       </NativeMenuItem>
@@ -44,6 +47,8 @@
       <NativeMenuItem Header="Help">
         <NativeMenu>
           <NativeMenuItem Header="Check for Updates" Click="NativeCheckForUpdates_Click"/>
+          <NativeMenuItem Header="Install &amp; Restart Update" Command="{Binding ApplyUpdateCommand}" IsVisible="{Binding IsUpdateAvailable}"/>
+          <NativeMenuItemSeparator/>
           <NativeMenuItem Header="About InkTag Desktop" Click="NativeAbout_Click"/>
         </NativeMenu>
       </NativeMenuItem>
@@ -52,8 +57,8 @@
 
   <Grid RowDefinitions="Auto, *, Auto">
     
-    <!-- Top MenuBar -->
-    <Menu Grid.Row="0" Background="#252526" BorderBrush="#3F3F46" BorderThickness="0,0,0,1">
+    <!-- Top MenuBar (Hidden on macOS so only the system macOS menu bar is used) -->
+    <Menu Grid.Row="0" IsVisible="{OnPlatform macOS=False, Default=True}" Background="#252526" BorderBrush="#3F3F46" BorderThickness="0,0,0,1">
       <!-- File Menu -->
       <MenuItem Header="_File">
         <MenuItem Header="_Open Folder..." InputGesture="Ctrl+O" Click="OpenFolder_Click"/>
