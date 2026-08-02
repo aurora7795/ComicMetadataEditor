@@ -19,6 +19,9 @@ This file sets the build, test, and style guidelines for the InkTag repository, 
 * **MCP Server**: `dotnet run --project src/InkTag.Mcp/InkTag.Mcp.csproj`
 * **GUI App**: `dotnet run --project src/InkTag.Gui/InkTag.Gui.csproj`
 
+### 1.3 Git Branching Strategy
+* **Default to Feature/Fix Branches**: NEVER write code or make modifications directly on `main`. Always check out or create a dedicated feature or bugfix branch (e.g., `feat/feature-name` or `fix/bug-description`) before modifying files, unless the request is explicitly part of an active work session on the current branch.
+
 ---
 
 ## 2. Coding & Design Standards
