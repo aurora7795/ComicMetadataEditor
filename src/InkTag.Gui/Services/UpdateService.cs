@@ -49,9 +49,15 @@ public static class UpdateService
         }
         catch { }
 
-        if (OperatingSystem.IsMacOS() && AppDomain.CurrentDomain.BaseDirectory.Contains(".app/Contents/"))
+        if (OperatingSystem.IsMacOS())
         {
-            return true;
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string macOsSq = System.IO.Path.Combine(baseDir, "sq.version");
+            string resourcesSq = System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, "..", "Resources", "sq.version"));
+            if (System.IO.File.Exists(macOsSq) || System.IO.File.Exists(resourcesSq))
+            {
+                return true;
+            }
         }
 
         return false;
@@ -89,7 +95,7 @@ public static class UpdateService
                 AppLogger.LogInfo($"Velopack initialization notice ({ex.Message}). Operating in portable mode.");
             }
 
-            if (manager != null && IsInstalledMode(manager))
+            if (manager != null && manager.IsInstalled)
             {
                 try
                 {

@@ -121,6 +121,7 @@ jobs:
           cp InkTag.icns InkTag.app/Contents/Resources/InkTag.icns
           VERSION="${GITHUB_REF_NAME#v}"
           echo "$VERSION" > InkTag.app/Contents/Resources/sq.version
+          echo "$VERSION" > InkTag.app/Contents/MacOS/sq.version
           chmod +x InkTag.app/Contents/MacOS/InkTag.Gui
           chmod +x InkTag.app/Contents/MacOS/InkTag.Mcp
 
