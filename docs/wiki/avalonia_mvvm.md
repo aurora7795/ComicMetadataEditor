@@ -66,7 +66,7 @@ The main interface is split into three main regions:
 | (Resizable columns, row dirty status indicators) |  - Tab 2: Bulk Edit (Batch Metadata Multi-Apply)            |
 |                                                  |  - Tab 3: Find & Replace (Batch String Substitution)        |
 +--------------------------------------------------+-------------------------------------------------------------+
-| Bottom Status Bar: X files loaded | [ProgressBar] ProgressText | UpdateStatus | InkTag v0.4.2                 |
+| Bottom Status Bar: X files loaded | [ProgressBar] ProgressText | UpdateStatus | InkTag v0.4.3                 |
 +----------------------------------------------------------------------------------------------------------------+
 ```
 |                                                  |  Sidebar (TabControl):                                      |

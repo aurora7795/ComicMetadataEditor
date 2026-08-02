@@ -36,7 +36,7 @@ public static class UpdateService
     private static UpdateCheckResult? _cachedPortableResult;
     private static DateTime _lastCheckTime = DateTime.MinValue;
     private static readonly TimeSpan MinCheckInterval = TimeSpan.FromMinutes(15);
-    public static readonly Version CurrentAppVersion = new(0, 4, 1);
+    public static readonly Version CurrentAppVersion = new(0, 4, 3);
 
     /// <summary>
     /// Checks if the application is running in installed mode (Velopack installed or macOS .app bundle).
