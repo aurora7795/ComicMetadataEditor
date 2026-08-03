@@ -13,7 +13,7 @@
       <StackPanel Spacing="6" VerticalAlignment="Top">
         <TextBlock Text="InkTag Desktop" FontSize="22" FontWeight="Bold" Foreground="White"/>
         <StackPanel Orientation="Horizontal" Spacing="8">
-          <TextBlock Text="Version 0.5.0" FontSize="13" Foreground="#4EC9B0" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <TextBlock Text="Version 0.5.1" FontSize="13" Foreground="#4EC9B0" FontWeight="SemiBold" VerticalAlignment="Center"/>
           <TextBlock Text="•" Foreground="#666666" FontSize="11" VerticalAlignment="Center"/>
           <Button Content="GitHub Repository" Click="OpenGitHubRepoClick" Classes="linkButton" FontSize="12" VerticalAlignment="Center"/>
         </StackPanel>
