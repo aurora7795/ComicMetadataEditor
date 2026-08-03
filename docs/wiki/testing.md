@@ -6,15 +6,24 @@ This page details the testing strategy and validation checklists for verifying t
 
 ## 🧪 Automated Testing Strategy
 
-### 1. Unit Test Suite (`InkTag.Tests`)
+### 1. Unit & Integration Test Suite (`InkTag.Tests`)
 * **Target Project**: `tests/InkTag.Tests/InkTag.Tests.csproj`
-* **Coverage Scope**:
-  * Deserialization of valid and invalid `ComicInfo.xml` schemas.
-  * Validation of schemas against official XSD (`ComicInfo.xsd`).
-  * Dynamic JSON patch application (`ApplyJsonPatch`).
-  * Property-level diff generation (`GetMetadataDiff`).
-  * JSON Schema generation (`ExportJsonSchema`).
-  * Repacking safety: Verify renaming, rollbacks upon corrupted repacking streams, and backup file deletions.
+* **Test Classes**:
+  * `MetadataEditorTests`:
+    * Deserialization of valid and invalid `ComicInfo.xml` schemas.
+    * Validation of schemas against official XSD (`ComicInfo.xsd`), skipping missing files, and throwing on malformed XML.
+    * Dynamic JSON patch application (`ApplyJsonPatch`), warning on unrecognized patch keys.
+    * Property-level diff generation (`GetMetadataDiff`).
+    * JSON Schema generation (`ExportJsonSchema`).
+    * ZipSlip protection: verification that entry keys containing `../` traversal sequences cannot escape temporary directories.
+    * Repacking safety: atomic swaps, rollback on failed edit callbacks, CBR to CBZ output conversion, and backup file cleanup.
+  * `AgentOperationsTests`:
+    * Top-level vs. recursive directory scanning (`ScanDirectory`) and missing metadata field detection.
+    * Single-file and directory metadata updates (`UpdatePath`) with dry-run diff previews and live bulk editing.
+  * `UpdateServiceTests`:
+    * Version tag parsing (`TryParseVersion`) and dynamic `CurrentAppVersion` resolution from executing assembly metadata.
+  * `ComicScannerServiceTests`:
+    * Reading valid comic metadata and setting scanner read-error flags (`HasReadError`, `ReadErrorMessage`) on corrupted archives.
 
 ---
 

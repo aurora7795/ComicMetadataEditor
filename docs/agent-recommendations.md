@@ -32,9 +32,9 @@ Harden InkTag's archive-handling safety, close correctness gaps in the GUI, redu
   - [x] **P3-B**: Add `--recursive` option to CLI and MCP server
   - [x] **P3-C**: Dynamic assembly version derivation from assembly metadata
 
-- [ ] **Stage 4: Test Expansion & Wiki Documentation** (Branch: `docs/update-wiki-and-tests`) — *PENDING*
-  - [ ] Edge-case integration tests (rollback on failed move, XML validation)
-  - [ ] Update `docs/wiki/` documentation for CLI/MCP flag parity and schema updates
+- [x] **Stage 4: Test Expansion & Wiki Documentation** (Branch: `docs/update-wiki-and-tests`) — **COMPLETED**
+  - [x] Edge-case integration tests (rollback on failed move, XML validation)
+  - [x] Update `docs/wiki/` documentation for CLI/MCP flag parity and schema updates
 
 ---
 

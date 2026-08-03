@@ -296,8 +296,13 @@ public class MetadataEditor
     }
 
     // Validates an XML file against the embedded ComicInfo XSD.
-    private static void ValidateXml(string xmlPath)
+    internal static void ValidateXml(string xmlPath)
     {
+        if (!File.Exists(xmlPath))
+        {
+            return;
+        }
+
         var schemaPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Schema", "ComicInfo.xsd");
         if (!File.Exists(schemaPath))
         {
