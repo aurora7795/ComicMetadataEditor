@@ -81,7 +81,7 @@
             <CheckBox IsChecked="{Binding IsRecursive}" VerticalAlignment="Center"/>
           </MenuItem.Icon>
         </MenuItem>
-        <MenuItem Header="_Inspector Panel">
+        <MenuItem Header="_Inspector Panel" Command="{Binding ToggleInspectorCommand}">
           <MenuItem.Icon>
             <CheckBox IsChecked="{Binding IsInspectorVisible}" VerticalAlignment="Center"/>
           </MenuItem.Icon>
@@ -152,7 +152,7 @@
     </Border>
 
     <!-- Main Workspace Split Area -->
-    <Grid Grid.Row="2" ColumnDefinitions="*, 350">
+    <Grid Grid.Row="2" ColumnDefinitions="*, Auto">
       
       <!-- Left Column: Spreadsheet DataGrid -->
       <Grid Grid.Column="0" Margin="10">
@@ -181,7 +181,7 @@
       </Grid>
 
       <!-- Right Column: Details & Bulk Tools Sidebar -->
-      <Border Grid.Column="1" Background="#252526" BorderBrush="#3F3F46" BorderThickness="1,0,0,0" Padding="15" IsVisible="{Binding IsInspectorVisible}">
+      <Border Grid.Column="1" Width="350" Background="#252526" BorderBrush="#3F3F46" BorderThickness="1,0,0,0" Padding="15" IsVisible="{Binding IsInspectorVisible}">
         <TabControl Theme="{StaticResource {x:Type TabControl}}">
           
           <!-- Tab 1: Single Comic Inspector -->
