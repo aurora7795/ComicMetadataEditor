@@ -73,7 +73,10 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _progressText = "Ready";
 
-    // Bulk Edit Fields
+    // Dynamic Bulk Edit Rules
+    public ObservableCollection<BulkEditRuleViewModel> BulkEditRules { get; } = new();
+
+    // Legacy Bulk Edit Fields (maintained for compatibility)
     [ObservableProperty] private string? _bulkSeries;
     [ObservableProperty] private bool _bulkSeriesEnabled;
     [ObservableProperty] private string? _bulkPublisher;
@@ -107,6 +110,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel()
     {
         Comics.CollectionChanged += OnComicsCollectionChanged;
+        BulkEditRules.Add(new BulkEditRuleViewModel());
     }
 
     private void OnComicsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -161,6 +165,28 @@ public partial class MainWindowViewModel : ViewModelBase
                 _selectedComics.Add(vm);
             }
         }
+    }
+
+    [RelayCommand]
+    private void AddBulkRule()
+    {
+        BulkEditRules.Add(new BulkEditRuleViewModel());
+    }
+
+    [RelayCommand]
+    private void RemoveBulkRule(BulkEditRuleViewModel? rule)
+    {
+        if (rule != null && BulkEditRules.Count > 1)
+        {
+            BulkEditRules.Remove(rule);
+        }
+    }
+
+    [RelayCommand]
+    private void ClearBulkRules()
+    {
+        BulkEditRules.Clear();
+        BulkEditRules.Add(new BulkEditRuleViewModel());
     }
 
     [RelayCommand]
