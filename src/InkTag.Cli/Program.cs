@@ -103,149 +103,107 @@ static void HandleUpdateCommand(string[] rawArgs, List<string> positionalArgs, b
 {
     if (positionalArgs.Count < 2)
     {
-        throw new ArgumentException("Usage: update <file-or-directory-path> --patch '<json>' [--dry-run]");
+        throw new ArgumentException("Usage: update <file-or-directory-path> --patch '<json>' [--dry-run] [--recursive]");
     }
 
     string targetPath = positionalArgs[1];
     string? patchJson = GetOptionValue(rawArgs, "--patch");
+    bool isRecursive = rawArgs.Any(a => a.Equals("--recursive", StringComparison.OrdinalIgnoreCase) || a.Equals("-r", StringComparison.OrdinalIgnoreCase));
 
     if (string.IsNullOrWhiteSpace(patchJson))
     {
         throw new ArgumentException("Missing required option --patch '<json>'");
     }
 
-    if (File.Exists(targetPath))
+    var result = AgentOperations.UpdatePath(editor, targetPath, patchJson, isDryRun, isRecursive);
+
+    if (!result.IsDirectory)
     {
-        var diffs = editor.GetMetadataDiff(targetPath, patchJson);
-        var warnings = MetadataEditor.ApplyJsonPatch(new ComicInfo(), patchJson);
-
-        if (!isDryRun)
-        {
-            editor.EditMetadataFromJson(targetPath, patchJson);
-        }
-
         if (isJson)
         {
-            var result = warnings.Count > 0
-                ? (object)new { success = true, path = targetPath, dryRun = isDryRun, diffs = diffs, warnings = warnings }
-                : (object)new { success = true, path = targetPath, dryRun = isDryRun, diffs = diffs };
-            Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
+            var jsonRes = (result.Warnings != null && result.Warnings.Count > 0)
+                ? (object)new { success = true, path = result.TargetPath, dryRun = result.DryRun, diffs = result.Diffs, warnings = result.Warnings }
+                : (object)new { success = true, path = result.TargetPath, dryRun = result.DryRun, diffs = result.Diffs };
+            Console.WriteLine(JsonSerializer.Serialize(jsonRes, new JsonSerializerOptions { WriteIndented = true }));
         }
         else
         {
-            Console.WriteLine($"{(isDryRun ? "[DRY RUN] " : "")}Updated {Path.GetFileName(targetPath)} successfully.");
-            Console.WriteLine($"Modifications ({diffs.Count} fields):");
-            foreach (var d in diffs)
+            Console.WriteLine($"{(isDryRun ? "[DRY RUN] " : "")}Updated {Path.GetFileName(result.TargetPath)} successfully.");
+            Console.WriteLine($"Modifications ({result.Diffs?.Count ?? 0} fields):");
+            if (result.Diffs != null)
             {
-                Console.WriteLine($"  - {d.PropertyName}: '{d.OldValue}' => '{d.NewValue}'");
-            }
-        }
-    }
-    else if (Directory.Exists(targetPath))
-    {
-        if (isDryRun)
-        {
-            var files = Directory.GetFiles(targetPath, "*.*", SearchOption.TopDirectoryOnly)
-                .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            var fileDiffs = files.Select(f => new
-            {
-                path = f,
-                diffs = editor.GetMetadataDiff(f, patchJson)
-            }).ToList();
-
-            if (isJson)
-            {
-                var result = new { success = true, directory = targetPath, dryRun = true, files = fileDiffs };
-                Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
-            }
-            else
-            {
-                Console.WriteLine($"[DRY RUN] Would update {files.Count} files in {targetPath}.");
-            }
-        }
-        else
-        {
-            var report = editor.BulkEditMetadataFromJson(targetPath, patchJson);
-            if (isJson)
-            {
-                var result = new { success = report.Failures.Count == 0, report = report };
-                Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
-            }
-            else
-            {
-                Console.WriteLine($"Bulk edit complete: {report.Successes.Count} succeeded, {report.Failures.Count} failed.");
+                foreach (var d in result.Diffs)
+                {
+                    Console.WriteLine($"  - {d.PropertyName}: '{d.OldValue}' => '{d.NewValue}'");
+                }
             }
         }
     }
     else
     {
-        throw new FileNotFoundException($"Target path not found: {targetPath}");
+        if (isDryRun)
+        {
+            var fileDiffsForJson = result.FileDiffs?.Select(fd => new
+            {
+                path = fd.Path,
+                diffs = fd.Diffs
+            }).ToList();
+
+            if (isJson)
+            {
+                var jsonRes = new { success = true, directory = result.TargetPath, dryRun = true, files = fileDiffsForJson };
+                Console.WriteLine(JsonSerializer.Serialize(jsonRes, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            else
+            {
+                Console.WriteLine($"[DRY RUN] Would update {result.FileDiffs?.Count ?? 0} files in {result.TargetPath}.");
+            }
+        }
+        else
+        {
+            if (isJson)
+            {
+                var jsonRes = new { success = result.Report?.Failures.Count == 0, report = result.Report };
+                Console.WriteLine(JsonSerializer.Serialize(jsonRes, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            else
+            {
+                Console.WriteLine($"Bulk edit complete: {result.Report?.Successes.Count ?? 0} succeeded, {result.Report?.Failures.Count ?? 0} failed.");
+            }
+        }
     }
 }
 
 static void HandleScanCommand(string[] rawArgs, List<string> positionalArgs, bool isJson, MetadataEditor editor)
 {
     string targetDir = positionalArgs.Count > 1 ? positionalArgs[1] : Directory.GetCurrentDirectory();
-    if (!Directory.Exists(targetDir))
-    {
-        throw new DirectoryNotFoundException($"Directory not found: {targetDir}");
-    }
-
     string? missingFilterStr = GetOptionValue(rawArgs, "--missing");
     var missingFields = missingFilterStr?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+    bool isRecursive = rawArgs.Any(a => a.Equals("--recursive", StringComparison.OrdinalIgnoreCase) || a.Equals("-r", StringComparison.OrdinalIgnoreCase));
 
-    var files = Directory.GetFiles(targetDir, "*.*", SearchOption.TopDirectoryOnly)
-        .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
-        .ToList();
-
-    var results = new List<object>();
-
-    foreach (var file in files)
-    {
-        var info = editor.ReadMetadata(file);
-        var missing = new List<string>();
-
-        if (missingFields.Length > 0)
-        {
-            var props = typeof(ComicInfo).GetProperties();
-            foreach (var req in missingFields)
-            {
-                var p = props.FirstOrDefault(pr => pr.Name.Equals(req, StringComparison.OrdinalIgnoreCase));
-                if (p != null)
-                {
-                    var val = p.GetValue(info);
-                    if (val == null || (val is string s && string.IsNullOrWhiteSpace(s)))
-                    {
-                        missing.Add(p.Name);
-                    }
-                }
-            }
-        }
-
-        results.Add(new
-        {
-            path = file,
-            title = info.Title,
-            series = info.Series,
-            number = info.Number,
-            year = info.Year,
-            missingFields = missing
-        });
-    }
+    var scanResult = AgentOperations.ScanDirectory(editor, targetDir, missingFields, isRecursive);
 
     if (isJson)
     {
-        var payload = new { success = true, directory = targetDir, totalFound = files.Count, items = results };
+        var itemsForJson = scanResult.Items.Select(item => new
+        {
+            path = item.Path,
+            title = item.Title,
+            series = item.Series,
+            number = item.Number,
+            year = item.Year,
+            missingFields = item.MissingFields
+        }).ToList();
+
+        var payload = new { success = true, directory = scanResult.Directory, totalFound = scanResult.TotalFound, items = itemsForJson };
         Console.WriteLine(JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
     }
     else
     {
-        Console.WriteLine($"Found {files.Count} comic archives in {targetDir}:");
-        foreach (dynamic item in results)
+        Console.WriteLine($"Found {scanResult.TotalFound} comic archives in {scanResult.Directory}:");
+        foreach (var item in scanResult.Items)
         {
-            Console.WriteLine($"  [{item.number ?? "?"}] {item.series ?? "Unknown"} - {item.title ?? Path.GetFileName(item.path)}");
+            Console.WriteLine($"  [{item.Number ?? "?"}] {item.Series ?? "Unknown"} - {item.Title ?? Path.GetFileName(item.Path)}");
         }
     }
 }
@@ -322,8 +280,8 @@ static void PrintHelp(bool isJson)
         subcommands = new[]
         {
             new { name = "read <file>", description = "Reads and displays ComicInfo metadata as JSON or text." },
-            new { name = "update <file|dir> --patch '<json>' [--dry-run]", description = "Applies JSON property edits to one or all comic archives." },
-            new { name = "scan <directory> [--missing Field1,Field2]", description = "Scans a directory for comic files and missing metadata." },
+            new { name = "update <file|dir> --patch '<json>' [--dry-run] [--recursive]", description = "Applies JSON property edits to one or all comic archives." },
+            new { name = "scan <directory> [--missing Field1,Field2] [--recursive]", description = "Scans a directory for comic files and missing metadata." },
             new { name = "cover <file> [--output <image-path>]", description = "Extracts front cover image from archive." },
             new { name = "schema", description = "Prints JSON Schema for ComicInfo metadata objects." }
         },
@@ -331,6 +289,7 @@ static void PrintHelp(bool isJson)
         {
             new { flag = "--json", description = "Output structured machine-parseable JSON." },
             new { flag = "--dry-run", description = "Preview changes without writing files to disk." },
+            new { flag = "--recursive, -r", description = "Recursively search subdirectories when scanning or updating directories." },
             new { flag = "--verbose", description = "Include detailed stack traces in error outputs." }
         }
     };

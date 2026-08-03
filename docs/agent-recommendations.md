@@ -27,10 +27,10 @@ Harden InkTag's archive-handling safety, close correctness gaps in the GUI, redu
   - [x] **P2-D**: Scanner read-error flags (`HasReadError`)
   - [x] **P2-E**: Nullable `Page` attributes for clean XML round-trips
 
-- [ ] **Stage 3: CLI & MCP Refactoring & Parity** (Branch: `refactor/cli-mcp-deduplication`) — *PENDING*
-  - [ ] **P3-A**: Deduplicate CLI/MCP scan/update handlers into `InkTag.Core`
-  - [ ] **P3-B**: Add `--recursive` option to CLI and MCP server
-  - [ ] **P3-C**: Dynamic assembly version derivation from assembly metadata
+- [x] **Stage 3: CLI & MCP Refactoring & Parity** (Branch: `refactor/cli-mcp-deduplication`) — **COMPLETED**
+  - [x] **P3-A**: Deduplicate CLI/MCP scan/update handlers into `InkTag.Core`
+  - [x] **P3-B**: Add `--recursive` option to CLI and MCP server
+  - [x] **P3-C**: Dynamic assembly version derivation from assembly metadata
 
 - [ ] **Stage 4: Test Expansion & Wiki Documentation** (Branch: `docs/update-wiki-and-tests`) — *PENDING*
   - [ ] Edge-case integration tests (rollback on failed move, XML validation)

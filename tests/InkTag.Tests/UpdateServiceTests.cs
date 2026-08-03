@@ -38,4 +38,12 @@ public class UpdateServiceTests
         bool isInstalled = UpdateService.IsInstalledMode(null);
         Assert.False(isInstalled);
     }
+
+    [Fact]
+    public void CurrentAppVersion_ReturnsNonNullValidVersion()
+    {
+        var ver = UpdateService.CurrentAppVersion;
+        Assert.NotNull(ver);
+        Assert.True(ver.Major >= 0);
+    }
 }
