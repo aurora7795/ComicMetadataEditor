@@ -194,6 +194,11 @@ jobs:
       - name: Install Velopack vpk tool
         run: dotnet tool install -g vpk
 
+      - name: Generate sq.version for Linux
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "$VERSION" > publish/linux-x64/sq.version
+
       - name: Pack Linux Release with Velopack
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -207,6 +212,8 @@ jobs:
           cp -r publish/linux-x64/* AppDir/usr/bin/
           cp -r publish/linux-x64-mcp/InkTag.Mcp AppDir/usr/bin/InkTag.Mcp
           rm -f AppDir/usr/bin/libcoreclrtraceptprovider.so
+          VERSION_CLEAN="${GITHUB_REF_NAME#v}"
+          echo "$VERSION_CLEAN" > AppDir/usr/bin/sq.version
           chmod +x AppDir/usr/bin/InkTag.Gui
           chmod +x AppDir/usr/bin/InkTag.Mcp
           NO_STRIP=1 ./linuxdeploy-x86_64.AppImage --appimage-extract-and-run \

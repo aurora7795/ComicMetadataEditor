@@ -62,7 +62,7 @@ public static class UpdateService
     }
 
     /// <summary>
-    /// Checks if the application is running in installed mode (Velopack installed or macOS .app bundle).
+    /// Checks if the application is running in installed mode (Velopack installed, Linux AppImage, or macOS .app bundle).
     /// </summary>
     public static bool IsInstalledMode(UpdateManager? manager = null)
     {
@@ -72,15 +72,25 @@ public static class UpdateService
         }
         catch { }
 
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        string sqPath = System.IO.Path.Combine(baseDir, "sq.version");
+        if (System.IO.File.Exists(sqPath))
+        {
+            return true;
+        }
+
         if (OperatingSystem.IsMacOS())
         {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string macOsSq = System.IO.Path.Combine(baseDir, "sq.version");
             string resourcesSq = System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, "..", "Resources", "sq.version"));
-            if (System.IO.File.Exists(macOsSq) || System.IO.File.Exists(resourcesSq))
+            if (System.IO.File.Exists(resourcesSq))
             {
                 return true;
             }
+        }
+
+        if (OperatingSystem.IsLinux() && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APPIMAGE")))
+        {
+            return true;
         }
 
         return false;
