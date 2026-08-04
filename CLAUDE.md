@@ -22,6 +22,15 @@ This file sets the build, test, and style guidelines for the InkTag repository, 
 ### 1.3 Git Branching Strategy
 * **Default to Feature/Fix Branches**: NEVER write code or make modifications directly on `main`. Always check out or create a dedicated feature or bugfix branch (e.g., `feat/feature-name` or `fix/bug-description`) before modifying files, unless the request is explicitly part of an active work session on the current branch.
 
+### 1.4 Task & Issue Tracking Rules
+* **Use the GitHub CLI (`gh`)** for tracking deferred work and major changes.
+* **When encountering a bug or feature decided NOT to fix immediately**: Automatically create a GitHub Issue:
+  `gh issue create --title "<Brief Title>" --body "<Detailed description + affected files>"`
+* **When implementing a feature based on an existing GitHub issue**:
+  1. Fetch the issue context: `gh issue view <issue-number>`
+  2. Reference the issue in commit messages: `Fixes #<issue-number>: <description>`
+* Keep issues concise, actionable, and tagged appropriately.
+
 ---
 
 ## 2. Coding & Design Standards
