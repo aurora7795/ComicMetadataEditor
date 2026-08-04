@@ -55,31 +55,33 @@ The desktop client follows the standard MVVM design pattern:
 
 ## 🖥️ Layout Grid Specifications (`MainWindow.axaml`)
 
-The main interface is split into three main regions:
+The main workspace area (`Grid.Row="2"`) uses a 3-column layout equipped with an interactive `GridSplitter`:
+
+* **Column 0** (`Width="*"`, `MinWidth="300"`): Main DataGrid area containing virtualized spreadsheet rows.
+* **Column 1** (`Width="Auto"`): Vertical `GridSplitter` (`Width="6"`, `ResizeDirection="Columns"`). Allows interactive drag-resizing between `MinWidth="250"` and `MaxWidth="800"`.
+* **Column 2** (`x:Name="InspectorColumn"`, `Width="350"`): Collapsible details, bulk editing, and search & replace inspector panel (`Border` container).
+
+### ↔️ Resizable Inspector Sidebar
+* **Interactive Dragging**: Users can drag the vertical splitter bar between the DataGrid and Inspector panel to customize the panel width.
+* **Visibility Collapse & Restore**: When toggling Inspector panel visibility (`IsInspectorVisible` = `false`), the inspector column width automatically collapses to `0` to let the DataGrid occupy 100% of the window width. Toggling visibility back to `true` restores the user's previously resized panel width (or default 350px).
 
 ```text
-+----------------------------------------------------------------------------------------------------------------+
-|  Top MenuBar: File  Edit  View  Tools  Help  (NativeMenu on macOS)                                            |
-+--------------------------------------------------+-------------------------------------------------------------+
-|                                                  | Right Inspector Panel (Collapsible via View Menu):           |
-| Left Column: Spreadsheet DataGrid                |  - Tab 1: Details (Cover Art, Metadata Editor)              |
-| (Resizable columns, row dirty status indicators) |  - Tab 2: Bulk Edit (Batch Metadata Multi-Apply)            |
-|                                                  |  - Tab 3: Find & Replace (Batch String Substitution)        |
-+--------------------------------------------------+-------------------------------------------------------------+
-| Bottom Status Bar: X files loaded | [ProgressBar] ProgressText | UpdateStatus | InkTag v0.4.4                 |
-+----------------------------------------------------------------------------------------------------------------+
-```
-|                                                  |  Sidebar (TabControl):                                      |
-|                                                  |  +---------------------------+                              |
-|                                                  |  | Active Details | Bulk Edit|                              |
-|                                                  |  +---------------------------+                              |
-|  Main DataGrid (Left Column)                     |  |  [Cover Image Thumbnail]  |                              |
-|  - Virtualized spreadsheet                       |  |                           |                              |
-|  - Columns: File Name, Title, Series, Issue,     |  |  Title: [Marvel Comics ]  |                              |
-|    Volume, Publisher, Year, Genre, Tags, Writer, |  |  Publisher: [Marvel    ]  |                              |
-|    Language, Manga orientation.                 |  |                           |                              |
-|                                                  |  +---------------------------+                              |
-+--------------------------------------------------+-------------------------------------------------------------+
-|  Status Bar: Ready | 42 files loaded | 3 unsaved changes                                                      |
-+----------------------------------------------------------------------------------------------------------------+
++------------------------------------------------------------------------------------------------------------------+
+|  Top MenuBar: File  Edit  View  Tools  Help  (NativeMenu on macOS)                                              |
++----------------------------------------------------+---+---------------------------------------------------------+
+|                                                    | G | Right Inspector Panel (Collapsible & Resizable):        |
+| Left Column: Spreadsheet DataGrid                  | r |  - Tab 1: Details (Cover Art, Metadata Editor)          |
+| (Resizable columns, row dirty status indicators)   | i |  - Tab 2: Bulk Edit (Batch Metadata Multi-Apply)        |
+|                                                    | d |  - Tab 3: Find & Replace (Batch String Substitution)    |
+|                                                    | S |                                                         |
+|                                                    | p |  Sidebar (TabControl):                                  |
+|                                                    | l |  +---------------------------+                          |
+|                                                    | i |  | Active Details | Bulk Edit|                          |
+|                                                    | t |  +---------------------------+                          |
+|                                                    | t |  |  [Cover Image Thumbnail]  |                          |
+|                                                    | e |  |                           |                          |
+|                                                    | r |  |  Title: [Marvel Comics ]  |                          |
++----------------------------------------------------+---+---------------------------------------------------------+
+| Bottom Status Bar: X files loaded | [ProgressBar] ProgressText | UpdateStatus | InkTag v0.4.4                   |
++------------------------------------------------------------------------------------------------------------------+
 ```

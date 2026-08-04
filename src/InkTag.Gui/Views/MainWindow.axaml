@@ -152,7 +152,12 @@
     </Border>
 
     <!-- Main Workspace Split Area -->
-    <Grid Grid.Row="2" ColumnDefinitions="*, Auto">
+    <Grid Grid.Row="2" x:Name="MainWorkspaceGrid">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" MinWidth="300"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="350" MinWidth="250" MaxWidth="800"/>
+      </Grid.ColumnDefinitions>
       
       <!-- Left Column: Spreadsheet DataGrid -->
       <Grid Grid.Column="0" Margin="10">
@@ -180,8 +185,19 @@
         </DataGrid>
       </Grid>
 
+      <!-- Splitter Column: GridSplitter between DataGrid and Inspector -->
+      <GridSplitter Grid.Column="1" 
+                    Width="6" 
+                    Background="#3F3F46" 
+                    ResizeDirection="Columns" 
+                    HorizontalAlignment="Center" 
+                    VerticalAlignment="Stretch"
+                    IsVisible="{Binding IsInspectorVisible}" 
+                    Focusable="False" 
+                    ToolTip.Tip="Drag to resize Inspector panel"/>
+
       <!-- Right Column: Details & Bulk Tools Sidebar -->
-      <Border Grid.Column="1" Width="350" Background="#252526" BorderBrush="#3F3F46" BorderThickness="1,0,0,0" Padding="15" IsVisible="{Binding IsInspectorVisible}">
+      <Border Grid.Column="2" Background="#252526" BorderBrush="#3F3F46" BorderThickness="1,0,0,0" Padding="15" IsVisible="{Binding IsInspectorVisible}">
         <TabControl Theme="{StaticResource {x:Type TabControl}}">
           
           <!-- Tab 1: Single Comic Inspector -->
