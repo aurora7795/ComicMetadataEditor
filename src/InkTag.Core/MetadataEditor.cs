@@ -32,8 +32,9 @@ public class MetadataEditor
     /// </summary>
     /// <param name="directoryPath">The path to the directory containing CBR or CBZ files.</param>
     /// <param name="editAction">An action to perform on the ComicInfo object for each file.</param>
+    /// <param name="recursive">If true, searches subdirectories recursively.</param>
     /// <returns>A report containing statistics and failure logs.</returns>
-    public BulkEditReport BulkEditMetadata(string directoryPath, Action<ComicInfo> editAction)
+    public BulkEditReport BulkEditMetadata(string directoryPath, Action<ComicInfo> editAction, bool recursive = false)
     {
         var report = new BulkEditReport();
 
@@ -42,8 +43,10 @@ public class MetadataEditor
             throw new DirectoryNotFoundException($"Directory not found: {directoryPath}");
         }
 
+        var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+
         // Support both .cbr and .cbz files
-        var comicFiles = Directory.GetFiles(directoryPath, "*.*", SearchOption.TopDirectoryOnly)
+        var comicFiles = Directory.GetFiles(directoryPath, "*.*", searchOption)
             .Where(f => f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase) || 
                         f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -293,8 +296,13 @@ public class MetadataEditor
     }
 
     // Validates an XML file against the embedded ComicInfo XSD.
-    private static void ValidateXml(string xmlPath)
+    internal static void ValidateXml(string xmlPath)
     {
+        if (!File.Exists(xmlPath))
+        {
+            return;
+        }
+
         var schemaPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Schema", "ComicInfo.xsd");
         if (!File.Exists(schemaPath))
         {
@@ -346,9 +354,9 @@ public class MetadataEditor
     /// <summary>
     /// Bulk edits comic files in a directory using a JSON patch object string.
     /// </summary>
-    public BulkEditReport BulkEditMetadataFromJson(string directoryPath, string jsonPatch)
+    public BulkEditReport BulkEditMetadataFromJson(string directoryPath, string jsonPatch, bool recursive = false)
     {
-        return BulkEditMetadata(directoryPath, comic => ApplyJsonPatch(comic, jsonPatch));
+        return BulkEditMetadata(directoryPath, comic => ApplyJsonPatch(comic, jsonPatch), recursive);
     }
 
     /// <summary>

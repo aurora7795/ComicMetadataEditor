@@ -295,4 +295,101 @@ public class MetadataEditorTests
 
         Assert.Equal(MangaDirection.YesAndRightToLeft, updatedModel.Manga);
     }
+
+    [Fact]
+    public void EditMetadata_RollbackOnFailedEdit_LeavesOriginalArchiveUntouched()
+    {
+        var editor = new MetadataEditor();
+        string tempCbz = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + "_rollback.cbz");
+        string tempDummy = Path.GetTempFileName();
+
+        try
+        {
+            File.WriteAllText(tempDummy, "dummy data");
+            using (var stream = File.OpenWrite(tempCbz))
+            using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+            {
+                writer.Write("01.png", tempDummy);
+            }
+
+            editor.EditMetadata(tempCbz, c => c.Title = "Original Title");
+            Assert.Equal("Original Title", editor.ReadMetadata(tempCbz).Title);
+
+            Assert.Throws<InvalidOperationException>(() =>
+            {
+                editor.EditMetadata(tempCbz, c =>
+                {
+                    c.Title = "Modified Title";
+                    throw new InvalidOperationException("Simulated failure during edit callback");
+                });
+            });
+
+            Assert.True(File.Exists(tempCbz));
+            Assert.Equal("Original Title", editor.ReadMetadata(tempCbz).Title);
+        }
+        finally
+        {
+            if (File.Exists(tempDummy)) File.Delete(tempDummy);
+            if (File.Exists(tempCbz)) File.Delete(tempCbz);
+        }
+    }
+
+    [Fact]
+    public void EditMetadata_CbrConvertsToCbz_RemovesOriginalCbr()
+    {
+        var editor = new MetadataEditor();
+        string tempCbr = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".cbr");
+        string expectedCbz = Path.ChangeExtension(tempCbr, ".cbz");
+        string tempDummy = Path.GetTempFileName();
+
+        try
+        {
+            File.WriteAllText(tempDummy, "dummy data");
+            using (var stream = File.OpenWrite(tempCbr))
+            using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+            {
+                writer.Write("01.png", tempDummy);
+            }
+
+            editor.EditMetadata(tempCbr, comic =>
+            {
+                comic.Title = "Converted CBR Title";
+            });
+
+            Assert.False(File.Exists(tempCbr));
+            Assert.True(File.Exists(expectedCbz));
+
+            var read = editor.ReadMetadata(expectedCbz);
+            Assert.Equal("Converted CBR Title", read.Title);
+        }
+        finally
+        {
+            if (File.Exists(tempDummy)) File.Delete(tempDummy);
+            if (File.Exists(tempCbr)) File.Delete(tempCbr);
+            if (File.Exists(expectedCbz)) File.Delete(expectedCbz);
+        }
+    }
+
+    [Fact]
+    public void ValidateXml_SkipsWhenFileMissing()
+    {
+        string nonExistentFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".xml");
+        var ex = Record.Exception(() => MetadataEditor.ValidateXml(nonExistentFile));
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public void ValidateXml_ThrowsOnInvalidXml()
+    {
+        string invalidXmlFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + "_invalid.xml");
+        try
+        {
+            File.WriteAllText(invalidXmlFile, "<ComicInfo><Title>Unclosed Tag");
+            Assert.ThrowsAny<Exception>(() => MetadataEditor.ValidateXml(invalidXmlFile));
+        }
+        finally
+        {
+            if (File.Exists(invalidXmlFile)) File.Delete(invalidXmlFile);
+        }
+    }
 }

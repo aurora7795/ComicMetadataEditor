@@ -18,6 +18,10 @@ Welcome to the AI-maintained project wiki for **InkTag**. This directory compile
 * Class structures and interface definitions for views and view models in `InkTag.Gui`.
 * State management, progress tracking, and validation rules.
 
-### 4. [Testing & Verification Guide](testing.md)
+### 4. [CLI & MCP Interface Specifications](cli_mcp.md)
+* Command specifications for `InkTag.Cli` subcommands and flags.
+* JSON-RPC stdio tool specifications for `InkTag.Mcp`.
+
+### 5. [Testing & Verification Guide](testing.md)
 * Guidelines for automated unit tests in `InkTag.Tests`.
 * Detailed manual test checklist.

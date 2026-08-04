@@ -81,7 +81,7 @@
             <CheckBox IsChecked="{Binding IsRecursive}" VerticalAlignment="Center"/>
           </MenuItem.Icon>
         </MenuItem>
-        <MenuItem Header="_Inspector Panel">
+        <MenuItem Header="_Inspector Panel" Command="{Binding ToggleInspectorCommand}">
           <MenuItem.Icon>
             <CheckBox IsChecked="{Binding IsInspectorVisible}" VerticalAlignment="Center"/>
           </MenuItem.Icon>
@@ -152,7 +152,7 @@
     </Border>
 
     <!-- Main Workspace Split Area -->
-    <Grid Grid.Row="2" ColumnDefinitions="*, 350">
+    <Grid Grid.Row="2" ColumnDefinitions="*, Auto">
       
       <!-- Left Column: Spreadsheet DataGrid -->
       <Grid Grid.Column="0" Margin="10">
@@ -181,7 +181,7 @@
       </Grid>
 
       <!-- Right Column: Details & Bulk Tools Sidebar -->
-      <Border Grid.Column="1" Background="#252526" BorderBrush="#3F3F46" BorderThickness="1,0,0,0" Padding="15" IsVisible="{Binding IsInspectorVisible}">
+      <Border Grid.Column="1" Width="350" Background="#252526" BorderBrush="#3F3F46" BorderThickness="1,0,0,0" Padding="15" IsVisible="{Binding IsInspectorVisible}">
         <TabControl Theme="{StaticResource {x:Type TabControl}}">
           
           <!-- Tab 1: Single Comic Inspector -->
@@ -251,41 +251,57 @@
           
           <!-- Tab 2: Bulk Apply Tools -->
           <TabItem Header="Bulk Edit" FontSize="13">
-            <StackPanel Spacing="12" Margin="0,15,0,0">
-              <TextBlock Text="Modify selected rows in batch:" FontWeight="Bold" FontSize="12" Margin="0,0,0,5"/>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+              <StackPanel Spacing="12">
+                <TextBlock Text="Modify selected rows in batch:" FontWeight="Bold" FontSize="12" Margin="0,0,0,5"/>
 
-              <!-- Series -->
-              <Grid ColumnDefinitions="Auto, *">
-                <CheckBox IsChecked="{Binding BulkSeriesEnabled}" Grid.Column="0" VerticalAlignment="Center"/>
-                <TextBox Watermark="Series" Text="{Binding BulkSeries}" IsEnabled="{Binding BulkSeriesEnabled}" Grid.Column="1" Background="#1E1E1E"/>
-              </Grid>
+                <ItemsControl ItemsSource="{Binding BulkEditRules}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BulkEditRuleViewModel">
+                      <Border Background="#1E1E1E" BorderBrush="#333" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,8">
+                        <StackPanel Spacing="6">
+                          <!-- Row Header: Field & Operation -->
+                          <Grid ColumnDefinitions="*, *, Auto">
+                            <ComboBox ItemsSource="{Binding AvailableFields}" SelectedItem="{Binding SelectedField}" Grid.Column="0" Margin="0,0,4,0" HorizontalAlignment="Stretch">
+                              <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:BulkEditFieldInfo">
+                                  <TextBlock Text="{Binding DisplayName}"/>
+                                </DataTemplate>
+                              </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <ComboBox ItemsSource="{Binding AvailableOperations}" SelectedItem="{Binding SelectedOperation}" Grid.Column="1" Margin="4,0,4,0" HorizontalAlignment="Stretch"/>
+                            <Button Content="✕" Command="{Binding $parent[Window].DataContext.RemoveBulkRuleCommand}" CommandParameter="{Binding .}" Grid.Column="2" Padding="6,2" Background="#3E3E42" Foreground="#CCC" ToolTip.Tip="Remove Rule"/>
+                          </Grid>
 
-              <!-- Publisher -->
-              <Grid ColumnDefinitions="Auto, *">
-                <CheckBox IsChecked="{Binding BulkPublisherEnabled}" Grid.Column="0" VerticalAlignment="Center"/>
-                <TextBox Watermark="Publisher" Text="{Binding BulkPublisher}" IsEnabled="{Binding BulkPublisherEnabled}" Grid.Column="1" Background="#1E1E1E"/>
-              </Grid>
+                          <!-- Context-Sensitive Inputs -->
+                          <!-- String Text Editor -->
+                          <TextBox Text="{Binding StringValue}" Watermark="New Value" IsVisible="{Binding IsTextEditorVisible}" Background="#2D2D30"/>
 
-              <!-- Year -->
-              <Grid ColumnDefinitions="Auto, *">
-                <CheckBox IsChecked="{Binding BulkYearEnabled}" Grid.Column="0" VerticalAlignment="Center"/>
-                <TextBox Watermark="Year" Text="{Binding BulkYear}" IsEnabled="{Binding BulkYearEnabled}" Grid.Column="1" Background="#1E1E1E"/>
-              </Grid>
+                          <!-- Numeric Editor -->
+                          <NumericUpDown Value="{Binding NumericValue}" IsVisible="{Binding IsNumericEditorVisible}" Background="#2D2D30"/>
 
-              <!-- Genre -->
-              <Grid ColumnDefinitions="Auto, *">
-                <CheckBox IsChecked="{Binding BulkGenreEnabled}" Grid.Column="0" VerticalAlignment="Center"/>
-                <TextBox Watermark="Genre" Text="{Binding BulkGenre}" IsEnabled="{Binding BulkGenreEnabled}" Grid.Column="1" Background="#1E1E1E"/>
-              </Grid>
+                          <!-- Enum Selector -->
+                          <ComboBox ItemsSource="{Binding EnumOptions}" SelectedItem="{Binding SelectedEnumOption}" IsVisible="{Binding IsEnumEditorVisible}" HorizontalAlignment="Stretch" Background="#2D2D30"/>
 
-              <!-- Manga -->
-              <Grid ColumnDefinitions="Auto, *">
-                <CheckBox IsChecked="{Binding BulkMangaEnabled}" Grid.Column="0" VerticalAlignment="Center"/>
-                <CheckBox Content="Manga (Read Right-to-Left)" IsChecked="{Binding BulkManga}" IsEnabled="{Binding BulkMangaEnabled}" Grid.Column="1" VerticalAlignment="Center"/>
-              </Grid>
+                          <!-- Find & Replace Pair -->
+                          <Grid ColumnDefinitions="*, *" IsVisible="{Binding IsReplaceEditorVisible}">
+                            <TextBox Text="{Binding FindValue}" Watermark="Find..." Grid.Column="0" Margin="0,0,4,0" Background="#2D2D30"/>
+                            <TextBox Text="{Binding ReplaceValue}" Watermark="Replace with..." Grid.Column="1" Margin="4,0,0,0" Background="#2D2D30"/>
+                          </Grid>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-              <Button Content="Apply to Selected Rows" Command="{Binding BulkApplyCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,15,0,0" Padding="10" Background="#0E639C" Foreground="White"/>
-            </StackPanel>
+                <Grid ColumnDefinitions="*, *">
+                  <Button Content="+ Add Rule" Command="{Binding AddBulkRuleCommand}" Grid.Column="0" Margin="0,0,4,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#2D2D30"/>
+                  <Button Content="Clear Rules" Command="{Binding ClearBulkRulesCommand}" Grid.Column="1" Margin="4,0,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#2D2D30"/>
+                </Grid>
+
+                <Button Content="Apply to Selected Rows" Command="{Binding BulkApplyCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,10,0,0" Padding="10" Background="#0E639C" Foreground="White"/>
+              </StackPanel>
+            </ScrollViewer>
           </TabItem>
 
           <!-- Tab 3: Batch Find & Replace -->

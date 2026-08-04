@@ -8,6 +8,8 @@ using InkTag.Core.Logging;
 using Velopack;
 using Velopack.Sources;
 
+using System.Reflection;
+
 namespace InkTag.Gui.Services;
 
 public enum UpdateStatusKind
@@ -36,7 +38,28 @@ public static class UpdateService
     private static UpdateCheckResult? _cachedPortableResult;
     private static DateTime _lastCheckTime = DateTime.MinValue;
     private static readonly TimeSpan MinCheckInterval = TimeSpan.FromMinutes(15);
-    public static readonly Version CurrentAppVersion = new(0, 4, 4);
+    private static Version? _resolvedAppVersion;
+
+    public static Version CurrentAppVersion => _resolvedAppVersion ??= GetCurrentAppVersion();
+
+    private static Version GetCurrentAppVersion()
+    {
+        var asm = Assembly.GetExecutingAssembly();
+        var ver = asm.GetName().Version;
+        if (ver != null && ver != new Version(0, 0, 0, 0))
+        {
+            int build = ver.Build < 0 ? 0 : ver.Build;
+            return new Version(ver.Major, ver.Minor, build);
+        }
+
+        var infoVerAttr = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        if (infoVerAttr != null && TryParseVersion(infoVerAttr.InformationalVersion, out var parsedVer))
+        {
+            return parsedVer;
+        }
+
+        return new Version(0, 4, 4);
+    }
 
     /// <summary>
     /// Checks if the application is running in installed mode (Velopack installed or macOS .app bundle).

@@ -160,7 +160,8 @@ internal class Program
                         {
                             path = new { type = "string", description = "Target file or directory path" },
                             patch = new { type = "object", description = "Key-value property updates (e.g. {\"Writer\": \"Stan Lee\"})" },
-                            dryRun = new { type = "boolean", description = "If true, previews diffs without modifying files on disk." }
+                            dryRun = new { type = "boolean", description = "If true, previews diffs without modifying files on disk." },
+                            recursive = new { type = "boolean", description = "If true, updates files in subdirectories recursively." }
                         },
                         required = new[] { "path", "patch" }
                     }
@@ -196,7 +197,8 @@ internal class Program
                                 type = "array",
                                 items = new { type = "string" },
                                 description = "Fields to flag if null/empty (e.g. [\"Writer\", \"Series\"])"
-                            }
+                            },
+                            recursive = new { type = "boolean", description = "If true, scans subdirectories recursively." }
                         },
                         required = new[] { "directory" }
                     }
@@ -237,39 +239,32 @@ internal class Program
                         string path = args.GetProperty("path").GetString()!;
                         string patchJson = args.GetProperty("patch").GetRawText();
                         bool dryRun = args.TryGetProperty("dryRun", out var dryProp) && dryProp.GetBoolean();
+                        bool recursive = args.TryGetProperty("recursive", out var recProp) && recProp.GetBoolean();
 
-                        if (File.Exists(path))
+                        var result = AgentOperations.UpdatePath(_editor, path, patchJson, dryRun, recursive);
+
+                        if (!result.IsDirectory)
                         {
-                            var diffs = _editor.GetMetadataDiff(path, patchJson);
-                            var warnings = MetadataEditor.ApplyJsonPatch(new ComicInfo(), patchJson);
-                            if (!dryRun)
-                            {
-                                _editor.EditMetadataFromJson(path, patchJson);
-                            }
-                            object resObj = warnings.Count > 0
-                                ? new { path, dryRun, modifiedFields = diffs.Count, diffs, warnings }
-                                : new { path, dryRun, modifiedFields = diffs.Count, diffs };
+                            object resObj = (result.Warnings != null && result.Warnings.Count > 0)
+                                ? (object)new { path = result.TargetPath, dryRun = result.DryRun, modifiedFields = result.Diffs?.Count ?? 0, diffs = result.Diffs, warnings = result.Warnings }
+                                : (object)new { path = result.TargetPath, dryRun = result.DryRun, modifiedFields = result.Diffs?.Count ?? 0, diffs = result.Diffs };
                             string resJson = JsonSerializer.Serialize(resObj, new JsonSerializerOptions { WriteIndented = true });
                             return FormatTextResult(resJson);
                         }
-                        else if (Directory.Exists(path))
+                        else
                         {
-                            if (dryRun)
+                            if (result.DryRun)
                             {
-                                var files = Directory.GetFiles(path, "*.*", SearchOption.TopDirectoryOnly)
-                                    .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase));
-                                var fileDiffs = files.Select(f => new { path = f, diffs = _editor.GetMetadataDiff(f, patchJson) }).ToList();
-                                return FormatTextResult(JsonSerializer.Serialize(new { dryRun = true, files = fileDiffs }, new JsonSerializerOptions { WriteIndented = true }));
+                                var fileDiffsForJson = result.FileDiffs?.Select(fd => new { path = fd.Path, diffs = fd.Diffs }).ToList();
+                                object resObj = (result.Warnings != null && result.Warnings.Count > 0)
+                                    ? (object)new { dryRun = true, files = fileDiffsForJson, warnings = result.Warnings }
+                                    : (object)new { dryRun = true, files = fileDiffsForJson };
+                                return FormatTextResult(JsonSerializer.Serialize(resObj, new JsonSerializerOptions { WriteIndented = true }));
                             }
                             else
                             {
-                                var report = _editor.BulkEditMetadataFromJson(path, patchJson);
-                                return FormatTextResult(JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
+                                return FormatTextResult(JsonSerializer.Serialize(result.Report, new JsonSerializerOptions { WriteIndented = true }));
                             }
-                        }
-                        else
-                        {
-                            return FormatErrorResult($"Path not found: {path}");
                         }
                     }
 
@@ -325,35 +320,26 @@ internal class Program
                                 if (item.GetString() is string s) missingFields.Add(s);
                             }
                         }
+                        bool recursive = args.TryGetProperty("recursive", out var recProp) && recProp.GetBoolean();
 
-                        var files = Directory.GetFiles(dir, "*.*", SearchOption.TopDirectoryOnly)
-                            .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
-                            .ToList();
+                        var scanResult = AgentOperations.ScanDirectory(_editor, dir, missingFields, recursive);
 
-                        var items = files.Select(f =>
+                        var comicsForJson = scanResult.Items.Select(item => new
                         {
-                            var meta = _editor.ReadMetadata(f);
-                            var missing = new List<string>();
-                            if (missingFields.Count > 0)
-                            {
-                                var props = typeof(ComicInfo).GetProperties();
-                                foreach (var req in missingFields)
-                                {
-                                    var p = props.FirstOrDefault(pr => pr.Name.Equals(req, StringComparison.OrdinalIgnoreCase));
-                                    if (p != null)
-                                    {
-                                        var val = p.GetValue(meta);
-                                        if (val == null || (val is string str && string.IsNullOrWhiteSpace(str)))
-                                        {
-                                            missing.Add(p.Name);
-                                        }
-                                    }
-                                }
-                            }
-                            return new { path = f, title = meta.Title, series = meta.Series, number = meta.Number, missing };
+                            path = item.Path,
+                            title = item.Title,
+                            series = item.Series,
+                            number = item.Number,
+                            missing = item.MissingFields
                         }).ToList();
 
-                        string res = JsonSerializer.Serialize(new { directory = dir, totalFound = files.Count, comics = items }, new JsonSerializerOptions { WriteIndented = true });
+                        string res = JsonSerializer.Serialize(new
+                        {
+                            directory = scanResult.Directory,
+                            totalFound = scanResult.TotalFound,
+                            comics = comicsForJson
+                        }, new JsonSerializerOptions { WriteIndented = true });
+
                         return FormatTextResult(res);
                     }
 
