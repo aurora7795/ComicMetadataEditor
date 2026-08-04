@@ -57,7 +57,7 @@ The desktop client follows the standard MVVM design pattern:
 
 The main workspace area (`Grid.Row="2"`) uses a 3-column layout equipped with an interactive `GridSplitter`:
 
-* **Column 0** (`Width="*"`, `MinWidth="300"`): Main DataGrid area containing virtualized spreadsheet rows.
+* **Column 0** (`Width="*"`, `MinWidth="300"`): Main DataGrid area containing virtualized spreadsheet rows with all 35 `ComicInfo` metadata fields (Title, Series, Number, Count, Volume, Publisher, Imprint, SeriesGroup, StoryArc, Year, Month, Day, Genre, Tags, Writer, Penciller, Inker, Colorist, Letterer, CoverArtist, Editor, Summary, Notes, Format, BlackAndWhite, AgeRating, LanguageISO, PageCount, Characters, Teams, Locations, ScanInformation, Web, Manga).
 * **Column 1** (`Width="Auto"`): Vertical `GridSplitter` (`Width="6"`, `ResizeDirection="Columns"`). Allows interactive drag-resizing between `MinWidth="250"` and `MaxWidth="800"`.
 * **Column 2** (`x:Name="InspectorColumn"`, `Width="350"`): Collapsible details, bulk editing, and search & replace inspector panel (`Border` container).
 
