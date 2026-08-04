@@ -10,6 +10,13 @@ namespace InkTag.Gui.Views;
 
 public partial class MainWindow : Window
 {
+    private GridLength _savedInspectorWidth = new GridLength(350);
+
+    private ColumnDefinition? InspectorColumn => 
+        MainWorkspaceGrid?.ColumnDefinitions != null && MainWorkspaceGrid.ColumnDefinitions.Count > 2 
+            ? MainWorkspaceGrid.ColumnDefinitions[2] 
+            : null;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -18,6 +25,33 @@ public partial class MainWindow : Window
         DataContext = vm;
 
         vm.SaveFinishedWithErrors += OnSaveFinishedWithErrors;
+        vm.PropertyChanged += Vm_PropertyChanged;
+    }
+
+    private void Vm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainWindowViewModel.IsInspectorVisible) && DataContext is MainWindowViewModel vm)
+        {
+            UpdateInspectorColumnWidth(vm.IsInspectorVisible);
+        }
+    }
+
+    private void UpdateInspectorColumnWidth(bool isVisible)
+    {
+        if (InspectorColumn == null) return;
+
+        if (!isVisible)
+        {
+            if (InspectorColumn.Width.Value > 0)
+            {
+                _savedInspectorWidth = InspectorColumn.Width;
+            }
+            InspectorColumn.Width = new GridLength(0);
+        }
+        else
+        {
+            InspectorColumn.Width = _savedInspectorWidth.Value > 0 ? _savedInspectorWidth : new GridLength(350);
+        }
     }
 
     private async void OnSaveFinishedWithErrors()
