@@ -175,11 +175,36 @@
             <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="180"/>
             <DataGridTextColumn Header="Series" Binding="{Binding Series}" Width="160"/>
             <DataGridTextColumn Header="Issue #" Binding="{Binding Number}" Width="80"/>
+            <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="70"/>
             <DataGridTextColumn Header="Volume" Binding="{Binding Volume}" Width="80"/>
             <DataGridTextColumn Header="Publisher" Binding="{Binding Publisher}" Width="140"/>
+            <DataGridTextColumn Header="Imprint" Binding="{Binding Imprint}" Width="120"/>
+            <DataGridTextColumn Header="Series Group" Binding="{Binding SeriesGroup}" Width="140"/>
+            <DataGridTextColumn Header="Story Arc" Binding="{Binding StoryArc}" Width="140"/>
             <DataGridTextColumn Header="Year" Binding="{Binding Year}" Width="70"/>
-            <DataGridTextColumn Header="Writer" Binding="{Binding Writer}" Width="140"/>
+            <DataGridTextColumn Header="Month" Binding="{Binding Month}" Width="65"/>
+            <DataGridTextColumn Header="Day" Binding="{Binding Day}" Width="65"/>
             <DataGridTextColumn Header="Genre" Binding="{Binding Genre}" Width="120"/>
+            <DataGridTextColumn Header="Tags" Binding="{Binding Tags}" Width="140"/>
+            <DataGridTextColumn Header="Writer" Binding="{Binding Writer}" Width="140"/>
+            <DataGridTextColumn Header="Penciller" Binding="{Binding Penciller}" Width="140"/>
+            <DataGridTextColumn Header="Inker" Binding="{Binding Inker}" Width="140"/>
+            <DataGridTextColumn Header="Colorist" Binding="{Binding Colorist}" Width="140"/>
+            <DataGridTextColumn Header="Letterer" Binding="{Binding Letterer}" Width="140"/>
+            <DataGridTextColumn Header="Cover Artist" Binding="{Binding CoverArtist}" Width="140"/>
+            <DataGridTextColumn Header="Editor" Binding="{Binding Editor}" Width="140"/>
+            <DataGridTextColumn Header="Summary" Binding="{Binding Summary}" Width="220"/>
+            <DataGridTextColumn Header="Notes" Binding="{Binding Notes}" Width="180"/>
+            <DataGridTextColumn Header="Format" Binding="{Binding Format}" Width="100"/>
+            <DataGridTextColumn Header="Black &amp; White" Binding="{Binding BlackAndWhite}" Width="110"/>
+            <DataGridTextColumn Header="Age Rating" Binding="{Binding AgeRating}" Width="100"/>
+            <DataGridTextColumn Header="Language ISO" Binding="{Binding LanguageISO}" Width="100"/>
+            <DataGridTextColumn Header="Page Count" Binding="{Binding PageCount}" Width="90"/>
+            <DataGridTextColumn Header="Characters" Binding="{Binding Characters}" Width="160"/>
+            <DataGridTextColumn Header="Teams" Binding="{Binding Teams}" Width="140"/>
+            <DataGridTextColumn Header="Locations" Binding="{Binding Locations}" Width="140"/>
+            <DataGridTextColumn Header="Scan Info" Binding="{Binding ScanInformation}" Width="160"/>
+            <DataGridTextColumn Header="Web Link" Binding="{Binding Web}" Width="180"/>
             <DataGridCheckBoxColumn Header="Manga (RTL)" Binding="{Binding Manga}" Width="100"/>
           </DataGrid.Columns>
         </DataGrid>
