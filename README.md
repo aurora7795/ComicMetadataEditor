@@ -11,10 +11,10 @@ The project contains a core domain library (`InkTag.Core`), an AI-agent-friendly
 * **Dual-Format Processing:** Supports reading both `.cbz` (ZIP-based) and `.cbr` (RAR/RAR-like) archives using random-access `ArchiveFactory.OpenArchive()`.
 * **Cross-Platform MenuBar & NativeMenu:** Full `File`, `Edit`, `View`, `Tools`, and `Help` navigation with hotkeys (`Ctrl+O`, `Ctrl+S`, `F5`, `Ctrl+Q`) and native macOS screen top MenuBar integration.
 * **Velopack Auto-Updater & Fallback:** Cross-platform auto-updates via Velopack with direct GitHub API release checking fallback for portable builds (Linux AppImages / macOS DMGs).
-* **AI Agent Native:** Built-in Model Context Protocol (MCP) server (`InkTag.Mcp`) over `stdio` and structured CLI (`InkTag.Cli`) with `--json` output mode and `--dry-run` safety checks.
+* **AI Agent Native & Tier-1 MCP SDK:** Built-in Model Context Protocol server (`InkTag.Mcp`) using the official **`ModelContextProtocol` C# SDK** (`v2.1.0`) over `stdio`, plus structured CLI (`InkTag.Cli`) with `--json` output mode and `--dry-run` safety checks.
 * **Multimodal Cover Extraction:** Extracts front cover art for visual LLMs (Gemini, Claude, GPT-4o) to visually inspect titles, creators, and issue numbers.
 * **Dynamic JSON Patching:** Mutate metadata via JSON strings without compiling C# lambdas.
-* **Safe Replacement Strategy:** Minimizes risk of data loss by repacking to a temporary archive, validating readability, making backups, and swapping target paths on success.
+* **Archive Security & Safe Replacement:** Active path containment (ZipSlip defense), safe temp extraction, and atomic archive repacking with automatic `.bak` rollbacks.
 * **Open Source Attributions:** Full license attributions for third-party tools ([THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)).
 
 ---
@@ -75,7 +75,7 @@ dotnet build InkTag.slnx
 ## 🤖 AI Agent Integration
 
 ### 1. Model Context Protocol (MCP) Server
-Run the MCP server to expose comic metadata tools directly to AI assistants (Claude Desktop, Cursor, Antigravity, VS Code):
+Run the MCP server (powered by the official **`ModelContextProtocol` C# SDK** `v2.1.0`) to expose comic metadata tools directly to AI assistants (Claude Desktop, Cursor, Antigravity, VS Code):
 
 ```bash
 dotnet run --project src/InkTag.Mcp/InkTag.Mcp.csproj
@@ -160,6 +160,8 @@ Integrates `Velopack` (v1.2.0) into **InkTag Desktop**, providing rate-limited u
 ## 🗺️ Roadmap & Future Vision
 
 ### Completed Milestones
+* **[x] Official Tier-1 MCP C# SDK Migration:** Upgraded `InkTag.Mcp` to the official `ModelContextProtocol` C# SDK (`v2.1.0`) with declarative `[McpServerTool]` tool definitions.
+* **[x] Archive Security & Extraction Containment:** Implemented strict ZipSlip defenses, path containment checks, and safe temp archive extraction options.
 * **[x] Fix XSD validation edge case:** Handled gracefully on missing metadata files.
 * **[x] Complete Avalonia Desktop App (InkTag Desktop):** Implemented modern spreadsheet grid, side panels, lazy-loaded cover thumbs, validation, find-replace, and safe background saving.
 * **[x] Make Library AI-Agent Ready:** Added stdio MCP server, single-file bundling, structured `--json` CLI subcommands, dynamic JSON patch API, cover art extraction, and agent skill package (`.agents/skills/comic-metadata-curator/`).
