@@ -36,6 +36,11 @@ Harden InkTag's archive-handling safety, close correctness gaps in the GUI, redu
   - [x] Edge-case integration tests (rollback on failed move, XML validation)
   - [x] Update `docs/wiki/` documentation for CLI/MCP flag parity and schema updates
 
+- [x] **Stage 5: Official MCP C# SDK Migration** (Branch: `feat/mcp-sdk-migration`) — **COMPLETED**
+  - [x] Migrated `InkTag.Mcp` from custom JSON-RPC stdio loop to official Tier-1 `ModelContextProtocol` C# SDK
+  - [x] Declarative tool registration using `[McpServerToolType]` and `[McpServerTool]` in `ComicTools.cs`
+  - [x] Unit test suite added in `McpToolsTests.cs` (36 total tests passing)
+
 ---
 
 ## Agent Rules (mandatory)

@@ -35,7 +35,7 @@ dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- <command> [options]
 
 ## 🔌 InkTag.Mcp (Model Context Protocol Server)
 
-`InkTag.Mcp` exposes JSON-RPC stdio capabilities compatible with AI agents (such as Claude Desktop, Gemini Antigravity, or custom MCP clients).
+`InkTag.Mcp` is implemented using the official Tier-1 **`ModelContextProtocol` C# SDK** (`modelcontextprotocol/csharp-sdk`). It exposes stdio tool capabilities over standard input/output streams compatible with AI agents (such as Claude Desktop, Gemini Antigravity, or custom MCP clients). Tools are declaratively defined using `[McpServerToolType]` and `[McpServerTool]` attributes on `ComicTools`.
 
 ### Available Tools (`tools/list`)
 

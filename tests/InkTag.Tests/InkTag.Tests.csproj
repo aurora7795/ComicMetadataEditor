@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\InkTag.Core\InkTag.Core.csproj" />
     <ProjectReference Include="..\..\src\InkTag.Gui\InkTag.Gui.csproj" />
+    <ProjectReference Include="..\..\src\InkTag.Mcp\InkTag.Mcp.csproj" />
   </ItemGroup>
 
 </Project>
