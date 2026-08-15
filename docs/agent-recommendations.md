@@ -78,9 +78,9 @@ entry.WriteToDirectory(tempDir, new ExtractionOptions { Overwrite = true, Extrac
 **Additional hardening (recommended):** After extraction, verify every file under `tempDir` resolves to a path still contained within `tempDir` (use `Path.GetFullPath` comparison). If any entry escapes, throw `InvalidDataException` and abort before repack.
 
 **Acceptance criteria:**
-- [ ] Both `ReadMetadata` and `EditMetadata` use identical safe `ExtractionOptions`.
-- [ ] New test: archive entry with `../` in the key does not write outside temp dir.
-- [ ] Existing 16 tests still pass.
+- [x] Both `ReadMetadata` and `EditMetadata` use identical safe `ExtractionOptions`.
+- [x] New test: archive entry with `../` in the key does not write outside temp dir.
+- [x] Existing 16 tests still pass.
 
 ---
 
@@ -97,9 +97,9 @@ entry.WriteToDirectory(tempDir, new ExtractionOptions { Overwrite = true, Extrac
 - Add optional `--verbose` global flag; include `stackTrace` only when `--verbose` is set.
 
 **Acceptance criteria:**
-- [ ] Normal `--json` errors omit `stackTrace`.
-- [ ] `--verbose --json` errors include `stackTrace`.
-- [ ] Help output documents the new flag.
+- [x] Normal `--json` errors omit `stackTrace`.
+- [x] `--verbose --json` errors include `stackTrace`.
+- [x] Help output documents the new flag.
 
 ---
 
@@ -121,9 +121,9 @@ entry.WriteToDirectory(tempDir, new ExtractionOptions { Overwrite = true, Extrac
 3. Optionally: prompt before first CBR save in a session (keep simple — status bar text is enough unless user prefers a dialog).
 
 **Acceptance criteria:**
-- [ ] Saving a `.cbr` file results in grid showing the new `.cbz` path.
-- [ ] User sees feedback that conversion occurred.
-- [ ] Test: edit a temp `.cbr` archive → output is `.cbz`, original `.cbr` removed.
+- [x] Saving a `.cbr` file results in grid showing the new `.cbz` path.
+- [x] User sees feedback that conversion occurred.
+- [x] Test: edit a temp `.cbr` archive → output is `.cbz`, original `.cbr` removed.
 
 ---
 
@@ -140,8 +140,8 @@ entry.WriteToDirectory(tempDir, new ExtractionOptions { Overwrite = true, Extrac
 - Keep a bool for quick toggle but store the original enum in a private field and only overwrite when the user explicitly changes Manga.
 
 **Acceptance criteria:**
-- [ ] Loading a comic with `<Manga>YesAndRightToLeft</Manga>` and saving without touching Manga preserves that value.
-- [ ] Unit or integration test covers round-trip.
+- [x] Loading a comic with `<Manga>YesAndRightToLeft</Manga>` and saving without touching Manga preserves that value.
+- [x] Unit or integration test covers round-trip.
 
 ---
 
@@ -160,8 +160,8 @@ entry.WriteToDirectory(tempDir, new ExtractionOptions { Overwrite = true, Extrac
 - Include `"warnings": ["Unknown property 'Writter'"]` in CLI `--json` and MCP tool responses when warnings exist.
 
 **Acceptance criteria:**
-- [ ] Patch with one valid + one invalid key applies the valid key and reports the invalid one.
-- [ ] Test covers unknown-key warning.
+- [x] Patch with one valid + one invalid key applies the valid key and reports the invalid one.
+- [x] Test covers unknown-key warning.
 
 ---
 
@@ -181,8 +181,8 @@ entry.WriteToDirectory(tempDir, new ExtractionOptions { Overwrite = true, Extrac
 3. Exclude `HasReadError` rows from `CanSave` / bulk apply, or warn on save attempt.
 
 **Acceptance criteria:**
-- [ ] Corrupt archive row shows an error indicator.
-- [ ] Save All skips or blocks rows with read errors.
+- [x] Corrupt archive row shows an error indicator.
+- [x] Save All skips or blocks rows with read errors.
 
 ---
 
@@ -197,8 +197,8 @@ entry.WriteToDirectory(tempDir, new ExtractionOptions { Overwrite = true, Extrac
 **Required change:** Convert optional attributes to nullable types with `ShouldSerialize*` methods (same pattern as `ComicInfo.Count`, `ComicInfo.Year`, etc.).
 
 **Acceptance criteria:**
-- [ ] CBZ containing `<Page Image="0" Type="FrontCover"/>` (no width/height attrs) round-trips without injecting `ImageWidth="0"`.
-- [ ] Test added.
+- [x] CBZ containing `<Page Image="0" Type="FrontCover"/>` (no width/height attrs) round-trips without injecting `ImageWidth="0"`.
+- [x] Test added.
 
 ---
 
@@ -215,8 +215,8 @@ entry.WriteToDirectory(tempDir, new ExtractionOptions { Overwrite = true, Extrac
 Both CLI and MCP call the shared helpers; delete duplicated loops.
 
 **Acceptance criteria:**
-- [ ] CLI and MCP behavior unchanged (same JSON shapes).
-- [ ] No duplicated scan/update/missing-field logic in CLI or MCP entrypoints.
+- [x] CLI and MCP behavior unchanged (same JSON shapes).
+- [x] No duplicated scan/update/missing-field logic in CLI or MCP entrypoints.
 
 ---
 
@@ -232,8 +232,8 @@ Both CLI and MCP call the shared helpers; delete duplicated loops.
 **Required change:** Add `--recursive` flag (CLI) and `recursive: boolean` param (MCP). Default `false` for backward compatibility.
 
 **Acceptance criteria:**
-- [ ] `--recursive` scans/updates nested subfolders.
-- [ ] Default behavior unchanged when flag omitted.
+- [x] `--recursive` scans/updates nested subfolders.
+- [x] Default behavior unchanged when flag omitted.
 
 ---
 
@@ -249,7 +249,7 @@ Both CLI and MCP call the shared helpers; delete duplicated loops.
 **Required change:** Read version from `Assembly.GetExecutingAssembly().GetName().Version` or `[AssemblyInformationalVersion]`. CI already tags releases — align csproj version with tag at release time.
 
 **Acceptance criteria:**
-- [ ] About window and update checker show assembly version, not a manually maintained constant.
+- [x] About window and update checker show assembly version, not a manually maintained constant.
 
 ---
 
@@ -310,10 +310,10 @@ dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- read <sample.cbz> --jso
 dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- update <sample.cbz> --patch '{"Writer":"Test"}' --dry-run --json
 ```
 
-- [ ] Build: 0 warnings, 0 errors
-- [ ] Tests: all pass (count should exceed 16)
-- [ ] No `.bak` files left after successful save
-- [ ] Wiki pages updated for any behavior changes
+- [x] Build: 0 warnings, 0 errors
+- [x] Tests: all pass (count should exceed 16)
+- [x] No `.bak` files left after successful save
+- [x] Wiki pages updated for any behavior changes
 
 ---
 
