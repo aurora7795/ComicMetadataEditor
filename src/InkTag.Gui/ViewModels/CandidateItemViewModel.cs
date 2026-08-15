@@ -55,9 +55,11 @@ public class CandidateItemViewModel : ObservableObject
     }
 
     public string SeriesTitle => Result.SeriesTitle;
-    public string IssueNumber => string.IsNullOrEmpty(Result.IssueNumber) ? "" : $"#{Result.IssueNumber}";
+    public string IssueNumber => Result.IssueNumber;
     public string IssueTitle => Result.IssueTitle;
-    public string DisplayTitle => !string.IsNullOrWhiteSpace(IssueTitle) ? $"{IssueNumber} - {IssueTitle}" : IssueNumber;
+    public string DisplayTitle => !string.IsNullOrWhiteSpace(IssueTitle) 
+        ? (!string.IsNullOrEmpty(IssueNumber) ? $"#{IssueNumber} - {IssueTitle}" : IssueTitle)
+        : (!string.IsNullOrEmpty(IssueNumber) ? $"#{IssueNumber}" : "");
     public string CoverDate => Result.CoverDate;
     public double MatchConfidence
     {
