@@ -382,5 +382,54 @@ public class ScraperTests
         Assert.True(visualConfidence >= 0.95, $"Expected visual confidence >= 0.95, got {visualConfidence}");
         Assert.Equal(1.0, result.VisualSimilarity);
     }
+
+    [Fact]
+    public void ComicVineProvider_PenalizesSevereYearMismatch()
+    {
+        var candidateFrom1998 = new ComicSearchResult
+        {
+            SeriesTitle = "Eden: It's an Endless World!",
+            IssueNumber = "2",
+            CoverDate = "1998-05-01",
+            CoverHash = 0b1111000011110000UL
+        };
+
+        var target2006Query = new ComicSearchQuery
+        {
+            Series = "Eden: It's an Endless World!",
+            IssueNumber = "2",
+            Year = 2006
+        };
+
+        // Even with matching title and issue #, 8-year difference applies severe penalty
+        double confidence = ComicVineProvider.CalculateConfidence(candidateFrom1998, target2006Query, null);
+        Assert.True(confidence <= 0.50, $"Expected confidence <= 0.50 due to 8-year mismatch penalty, got {confidence}");
+
+        // Severe year mismatch also prevents visual override from over-promoting the wrong decade run
+        ulong localCoverHash = 0b1111000011110000UL;
+        double visualConfidence = ComicVineProvider.CalculateConfidence(candidateFrom1998, target2006Query, localCoverHash);
+        Assert.True(visualConfidence <= 0.40, $"Expected visual confidence <= 0.40 due to volume mismatch, got {visualConfidence}");
+    }
+
+    [Fact]
+    public void ComicVineProvider_RewardsExactYearMatch()
+    {
+        var candidate2006 = new ComicSearchResult
+        {
+            SeriesTitle = "Eden: It's an Endless World!",
+            IssueNumber = "2",
+            CoverDate = "2006-08-01"
+        };
+
+        var target2006Query = new ComicSearchQuery
+        {
+            Series = "Eden: It's an Endless World!",
+            IssueNumber = "2",
+            Year = 2006
+        };
+
+        double confidence = ComicVineProvider.CalculateConfidence(candidate2006, target2006Query, null);
+        Assert.Equal(1.0, confidence); // 0.50 (title) + 0.35 (issue) + 0.25 (year) = 1.0 (100%)
+    }
 }
 

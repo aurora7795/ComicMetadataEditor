@@ -342,16 +342,34 @@ public class ComicVineProvider : IMetadataScraperProvider
             }
         }
 
-        // Year similarity
-        if (query.Year.HasValue && !string.IsNullOrEmpty(result.CoverDate) && DateTime.TryParse(result.CoverDate, out var date))
+        int? candidateYear = null;
+        if (!string.IsNullOrEmpty(result.CoverDate) && DateTime.TryParse(result.CoverDate, out var date))
         {
-            if (date.Year == query.Year.Value)
+            candidateYear = date.Year;
+        }
+
+        bool hasSevereYearMismatch = false;
+
+        // Year similarity & mismatch penalty
+        if (query.Year.HasValue && candidateYear.HasValue)
+        {
+            int yearDiff = Math.Abs(query.Year.Value - candidateYear.Value);
+            if (yearDiff == 0)
             {
-                textScore += 0.15;
+                textScore += 0.25; // Exact year match
+            }
+            else if (yearDiff == 1)
+            {
+                textScore += 0.15; // Adjacent year (publication/cover date difference)
+            }
+            else
+            {
+                hasSevereYearMismatch = true;
+                textScore -= 0.40; // Severe mismatch penalty for different comic runs/decades
             }
         }
 
-        textScore = Math.Min(1.0, textScore);
+        textScore = Math.Clamp(textScore, 0.0, 1.0);
 
         // Visual Cover Similarity (if both local and online hashes are present)
         if (localCoverHash.HasValue && localCoverHash.Value != 0 && result.CoverHash.HasValue && result.CoverHash.Value != 0)
@@ -359,8 +377,14 @@ public class ComicVineProvider : IMetadataScraperProvider
             double visualSimilarity = InkTag.Core.Images.PerceptualHashService.CalculateSimilarity(localCoverHash.Value, result.CoverHash.Value);
             result.VisualSimilarity = visualSimilarity;
 
+            // If there is a severe year mismatch, prevent visual override from promoting the wrong volume
+            if (hasSevereYearMismatch)
+            {
+                return Math.Min(0.40, (textScore * 0.5) + (visualSimilarity * 0.5));
+            }
+
             // Visual Override Strategy:
-            // If visual match is extremely high (>= 90%), treat cover as primary confirmation (95%+ confidence)
+            // If visual match is extremely high (>= 90%) and year is not contradictory, treat cover as primary confirmation (95%+ confidence)
             if (visualSimilarity >= 0.90)
             {
                 return Math.Max(0.95, (textScore * 0.2) + (visualSimilarity * 0.8));

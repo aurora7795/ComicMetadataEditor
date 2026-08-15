@@ -37,7 +37,37 @@ public class MetadataScraperService
             throw new InvalidOperationException("ComicVine API key is not configured. Please set your API key in Settings or COMICVINE_API_KEY environment variable.");
         }
 
-        return await _provider.SearchAsync(query, apiKey, ct);
+        var globalResults = (await _provider.SearchAsync(query, apiKey, ct)).ToList();
+
+        // Volume-First Resolution: If series title and year are present, find the matching volume
+        // and include its issues so the correct publication run is guaranteed to be in the candidate list
+        if (_provider.SupportsSeriesSearch && !string.IsNullOrWhiteSpace(query.Series) && query.Year.HasValue)
+        {
+            try
+            {
+                var volumes = await _provider.SearchSeriesAsync(query.Series, apiKey, ct);
+                var matchingVolume = volumes.FirstOrDefault(v => v.StartYear.HasValue && Math.Abs(v.StartYear.Value - query.Year.Value) <= 1);
+                
+                if (matchingVolume != null)
+                {
+                    var volumeIssues = await _provider.FetchSeriesIssuesAsync(matchingVolume.VolumeId, apiKey, 1, 50, query, ct);
+                    var seenIds = new HashSet<string>(globalResults.Select(r => r.IssueId));
+                    foreach (var vIssue in volumeIssues)
+                    {
+                        if (seenIds.Add(vIssue.IssueId))
+                        {
+                            globalResults.Add(vIssue);
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Fallback to standard global results on any lookup error
+            }
+        }
+
+        return globalResults.OrderByDescending(r => r.MatchConfidence);
     }
 
     public async Task<ComicInfo> FetchMetadataAsync(string issueId, CancellationToken ct = default)
