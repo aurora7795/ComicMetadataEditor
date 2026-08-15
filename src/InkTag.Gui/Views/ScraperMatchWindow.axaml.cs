@@ -25,6 +25,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
 {
     private readonly ComicInfo _targetComic;
     private readonly MetadataScraperService _scraperService;
+    private readonly ulong? _localCoverHash;
     private ComicInfo? _fetchedComic;
 
     private Avalonia.Media.Imaging.Bitmap? _localCoverImage;
@@ -51,11 +52,12 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
     {
     }
 
-    public ScraperMatchWindow(ComicInfo targetComic, IEnumerable<ComicSearchResult>? initialCandidates = null, Avalonia.Media.Imaging.Bitmap? localCover = null)
+    public ScraperMatchWindow(ComicInfo targetComic, IEnumerable<ComicSearchResult>? initialCandidates = null, Avalonia.Media.Imaging.Bitmap? localCover = null, ulong? localCoverHash = null)
     {
         InitializeComponent();
         DataContext = this;
         _targetComic = targetComic;
+        _localCoverHash = localCoverHash;
         LocalCoverImage = localCover;
         _scraperService = new MetadataScraperService(new AppSettingsService());
 
@@ -68,7 +70,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
 
         if (initialCandidates != null && initialCandidates.Any())
         {
-            var viewModels = initialCandidates.Select(c => new CandidateItemViewModel(c)).ToList();
+            var viewModels = initialCandidates.Select(c => new CandidateItemViewModel(c, _localCoverHash)).ToList();
             CandidatesListBox.ItemsSource = viewModels;
             CandidatesListBox.SelectedIndex = 0;
         }
@@ -86,7 +88,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
     private async void SeriesWizard_Click(object? sender, RoutedEventArgs e)
     {
         string initialQuery = SeriesTextBox.Text?.Trim() ?? _targetComic.Series ?? "";
-        var wizard = new SeriesSearchWizardWindow(initialQuery);
+        var wizard = new SeriesSearchWizardWindow(initialQuery, _localCoverHash);
         await wizard.ShowDialog(this);
 
         if (wizard.WasApplied && wizard.SelectedResult != null)
@@ -98,9 +100,9 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
                 IssueNumber = !string.IsNullOrWhiteSpace(IssueTextBox.Text) ? IssueTextBox.Text.Trim() : (_targetComic.Number ?? ""),
                 Year = year
             };
-            wizard.SelectedResult.MatchConfidence = ComicVineProvider.CalculateConfidence(wizard.SelectedResult, targetQuery);
+            wizard.SelectedResult.MatchConfidence = ComicVineProvider.CalculateConfidence(wizard.SelectedResult, targetQuery, _localCoverHash);
 
-            var vm = new CandidateItemViewModel(wizard.SelectedResult);
+            var vm = new CandidateItemViewModel(wizard.SelectedResult, _localCoverHash);
             CandidatesListBox.ItemsSource = new List<CandidateItemViewModel> { vm };
             CandidatesListBox.SelectedIndex = 0;
 
@@ -126,7 +128,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
             };
 
             var candidates = (await _scraperService.SearchCandidatesAsync(query)).ToList();
-            var viewModels = candidates.Select(c => new CandidateItemViewModel(c)).ToList();
+            var viewModels = candidates.Select(c => new CandidateItemViewModel(c, _localCoverHash)).ToList();
             CandidatesListBox.ItemsSource = viewModels;
 
             if (viewModels.Any())

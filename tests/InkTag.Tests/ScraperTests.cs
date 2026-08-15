@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using InkTag.Core;
 using InkTag.Core.Configuration;
 using InkTag.Core.Scrapers;
+using SixLabors.ImageSharp;
 using Xunit;
 
 namespace InkTag.Tests;
@@ -316,4 +317,70 @@ public class ScraperTests
         Assert.Equal("Spider-Man No More!", issue.IssueTitle);
         Assert.Equal("The Amazing Spider-Man", issue.SeriesTitle);
     }
+
+    [Fact]
+    public void PerceptualHashService_ComputesIdenticalHashForIdenticalImages()
+    {
+        // Generate a 100x100 checkerboard pattern image
+        using var image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(100, 100);
+        for (int y = 0; y < 100; y++)
+        {
+            for (int x = 0; x < 100; x++)
+            {
+                byte val = (byte)(((x / 10) % 2 == (y / 10) % 2) ? 240 : 20);
+                image[x, y] = new SixLabors.ImageSharp.PixelFormats.Rgba32(val, val, val);
+            }
+        }
+
+        using var ms1 = new MemoryStream();
+        image.SaveAsPng(ms1);
+        ms1.Position = 0;
+
+        using var ms2 = new MemoryStream();
+        image.SaveAsJpeg(ms2);
+        ms2.Position = 0;
+
+        ulong hashPng = InkTag.Core.Images.PerceptualHashService.ComputeDHash(ms1);
+        ulong hashJpeg = InkTag.Core.Images.PerceptualHashService.ComputeDHash(ms2);
+
+        Assert.NotEqual(0UL, hashPng);
+        Assert.NotEqual(0UL, hashJpeg);
+
+        // PNG vs JPEG of same image should have minimal or 0 Hamming distance
+        int distance = InkTag.Core.Images.PerceptualHashService.ComputeHammingDistance(hashPng, hashJpeg);
+        double similarity = InkTag.Core.Images.PerceptualHashService.CalculateSimilarity(hashPng, hashJpeg);
+
+        Assert.True(distance <= 4, $"Expected distance <= 4, got {distance}");
+        Assert.True(similarity >= 0.90, $"Expected similarity >= 0.90, got {similarity}");
+        Assert.True(InkTag.Core.Images.PerceptualHashService.IsVisualMatch(hashPng, hashJpeg));
+    }
+
+    [Fact]
+    public void ComicVineProvider_AppliesVisualOverrideWhenCoverMatches()
+    {
+        var result = new ComicSearchResult
+        {
+            SeriesTitle = "Unorganized Comic",
+            IssueNumber = "Unknown",
+            CoverHash = 0b1111000011110000UL
+        };
+
+        var query = new ComicSearchQuery
+        {
+            Series = "Unknown Title",
+            IssueNumber = "99"
+        };
+
+        // Text score alone is 0
+        double textOnlyConfidence = ComicVineProvider.CalculateConfidence(result, query, null);
+        Assert.Equal(0.0, textOnlyConfidence);
+
+        // With identical cover hash, visual override triggers and yields >= 95% confidence
+        ulong localCoverHash = 0b1111000011110000UL;
+        double visualConfidence = ComicVineProvider.CalculateConfidence(result, query, localCoverHash);
+
+        Assert.True(visualConfidence >= 0.95, $"Expected visual confidence >= 0.95, got {visualConfidence}");
+        Assert.Equal(1.0, result.VisualSimilarity);
+    }
 }
+

@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="InkTag.Gui.Views.SettingsWindow"
         Title="InkTag Settings"
-        Width="520" Height="400"
+        Width="520" Height="460"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
         Background="#1E1E1E" Foreground="White">
@@ -33,11 +33,21 @@
           </ComboBox>
         </StackPanel>
 
+        <!-- Visual Cover Match Options -->
+        <StackPanel Spacing="5" Margin="0,10,0,0">
+          <TextBlock Text="Cover Image Matching (Perceptual Hashing):" FontWeight="Medium"/>
+          <CheckBox Name="VisualMatchCheckBox" Content="Enable automated cover matching &amp; visual verification" IsChecked="True"/>
+          <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
+            <TextBlock Grid.Column="0" Text="Visual Match Confidence Threshold (Default 90%):" VerticalAlignment="Center" Foreground="Gray" FontSize="12"/>
+            <TextBox Name="VisualThresholdTextBox" Grid.Column="1" Text="90" Width="60" TextAlignment="Center"/>
+          </Grid>
+        </StackPanel>
+
         <!-- Cache Management -->
         <StackPanel Spacing="5" Margin="0,10,0,0">
           <TextBlock Text="Local Response Cache:" FontWeight="Medium"/>
           <Grid ColumnDefinitions="*, Auto">
-            <TextBlock Grid.Column="0" Text="Response cache (~/.cache/InkTag/scraper_cache.json)" VerticalAlignment="Center" Foreground="Gray" FontSize="12"/>
+            <TextBlock Grid.Column="0" Text="Response &amp; cover hash cache (~/.cache/InkTag/scraper_cache.json)" VerticalAlignment="Center" Foreground="Gray" FontSize="12"/>
             <Button Grid.Column="1" Content="Clear Cache" Click="ClearCache_Click" Padding="10,5" Background="#3E3E42"/>
           </Grid>
         </StackPanel>

@@ -185,6 +185,9 @@ public static class ComicTools
         {
             success = result.Success,
             message = result.Message,
+            confidence = result.SelectedCandidate?.MatchConfidence,
+            visualSimilarity = result.SelectedCandidate?.VisualSimilarity,
+            isVisualMatch = result.SelectedCandidate?.VisualSimilarity >= 0.90,
             dryRun,
             path,
             title = comic.Title,

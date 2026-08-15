@@ -23,6 +23,8 @@ public partial class SettingsWindow : Window
         var settings = _settingsService.Settings;
         ApiKeyTextBox.Text = settings.ComicVineApiKey;
         MergePolicyComboBox.SelectedIndex = settings.DefaultMergeMode == ScrapeMergeMode.OverwriteAll ? 1 : 0;
+        VisualMatchCheckBox.IsChecked = settings.AutoApplyOnVisualMatch;
+        VisualThresholdTextBox.Text = ((int)(settings.VisualMatchConfidenceThreshold * 100)).ToString();
     }
 
     private async void TestApiKey_Click(object? sender, RoutedEventArgs e)
@@ -69,6 +71,11 @@ public partial class SettingsWindow : Window
         settings.DefaultMergeMode = MergePolicyComboBox.SelectedIndex == 1 
             ? ScrapeMergeMode.OverwriteAll 
             : ScrapeMergeMode.FillMissingOnly;
+        settings.AutoApplyOnVisualMatch = VisualMatchCheckBox.IsChecked == true;
+        if (double.TryParse(VisualThresholdTextBox.Text, out double thresh))
+        {
+            settings.VisualMatchConfidenceThreshold = Math.Clamp(thresh > 1 ? thresh / 100.0 : thresh, 0.50, 1.0);
+        }
 
         _settingsService.SaveSettings(settings);
         Close();

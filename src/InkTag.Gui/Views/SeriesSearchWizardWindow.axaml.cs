@@ -17,21 +17,24 @@ namespace InkTag.Gui.Views;
 public partial class SeriesSearchWizardWindow : Window
 {
     private readonly MetadataScraperService _scraperService;
+    private readonly ulong? _localCoverHash;
     private SeriesSearchResult? _selectedSeries;
     private int _currentPage = 1;
     private const int PageSize = 50;
+    private bool _hasUserManuallySelected;
 
     public bool WasApplied { get; private set; }
     public ComicSearchResult? SelectedResult { get; private set; }
     public bool RequestCompareDiff { get; private set; }
 
-    public SeriesSearchWizardWindow() : this(string.Empty)
+    public SeriesSearchWizardWindow() : this(string.Empty, null)
     {
     }
 
-    public SeriesSearchWizardWindow(string initialSeriesQuery)
+    public SeriesSearchWizardWindow(string initialSeriesQuery, ulong? localCoverHash = null)
     {
         InitializeComponent();
+        _localCoverHash = localCoverHash;
         _scraperService = new MetadataScraperService(new AppSettingsService());
 
         if (!string.IsNullOrWhiteSpace(initialSeriesQuery))
@@ -154,6 +157,7 @@ public partial class SeriesSearchWizardWindow : Window
         CompareApplyButton.IsEnabled = false;
         QuickApplyButton.IsEnabled = false;
         SelectedIssueSummaryText.Text = "No issue selected. Click an issue from the list above.";
+        _hasUserManuallySelected = false;
 
         try
         {
@@ -163,10 +167,18 @@ public partial class SeriesSearchWizardWindow : Window
                 var viewModels = issues
                     .OrderBy(i => GetNumericIssueNumber(i.IssueNumber))
                     .ThenBy(i => i.IssueNumber)
-                    .Select(i => new CandidateItemViewModel(i))
+                    .Select(i =>
+                    {
+                        var vm = new CandidateItemViewModel(i, _localCoverHash);
+                        vm.OnCoverHashComputed += OnCandidateCoverHashComputed;
+                        return vm;
+                    })
                     .ToList();
+
                 IssuesListBox.ItemsSource = viewModels;
                 Step2StatusText.IsVisible = false;
+
+                EvaluateTopVisualMatch(viewModels);
             }
             else
             {
@@ -181,6 +193,42 @@ public partial class SeriesSearchWizardWindow : Window
         }
 
         UpdatePaginationControls();
+    }
+
+    private void OnCandidateCoverHashComputed(CandidateItemViewModel vm)
+    {
+        if (IssuesListBox.ItemsSource is List<CandidateItemViewModel> list)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => EvaluateTopVisualMatch(list));
+        }
+    }
+
+    private void EvaluateTopVisualMatch(List<CandidateItemViewModel> list)
+    {
+        if (!_localCoverHash.HasValue || _localCoverHash.Value == 0 || list.Count == 0) return;
+
+        CandidateItemViewModel? topMatch = null;
+        double bestSim = 0.0;
+
+        foreach (var item in list)
+        {
+            if (item.VisualSimilarity.HasValue && item.VisualSimilarity.Value > bestSim)
+            {
+                bestSim = item.VisualSimilarity.Value;
+                topMatch = item;
+            }
+        }
+
+        foreach (var item in list)
+        {
+            item.IsTopVisualMatch = topMatch != null && item == topMatch && bestSim >= 0.70;
+        }
+
+        // Auto-select if top match is high confidence (>= 85%) and user hasn't made a manual pick yet
+        if (!_hasUserManuallySelected && topMatch != null && bestSim >= 0.85 && IssuesListBox.SelectedItem != topMatch)
+        {
+            IssuesListBox.SelectedItem = topMatch;
+        }
     }
 
     private void UpdatePaginationControls()
@@ -222,10 +270,16 @@ public partial class SeriesSearchWizardWindow : Window
 
     private void IssuesListBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (e.AddedItems.Count > 0)
+        {
+            _hasUserManuallySelected = true;
+        }
+
         if (IssuesListBox.SelectedItem is CandidateItemViewModel vm)
         {
             SelectedResult = vm.Result;
-            SelectedIssueSummaryText.Text = $"Selected: {vm.Result.SeriesTitle} #{vm.Result.IssueNumber} ({vm.Result.IssueTitle})";
+            string matchNote = vm.VisualSimilarity.HasValue && vm.VisualSimilarity.Value > 0 ? $" [Cover Match: {vm.VisualSimilarity.Value:P0}]" : "";
+            SelectedIssueSummaryText.Text = $"Selected: {vm.Result.SeriesTitle} #{vm.Result.IssueNumber} ({vm.Result.IssueTitle}){matchNote}";
             CompareApplyButton.IsEnabled = true;
             QuickApplyButton.IsEnabled = true;
         }

@@ -143,7 +143,7 @@ public partial class MainWindow : Window
             }
 
             var model = targetItem.ToModel();
-            var dialog = new ScraperMatchWindow(model, null, targetItem.CoverImage);
+            var dialog = new ScraperMatchWindow(model, null, targetItem.CoverImage, targetItem.CoverHash != 0 ? targetItem.CoverHash : null);
             await dialog.ShowDialog(this);
 
             if (dialog.WasApplied)
@@ -176,7 +176,7 @@ public partial class MainWindow : Window
             }
 
             string initialQuery = targetItem.Series ?? "";
-            var wizard = new SeriesSearchWizardWindow(initialQuery);
+            var wizard = new SeriesSearchWizardWindow(initialQuery, targetItem.CoverHash != 0 ? targetItem.CoverHash : null);
             await wizard.ShowDialog(this);
 
             if (wizard.WasApplied && wizard.SelectedResult != null)
@@ -184,7 +184,7 @@ public partial class MainWindow : Window
                 var model = targetItem.ToModel();
                 if (wizard.RequestCompareDiff)
                 {
-                    var matchWindow = new ScraperMatchWindow(model, new[] { wizard.SelectedResult }, targetItem.CoverImage);
+                    var matchWindow = new ScraperMatchWindow(model, new[] { wizard.SelectedResult }, targetItem.CoverImage, targetItem.CoverHash != 0 ? targetItem.CoverHash : null);
                     await matchWindow.ShowDialog(this);
                     if (matchWindow.WasApplied)
                     {

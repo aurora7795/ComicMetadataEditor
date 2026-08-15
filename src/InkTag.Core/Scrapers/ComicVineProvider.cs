@@ -312,9 +312,9 @@ public class ComicVineProvider : IMetadataScraperProvider
         return results.OrderByDescending(r => r.MatchConfidence);
     }
 
-    public static double CalculateConfidence(ComicSearchResult result, ComicSearchQuery query)
+    public static double CalculateConfidence(ComicSearchResult result, ComicSearchQuery query, ulong? localCoverHash = null)
     {
-        double score = 0.0;
+        double textScore = 0.0;
 
         // Series title similarity
         if (!string.IsNullOrEmpty(query.Series) && !string.IsNullOrEmpty(result.SeriesTitle))
@@ -324,12 +324,12 @@ public class ComicVineProvider : IMetadataScraperProvider
 
             if (cleanSearchSeries.Equals(cleanResultSeries, StringComparison.OrdinalIgnoreCase))
             {
-                score += 0.5;
+                textScore += 0.5;
             }
             else if (cleanResultSeries.Contains(cleanSearchSeries, StringComparison.OrdinalIgnoreCase) ||
                      cleanSearchSeries.Contains(cleanResultSeries, StringComparison.OrdinalIgnoreCase))
             {
-                score += 0.3;
+                textScore += 0.3;
             }
         }
 
@@ -338,7 +338,7 @@ public class ComicVineProvider : IMetadataScraperProvider
         {
             if (NormalizeIssueNumber(query.IssueNumber) == NormalizeIssueNumber(result.IssueNumber))
             {
-                score += 0.35;
+                textScore += 0.35;
             }
         }
 
@@ -347,11 +347,32 @@ public class ComicVineProvider : IMetadataScraperProvider
         {
             if (date.Year == query.Year.Value)
             {
-                score += 0.15;
+                textScore += 0.15;
             }
         }
 
-        return Math.Min(1.0, score);
+        textScore = Math.Min(1.0, textScore);
+
+        // Visual Cover Similarity (if both local and online hashes are present)
+        if (localCoverHash.HasValue && localCoverHash.Value != 0 && result.CoverHash.HasValue && result.CoverHash.Value != 0)
+        {
+            double visualSimilarity = InkTag.Core.Images.PerceptualHashService.CalculateSimilarity(localCoverHash.Value, result.CoverHash.Value);
+            result.VisualSimilarity = visualSimilarity;
+
+            // Visual Override Strategy:
+            // If visual match is extremely high (>= 90%), treat cover as primary confirmation (95%+ confidence)
+            if (visualSimilarity >= 0.90)
+            {
+                return Math.Max(0.95, (textScore * 0.2) + (visualSimilarity * 0.8));
+            }
+            if (visualSimilarity >= 0.75)
+            {
+                return (textScore * 0.5) + (visualSimilarity * 0.5);
+            }
+            return (textScore * 0.7) + (visualSimilarity * 0.3);
+        }
+
+        return textScore;
     }
 
     private ComicInfo ParseIssueDetails(string json)

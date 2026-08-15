@@ -35,6 +35,9 @@ public partial class ComicItemViewModel : ObservableValidator
     private Bitmap? _coverImage;
 
     [ObservableProperty]
+    private ulong _coverHash;
+
+    [ObservableProperty]
     private string? _title;
 
     [ObservableProperty]
@@ -367,11 +370,12 @@ public partial class ComicItemViewModel : ObservableValidator
 
     public async Task LoadCoverAsync(ArchiveCoverService coverService, CancellationToken cancellationToken)
     {
-        if (CoverImage != null) return;
-        var bitmap = await coverService.LoadCoverAsync(FilePath, cancellationToken);
+        if (CoverImage != null && CoverHash != 0) return;
+        var (bitmap, hash) = await coverService.LoadCoverWithHashAsync(FilePath, cancellationToken);
         if (bitmap != null)
         {
             CoverImage = bitmap;
+            CoverHash = hash;
         }
     }
 

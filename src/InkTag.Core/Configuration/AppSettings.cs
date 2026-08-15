@@ -10,6 +10,8 @@ public class AppSettings
     public string ComicVineApiKey { get; set; } = string.Empty;
     public ScrapeMergeMode DefaultMergeMode { get; set; } = ScrapeMergeMode.FillMissingOnly;
     public double AutoMatchConfidenceThreshold { get; set; } = 0.85;
+    public bool AutoApplyOnVisualMatch { get; set; } = true;
+    public double VisualMatchConfidenceThreshold { get; set; } = 0.90;
     public int CacheDurationHours { get; set; } = 168; // 7 days
 }
 

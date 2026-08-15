@@ -18,13 +18,20 @@ public class ArchiveCoverService
     private const int MaxCacheCapacity = 50;
     private readonly object _cacheLock = new();
     private readonly Dictionary<string, Bitmap> _coverCache = new();
+    private readonly Dictionary<string, ulong> _hashCache = new();
     private readonly LinkedList<string> _lruOrder = new();
 
     public async Task<Bitmap?> LoadCoverAsync(string archivePath, CancellationToken cancellationToken)
     {
+        var result = await LoadCoverWithHashAsync(archivePath, cancellationToken);
+        return result.Bitmap;
+    }
+
+    public async Task<(Bitmap? Bitmap, ulong CoverHash)> LoadCoverWithHashAsync(string archivePath, CancellationToken cancellationToken)
+    {
         if (string.IsNullOrEmpty(archivePath) || !File.Exists(archivePath))
         {
-            return null;
+            return (null, 0);
         }
 
         lock (_cacheLock)
@@ -33,11 +40,12 @@ public class ArchiveCoverService
             {
                 _lruOrder.Remove(archivePath);
                 _lruOrder.AddLast(archivePath);
-                return cachedBitmap;
+                _hashCache.TryGetValue(archivePath, out ulong cachedHash);
+                return (cachedBitmap, cachedHash);
             }
         }
 
-        return await Task.Run(() =>
+        return await Task.Run<(Bitmap?, ulong)>(() =>
         {
             try
             {
@@ -50,7 +58,7 @@ public class ArchiveCoverService
 
                 if (imageEntries.Count == 0)
                 {
-                    return null;
+                    return (null, 0);
                 }
 
                 var bestEntry = imageEntries.FirstOrDefault(e => Path.GetFileName(e.Key!).Contains("cover", StringComparison.OrdinalIgnoreCase));
@@ -61,9 +69,11 @@ public class ArchiveCoverService
 
                 using var memoryStream = new MemoryStream();
                 bestEntry.OpenEntryStream().CopyTo(memoryStream);
-                memoryStream.Position = 0;
+                byte[] bytes = memoryStream.ToArray();
 
+                memoryStream.Position = 0;
                 var bitmap = new Bitmap(memoryStream);
+                ulong hash = InkTag.Core.Images.PerceptualHashService.ComputeDHash(bytes);
 
                 lock (_cacheLock)
                 {
@@ -82,18 +92,23 @@ public class ArchiveCoverService
                             {
                                 evictedBitmap.Dispose();
                             }
+                            _hashCache.Remove(oldestKey);
                         }
                     }
 
                     _coverCache[archivePath] = bitmap;
+                    if (hash != 0)
+                    {
+                        _hashCache[archivePath] = hash;
+                    }
                     _lruOrder.AddLast(archivePath);
                 }
 
-                return bitmap;
+                return (bitmap, hash);
             }
             catch
             {
-                return null;
+                return (null, 0);
             }
         }, cancellationToken);
     }
