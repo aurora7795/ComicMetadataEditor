@@ -92,9 +92,13 @@
 
       <!-- Tools Menu -->
       <MenuItem Header="_Tools">
+        <MenuItem Header="🔍 _Scrape Metadata (ComicVine)..." Click="ScrapeMetadata_Click"/>
+        <MenuItem Header="🧙 Series _Search Wizard..." Click="SeriesSearchWizard_Click"/>
         <MenuItem Header="Open _Logs Directory" Command="{Binding OpenLogsCommand}"/>
+        <Separator/>
+        <MenuItem Header="_Settings..." Click="Settings_Click"/>
       </MenuItem>
-
+      
       <!-- Help Menu -->
       <MenuItem Header="_Help">
         <MenuItem Header="_Check for Updates" Command="{Binding CheckForUpdatesCommand}"/>
@@ -105,10 +109,10 @@
     </Menu>
 
     <!-- Top Header Toolbar -->
-    <Border Grid.Row="1" Background="#2D2D30" BorderBrush="#3F3F46" BorderThickness="0,0,0,1" Padding="10,6">
+    <Border Grid.Row="1" Background="#2D2D30" Padding="8,6" BorderBrush="#3F3F46" BorderThickness="0,0,0,1">
       <Grid ColumnDefinitions="Auto, Auto, Auto, Auto, *, Auto">
         <!-- Open Folder Button -->
-        <Button Grid.Column="0" Click="OpenFolder_Click" Margin="0,0,8,0" Padding="10,5" Background="#3E3E42" Foreground="White" CornerRadius="4">
+        <Button Grid.Column="0" Click="OpenFolder_Click" Padding="12,6" Background="#3E3E42" Foreground="White" CornerRadius="4">
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Text="📁" VerticalAlignment="Center"/>
             <TextBlock Text="Open Folder..." VerticalAlignment="Center" FontWeight="SemiBold"/>
@@ -116,7 +120,7 @@
         </Button>
 
         <!-- Save All Button -->
-        <Button Grid.Column="1" Command="{Binding SaveAllCommand}" Margin="0,0,12,0" Padding="10,5" Background="#007ACC" Foreground="White" CornerRadius="4">
+        <Button Grid.Column="1" Command="{Binding SaveAllCommand}" Padding="12,6" Background="#007ACC" Foreground="White" CornerRadius="4" Margin="8,0,0,0">
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Text="💾" VerticalAlignment="Center"/>
             <TextBlock Text="Save All" VerticalAlignment="Center" FontWeight="SemiBold"/>
@@ -124,7 +128,7 @@
         </Button>
 
         <!-- Separator -->
-        <Rectangle Grid.Column="2" Width="1" Fill="#3F3F46" Margin="0,3,12,3"/>
+        <Rectangle Grid.Column="2" Width="1" Fill="#3F3F46" Margin="12,3"/>
 
         <!-- Scan Recursively CheckBox Toggle -->
         <CheckBox Grid.Column="3" IsChecked="{Binding IsRecursive}" Content="Scan Subfolders Recursively" VerticalAlignment="Center" Margin="0,0,12,0"/>
@@ -132,8 +136,22 @@
         <!-- Active Folder Path Display -->
         <TextBlock Grid.Column="4" Text="{Binding SelectedDirectory}" TextTrimming="CharacterEllipsis" Foreground="#9CDCFE" VerticalAlignment="Center" Margin="10,0" FontStyle="Italic"/>
 
-        <!-- Right Side Controls: Refresh & Inspector Toggle -->
+        <!-- Right Side Controls: Scrape, Refresh & Inspector Toggle -->
         <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8">
+          <Button Click="ScrapeMetadata_Click" Padding="8,5" Background="#007ACC" Foreground="White" CornerRadius="4" ToolTip.Tip="Scrape metadata from ComicVine">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Text="🌐" VerticalAlignment="Center"/>
+              <TextBlock Text="Scrape" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+
+          <Button Click="SeriesSearchWizard_Click" Padding="8,5" Background="#313244" Foreground="#CDD6F4" CornerRadius="4" ToolTip.Tip="Series Search Wizard">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Text="🧙" VerticalAlignment="Center"/>
+              <TextBlock Text="Series Wizard" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+
           <Button Command="{Binding RefreshGridCommand}" Padding="8,5" Background="#3E3E42" Foreground="White" CornerRadius="4" ToolTip.Tip="Refresh Grid (F5)">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Text="🔄" VerticalAlignment="Center"/>

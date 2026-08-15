@@ -129,4 +129,67 @@ public static class ComicTools
     {
         return MetadataEditor.ExportJsonSchema();
     }
+
+    [McpServerTool, Description("Searches ComicVine online database for matching comic issues.")]
+    public static string SearchExternalMetadata(
+        [Description("Series title (e.g. 'The Amazing Spider-Man')")] string series,
+        [Description("Issue number (e.g. '121')")] string issueNumber = "",
+        [Description("Optional release year (e.g. 1973)")] int? year = null,
+        [Description("Optional ComicVine API key")] string? apiKey = null)
+    {
+        var settingsService = new InkTag.Core.Configuration.AppSettingsService();
+        if (!string.IsNullOrEmpty(apiKey))
+        {
+            settingsService.Settings.ComicVineApiKey = apiKey;
+        }
+
+        var service = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);
+        var query = new InkTag.Core.Scrapers.ComicSearchQuery
+        {
+            Series = series,
+            IssueNumber = issueNumber,
+            Year = year
+        };
+
+        var results = service.SearchCandidatesAsync(query).GetAwaiter().GetResult();
+        return JsonSerializer.Serialize(results, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    [McpServerTool, Description("Scrapes and applies metadata from ComicVine to a local comic archive.")]
+    public static string ScrapeComicMetadata(
+        [Description("Path to comic archive (.cbz / .cbr)")] string path,
+        [Description("Merge mode: 'fill-missing' (default) or 'overwrite'")] string mode = "fill-missing",
+        [Description("If true, previews updates without writing to disk")] bool dryRun = false,
+        [Description("Optional ComicVine API key")] string? apiKey = null)
+    {
+        var settingsService = new InkTag.Core.Configuration.AppSettingsService();
+        if (!string.IsNullOrEmpty(apiKey))
+        {
+            settingsService.Settings.ComicVineApiKey = apiKey;
+        }
+
+        var service = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);
+        var comic = _editor.ReadMetadata(path);
+        var result = service.AutoScrapeComicAsync(comic).GetAwaiter().GetResult();
+
+        if (result.Success && !dryRun)
+        {
+            var mergeMode = string.Equals(mode, "overwrite", StringComparison.OrdinalIgnoreCase)
+                ? InkTag.Core.Scrapers.ScrapeMergeMode.OverwriteAll
+                : InkTag.Core.Scrapers.ScrapeMergeMode.FillMissingOnly;
+
+            _editor.EditMetadata(path, existing => service.ApplyMetadata(existing, comic, mergeMode));
+        }
+
+        return JsonSerializer.Serialize(new
+        {
+            success = result.Success,
+            message = result.Message,
+            dryRun,
+            path,
+            title = comic.Title,
+            series = comic.Series,
+            writer = comic.Writer
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
 }

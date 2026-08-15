@@ -34,6 +34,9 @@ try
         case "schema":
             HandleSchemaCommand(isJsonOutput);
             break;
+        case "scrape":
+            HandleScrapeCommand(args, positionalArgs, isJsonOutput, isDryRun, editor);
+            break;
         case "help":
         case "--help":
         case "-h":
@@ -271,6 +274,127 @@ static void HandleLegacyOrFallback(string targetDir, bool isJson, bool isDryRun,
     }
 }
 
+static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool isJson, bool isDryRun, MetadataEditor editor)
+{
+    if (positionalArgs.Count < 2)
+    {
+        throw new ArgumentException("Usage: scrape <file|directory> [--api-key KEY] [--mode fill-missing|overwrite] [--dry-run] [--json]");
+    }
+
+    string targetPath = positionalArgs[1];
+    string? apiKey = GetOptionValue(args, "--api-key");
+    string? modeStr = GetOptionValue(args, "--mode");
+
+    InkTag.Core.Scrapers.ScrapeMergeMode mergeMode = InkTag.Core.Scrapers.ScrapeMergeMode.FillMissingOnly;
+    if (string.Equals(modeStr, "overwrite", StringComparison.OrdinalIgnoreCase))
+    {
+        mergeMode = InkTag.Core.Scrapers.ScrapeMergeMode.OverwriteAll;
+    }
+
+    var settingsService = new InkTag.Core.Configuration.AppSettingsService();
+    if (!string.IsNullOrEmpty(apiKey))
+    {
+        settingsService.Settings.ComicVineApiKey = apiKey;
+    }
+
+    var scraperService = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);
+
+    if (File.Exists(targetPath))
+    {
+        var comic = editor.ReadMetadata(targetPath);
+        var result = scraperService.AutoScrapeComicAsync(comic).GetAwaiter().GetResult();
+
+        if (result.Success && !isDryRun)
+        {
+            editor.EditMetadata(targetPath, existing =>
+            {
+                scraperService.ApplyMetadata(existing, comic, mergeMode);
+            });
+        }
+
+        if (isJson)
+        {
+            var resObj = new
+            {
+                success = result.Success,
+                message = result.Message,
+                dryRun = isDryRun,
+                file = targetPath,
+                series = comic.Series,
+                number = comic.Number,
+                title = comic.Title,
+                writer = comic.Writer
+            };
+            Console.WriteLine(JsonSerializer.Serialize(resObj, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        else
+        {
+            Console.WriteLine(result.Message);
+        }
+    }
+    else if (Directory.Exists(targetPath))
+    {
+        bool recursive = args.Any(a => a.Equals("--recursive", StringComparison.OrdinalIgnoreCase) || a.Equals("-r", StringComparison.OrdinalIgnoreCase));
+        var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        var files = Directory.GetFiles(targetPath, "*.*", searchOption)
+                             .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
+                             .ToList();
+
+        int successCount = 0;
+        int failCount = 0;
+        var resultsList = new List<object>();
+
+        foreach (var file in files)
+        {
+            try
+            {
+                var comic = editor.ReadMetadata(file);
+                var result = scraperService.AutoScrapeComicAsync(comic).GetAwaiter().GetResult();
+                if (result.Success)
+                {
+                    if (!isDryRun)
+                    {
+                        editor.EditMetadata(file, existing => scraperService.ApplyMetadata(existing, comic, mergeMode));
+                    }
+                    successCount++;
+                }
+                else
+                {
+                    failCount++;
+                }
+                resultsList.Add(new { file, success = result.Success, message = result.Message });
+            }
+            catch (Exception ex)
+            {
+                failCount++;
+                resultsList.Add(new { file, success = false, message = ex.Message });
+            }
+        }
+
+        if (isJson)
+        {
+            var summary = new
+            {
+                success = true,
+                dryRun = isDryRun,
+                totalFiles = files.Count,
+                scrapedCount = successCount,
+                failedCount = failCount,
+                details = resultsList
+            };
+            Console.WriteLine(JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        else
+        {
+            Console.WriteLine($"Scraped {successCount}/{files.Count} files successfully ({failCount} skipped/failed).");
+        }
+    }
+    else
+    {
+        throw new FileNotFoundException($"Target path not found: '{targetPath}'");
+    }
+}
+
 static void PrintHelp(bool isJson)
 {
     var helpObj = new
@@ -282,6 +406,7 @@ static void PrintHelp(bool isJson)
             new { name = "read <file>", description = "Reads and displays ComicInfo metadata as JSON or text." },
             new { name = "update <file|dir> --patch '<json>' [--dry-run] [--recursive]", description = "Applies JSON property edits to one or all comic archives." },
             new { name = "scan <directory> [--missing Field1,Field2] [--recursive]", description = "Scans a directory for comic files and missing metadata." },
+            new { name = "scrape <file|dir> [--api-key KEY] [--mode fill-missing|overwrite]", description = "Auto-scrapes metadata from ComicVine online database." },
             new { name = "cover <file> [--output <image-path>]", description = "Extracts front cover image from archive." },
             new { name = "schema", description = "Prints JSON Schema for ComicInfo metadata objects." }
         },

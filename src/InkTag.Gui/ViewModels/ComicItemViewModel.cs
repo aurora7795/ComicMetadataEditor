@@ -13,7 +13,7 @@ namespace InkTag.Gui.ViewModels;
 
 public partial class ComicItemViewModel : ObservableValidator
 {
-    private readonly ComicInfo _model;
+    private ComicInfo _model;
     private bool _isInitializing;
 
     [ObservableProperty]
@@ -158,6 +158,12 @@ public partial class ComicItemViewModel : ObservableValidator
         FileName = Path.GetFileName(newPath);
     }
 
+    public void LoadFromModel(ComicInfo model)
+    {
+        _model = model;
+        LoadFromModel();
+    }
+
     public void LoadFromModel()
     {
         _isInitializing = true;
@@ -206,6 +212,13 @@ public partial class ComicItemViewModel : ObservableValidator
         {
             _isInitializing = false;
         }
+    }
+
+    public ComicInfo ToModel()
+    {
+        var model = new ComicInfo();
+        ApplyChangesToModel(model);
+        return model;
     }
 
     public void ApplyChangesToModel()

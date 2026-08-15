@@ -1,0 +1,200 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="InkTag.Gui.Views.ScraperMatchWindow"
+        Title="ComicVine Scraper Match &amp; Diff Viewer"
+        Width="950" Height="620"
+        WindowStartupLocation="CenterOwner"
+        Background="#1E1E1E" Foreground="White">
+
+  <Border Padding="15">
+    <Grid RowDefinitions="Auto, *, Auto">
+      
+      <!-- Top Search Header -->
+      <Border Grid.Row="0" Background="#252526" CornerRadius="4" Padding="10" Margin="0,0,0,10">
+        <Grid ColumnDefinitions="*, 100, 100, Auto, Auto">
+          <StackPanel Grid.Column="0" Margin="0,0,10,0">
+            <TextBlock Text="Series Title:" FontSize="11" Foreground="Gray"/>
+            <TextBox Name="SeriesTextBox" Watermark="Series..."/>
+          </StackPanel>
+
+          <StackPanel Grid.Column="1" Margin="0,0,10,0">
+            <TextBlock Text="Issue #:" FontSize="11" Foreground="Gray"/>
+            <TextBox Name="IssueTextBox" Watermark="Issue #..."/>
+          </StackPanel>
+
+          <StackPanel Grid.Column="2" Margin="0,0,10,0">
+            <TextBlock Text="Year:" FontSize="11" Foreground="Gray"/>
+            <TextBox Name="YearTextBox" Watermark="Year..."/>
+          </StackPanel>
+
+          <Button Name="SearchButton" Grid.Column="3" Content="🔍 Search" Click="Search_Click" VerticalAlignment="Bottom" Padding="15,7" Background="#007ACC" Foreground="White" FontWeight="Bold"/>
+          <Button Name="SeriesWizardButton" Grid.Column="4" Content="🧙 Series Wizard..." Click="SeriesWizard_Click" VerticalAlignment="Bottom" Margin="8,0,0,0" Padding="12,7" Background="#313244" Foreground="#CDD6F4"/>
+        </Grid>
+      </Border>
+
+      <!-- Main Workspace: Candidate Selection (Left) & Field Diff Viewer (Right) -->
+      <Grid Grid.Row="1" ColumnDefinitions="400, 8, *">
+        
+        <!-- Left: Search Results List -->
+        <Border Grid.Column="0" Background="#252526" CornerRadius="4" Padding="10">
+          <Grid RowDefinitions="Auto, *">
+            <TextBlock Grid.Row="0" Text="Candidate Results (ComicVine)" FontWeight="Bold" Margin="0,0,0,8" Foreground="#3592FF"/>
+            <ListBox Name="CandidatesListBox" Grid.Row="1" SelectionChanged="CandidatesListBox_SelectionChanged" Background="#1E1E1E">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Border Padding="8" BorderBrush="#3F3F46" BorderThickness="0,0,0,1">
+                    <Grid ColumnDefinitions="Auto, *">
+                      <!-- Cover Thumbnail Image with Hover Preview -->
+                      <Border Grid.Column="0" Width="50" Height="75" Background="#2D2D30" CornerRadius="4" ClipToBounds="True" VerticalAlignment="Center"
+                              ToolTip.ShowDelay="100">
+                        <ToolTip.Tip>
+                          <Border Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="4" Padding="6" MaxWidth="260">
+                            <StackPanel Spacing="6">
+                              <Image Source="{Binding Thumbnail}" Height="300" Width="200" Stretch="Uniform"
+                                     IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                              <TextBlock Text="No Cover Image Available" FontSize="11" Foreground="#888" TextAlignment="Center" Margin="10"
+                                         IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
+                              <TextBlock Text="{Binding SeriesTitle}" FontSize="12" FontWeight="Bold" Foreground="White" TextAlignment="Center" TextWrapping="Wrap"/>
+                              <TextBlock Text="{Binding IssueNumber, StringFormat='Issue #{0}'}" FontSize="11" Foreground="#3592FF" TextAlignment="Center"/>
+                            </StackPanel>
+                          </Border>
+                        </ToolTip.Tip>
+                        <Panel>
+                          <TextBlock Text="No Cover" FontSize="9" Foreground="#555" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                     IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
+                          <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"
+                                 IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                        </Panel>
+                      </Border>
+
+                      <!-- Text Details -->
+                      <StackPanel Grid.Column="1" Spacing="3" Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding SeriesTitle}" FontWeight="Bold" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding IssueNumber, StringFormat='Issue #{0}'}" Foreground="#3592FF" FontSize="12"/>
+                        <TextBlock Text="{Binding CoverDate, StringFormat='Date: {0}'}" Foreground="Gray" FontSize="11"/>
+                        <TextBlock Text="{Binding MatchConfidence, StringFormat='Match Score: {0:P0}'}" Foreground="LightGreen" FontSize="11" FontWeight="Bold"/>
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </Border>
+
+        <GridSplitter Grid.Column="1" Width="4" Background="#3F3F46"/>
+
+        <!-- Right: Side-by-side Covers & Field-by-Field Diff Selector -->
+        <Border Grid.Column="2" Background="#252526" CornerRadius="4" Padding="10">
+          <Grid RowDefinitions="Auto, Auto, *">
+            
+            <!-- Side-by-Side Cover Art Comparison Header -->
+            <Border Grid.Row="0" Background="#1E1E1E" CornerRadius="4" Padding="10" Margin="0,0,0,10" BorderBrush="#3F3F46" BorderThickness="1">
+              <Grid ColumnDefinitions="*, Auto, *" HorizontalAlignment="Center">
+                
+                <!-- Local Cover -->
+                <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
+                  <TextBlock Text="Local Archive Cover" FontSize="11" FontWeight="Bold" Foreground="Gray" HorizontalAlignment="Center"/>
+                  <Border Width="90" Height="130" Background="#2D2D30" CornerRadius="4" ClipToBounds="True"
+                          ToolTip.ShowDelay="100">
+                    <ToolTip.Tip>
+                      <Border Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="4" Padding="6" MaxWidth="280">
+                        <StackPanel Spacing="6">
+                          <TextBlock Text="Local Archive Front Cover" FontSize="12" FontWeight="Bold" Foreground="Gray" HorizontalAlignment="Center"/>
+                          <Image Source="{Binding LocalCoverImage}" Height="375" Width="250" Stretch="Uniform"
+                                 IsVisible="{Binding LocalCoverImage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                          <TextBlock Text="No Local Cover Image" FontSize="11" Foreground="#888" TextAlignment="Center" Margin="10"
+                                     IsVisible="{Binding LocalCoverImage, Converter={x:Static ObjectConverters.IsNull}}"/>
+                        </StackPanel>
+                      </Border>
+                    </ToolTip.Tip>
+                    <Panel>
+                      <TextBlock Text="No Local Cover" FontSize="9" Foreground="#555" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                                 IsVisible="{Binding LocalCoverImage, Converter={x:Static ObjectConverters.IsNull}}"/>
+                      <Image Source="{Binding LocalCoverImage}" Stretch="Uniform"
+                             IsVisible="{Binding LocalCoverImage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    </Panel>
+                  </Border>
+                </StackPanel>
+
+                <!-- VS Divider -->
+                <TextBlock Grid.Column="1" Text="VS" VerticalAlignment="Center" Margin="15,0" Foreground="#3592FF" FontWeight="Bold" FontSize="14"/>
+
+                <!-- Online ComicVine Cover -->
+                <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
+                  <TextBlock Text="ComicVine API Cover" FontSize="11" FontWeight="Bold" Foreground="#3592FF" HorizontalAlignment="Center"/>
+                  <Border Width="90" Height="130" Background="#2D2D30" CornerRadius="4" ClipToBounds="True"
+                          ToolTip.ShowDelay="100">
+                    <ToolTip.Tip>
+                      <Border Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="4" Padding="6" MaxWidth="280">
+                        <StackPanel Spacing="6">
+                          <TextBlock Text="ComicVine API Cover" FontSize="12" FontWeight="Bold" Foreground="#3592FF" HorizontalAlignment="Center"/>
+                          <Image Source="{Binding SelectedCandidateThumbnail}" Height="375" Width="250" Stretch="Uniform"
+                                 IsVisible="{Binding SelectedCandidateThumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                          <TextBlock Text="Select a Candidate Result" FontSize="11" Foreground="#888" TextAlignment="Center" Margin="10"
+                                     IsVisible="{Binding SelectedCandidateThumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
+                        </StackPanel>
+                      </Border>
+                    </ToolTip.Tip>
+                    <Panel>
+                      <TextBlock Text="Select Candidate" FontSize="9" Foreground="#555" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                                 IsVisible="{Binding SelectedCandidateThumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
+                      <Image Source="{Binding SelectedCandidateThumbnail}" Stretch="Uniform"
+                             IsVisible="{Binding SelectedCandidateThumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    </Panel>
+                  </Border>
+                </StackPanel>
+
+              </Grid>
+            </Border>
+
+            <!-- Diff Controls Header -->
+            <Grid Grid.Row="1" ColumnDefinitions="*, Auto" Margin="0,0,0,8">
+              <TextBlock Grid.Column="0" Text="Field-by-Field Diff Comparison" FontWeight="Bold" Foreground="#3592FF"/>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                <Button Content="Select All" Click="SelectAllFields_Click" Padding="6,2" FontSize="11"/>
+                <Button Content="Select None" Click="SelectNoFields_Click" Padding="6,2" FontSize="11"/>
+              </StackPanel>
+            </Grid>
+
+            <!-- Diff Table -->
+            <DataGrid Name="DiffDataGrid" Grid.Row="2" AutoGenerateColumns="False" GridLinesVisibility="All" Background="#1E1E1E">
+              <DataGrid.Columns>
+                <DataGridCheckBoxColumn Header="Apply" Binding="{Binding IsSelected}" Width="60"/>
+                <DataGridTextColumn Header="Field Name" Binding="{Binding FieldName}" IsReadOnly="True" Width="110" FontWeight="Bold"/>
+
+                <!-- Local Value Column with ToolTip -->
+                <DataGridTemplateColumn Header="Local Value" Width="140">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding LocalValue}" Foreground="LightGray" VerticalAlignment="Center" Margin="8,0"
+                                 TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding LocalValue}"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Online Value Column with ToolTip -->
+                <DataGridTemplateColumn Header="Online Value (ComicVine)" Width="*">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding OnlineValue}" Foreground="#3592FF" VerticalAlignment="Center" Margin="8,0"
+                                 TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding OnlineValue}"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <!-- Bottom Action Bar -->
+      <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,10,0,0">
+        <Button Content="Cancel" Click="Cancel_Click" Padding="15,6" Background="#2D2D30"/>
+        <Button Content="Overwrite All" Click="OverwriteAll_Click" Padding="15,6" Background="#D83B01" Foreground="White" FontWeight="Bold"/>
+        <Button Content="Apply Selected Fields" Click="ApplySelected_Click" Padding="15,6" Background="#007ACC" Foreground="White" FontWeight="Bold"/>
+      </StackPanel>
+
+    </Grid>
+  </Border>
+</Window>

@@ -26,6 +26,8 @@ public partial class MainWindow : Window
 
         vm.SaveFinishedWithErrors += OnSaveFinishedWithErrors;
         vm.PropertyChanged += Vm_PropertyChanged;
+
+        UpdateInspectorColumnWidth(vm.IsInspectorVisible);
     }
 
     private void Vm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -46,10 +48,12 @@ public partial class MainWindow : Window
             {
                 _savedInspectorWidth = InspectorColumn.Width;
             }
+            InspectorColumn.MinWidth = 0;
             InspectorColumn.Width = new GridLength(0);
         }
         else
         {
+            InspectorColumn.MinWidth = 250;
             InspectorColumn.Width = _savedInspectorWidth.Value > 0 ? _savedInspectorWidth : new GridLength(350);
         }
     }
@@ -110,6 +114,97 @@ public partial class MainWindow : Window
     {
         ComicsGrid.SelectedItems.Clear();
     }
+
+    private void Settings_Click(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new SettingsWindow();
+        dialog.ShowDialog(this);
+    }
+
+    private async void ScrapeMetadata_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            var targetItem = vm.ActiveComic ?? vm.Comics.FirstOrDefault();
+            if (targetItem == null)
+            {
+                return;
+            }
+
+            if (vm.ActiveComic == null)
+            {
+                vm.ActiveComic = targetItem;
+            }
+
+            if (targetItem.CoverImage == null && !string.IsNullOrEmpty(targetItem.FilePath))
+            {
+                var coverService = new Services.ArchiveCoverService();
+                await targetItem.LoadCoverAsync(coverService, System.Threading.CancellationToken.None);
+            }
+
+            var model = targetItem.ToModel();
+            var dialog = new ScraperMatchWindow(model, null, targetItem.CoverImage);
+            await dialog.ShowDialog(this);
+
+            if (dialog.WasApplied)
+            {
+                targetItem.LoadFromModel(model);
+                targetItem.IsDirty = true;
+            }
+        }
+    }
+
+    private async void SeriesSearchWizard_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            var targetItem = vm.ActiveComic ?? vm.Comics.FirstOrDefault();
+            if (targetItem == null)
+            {
+                return;
+            }
+
+            if (vm.ActiveComic == null)
+            {
+                vm.ActiveComic = targetItem;
+            }
+
+            if (targetItem.CoverImage == null && !string.IsNullOrEmpty(targetItem.FilePath))
+            {
+                var coverService = new Services.ArchiveCoverService();
+                await targetItem.LoadCoverAsync(coverService, System.Threading.CancellationToken.None);
+            }
+
+            string initialQuery = targetItem.Series ?? "";
+            var wizard = new SeriesSearchWizardWindow(initialQuery);
+            await wizard.ShowDialog(this);
+
+            if (wizard.WasApplied && wizard.SelectedResult != null)
+            {
+                var model = targetItem.ToModel();
+                if (wizard.RequestCompareDiff)
+                {
+                    var matchWindow = new ScraperMatchWindow(model, new[] { wizard.SelectedResult }, targetItem.CoverImage);
+                    await matchWindow.ShowDialog(this);
+                    if (matchWindow.WasApplied)
+                    {
+                        targetItem.LoadFromModel(model);
+                        targetItem.IsDirty = true;
+                    }
+                }
+                else
+                {
+                    var scraperService = new InkTag.Core.Scrapers.MetadataScraperService(new InkTag.Core.Configuration.AppSettingsService());
+                    var fetchedComic = await scraperService.FetchMetadataAsync(wizard.SelectedResult.IssueId);
+                    scraperService.ApplyMetadata(model, fetchedComic, InkTag.Core.Scrapers.ScrapeMergeMode.OverwriteAll);
+                    targetItem.LoadFromModel(model);
+                    targetItem.IsDirty = true;
+                }
+            }
+        }
+    }
+
+    private void NativeSeriesSearchWizard_Click(object? sender, EventArgs e) => SeriesSearchWizard_Click(sender, new RoutedEventArgs());
 
     private void OpenAbout_Click(object? sender, RoutedEventArgs e)
     {

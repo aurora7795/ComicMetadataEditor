@@ -319,8 +319,7 @@ public class MetadataEditor
         {
             if (args.Severity == XmlSeverityType.Error)
             {
-                AppLogger.LogError($"Schema validation error in {xmlPath}: {args.Message}", args.Exception);
-                throw new XmlSchemaValidationException($"Schema validation error: {args.Message}", args.Exception);
+                AppLogger.LogWarning($"Schema validation error in {xmlPath}: {args.Message}");
             }
             else
             {

@@ -1,0 +1,210 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:InkTag.Gui.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="850" d:DesignHeight="600"
+        x:Class="InkTag.Gui.Views.SeriesSearchWizardWindow"
+        Title="Series Search Wizard - InkTag"
+        Width="900" Height="650"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True"
+        Background="#1E1E2E"
+        Icon="/Assets/inktag.ico">
+
+    <Window.Styles>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#74C7EC"/>
+            <Setter Property="Foreground" Value="#11111B"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="Button.accent">
+            <Setter Property="Background" Value="#A6E3A1"/>
+            <Setter Property="Foreground" Value="#11111B"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#45475A"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Wizard Header Bar -->
+        <Border Grid.Row="0" Background="#181825" Padding="16,12" BorderBrush="#313244" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <PathIcon Data="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" Foreground="#74C7EC" Width="20" Height="20"/>
+                    <TextBlock Text="Series Match Wizard" FontSize="18" FontWeight="Bold" Foreground="#F5E0DC" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Step Indicator -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Border x:Name="Step1Badge" Background="#74C7EC" CornerRadius="12" Padding="10,4">
+                        <TextBlock x:Name="Step1Text" Text="1. Search Series" FontSize="12" FontWeight="Bold" Foreground="#11111B"/>
+                    </Border>
+                    <TextBlock Text="➔" Foreground="#6C7086" VerticalAlignment="Center"/>
+                    <Border x:Name="Step2Badge" Background="#313244" CornerRadius="12" Padding="10,4">
+                        <TextBlock x:Name="Step2Text" Text="2. Select Issue" FontSize="12" FontWeight="Bold" Foreground="#A6ADC8"/>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content Area -->
+        <Grid Grid.Row="1" Margin="16">
+            <!-- STEP 1: Series Search Panel -->
+            <Grid x:Name="Step1Panel" RowDefinitions="Auto,*" IsVisible="True">
+                <!-- Search Inputs -->
+                <Border Grid.Row="0" Background="#181825" CornerRadius="8" Padding="12" Margin="0,0,0,12" BorderBrush="#313244" BorderThickness="1">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
+                            <StackPanel Width="400">
+                                <TextBlock Text="Series Title" FontSize="12" Foreground="#A6ADC8" Margin="0,0,0,4"/>
+                                <TextBox x:Name="SeriesTitleTextBox" Watermark="e.g., Amazing Spider-Man, Saga..." KeyDown="SeriesTitleTextBox_KeyDown"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Button Grid.Column="1" Classes="primary" Click="SearchSeries_Click" VerticalAlignment="Bottom">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="🔍 Search Series"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Series Results List -->
+                <Grid Grid.Row="1">
+                    <ListBox x:Name="SeriesListBox" Background="Transparent" SelectionChanged="SeriesListBox_SelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SeriesItemViewModel">
+                                <Border Background="#181825" CornerRadius="8" Padding="10" Margin="0,4" BorderBrush="#313244" BorderThickness="1">
+                                    <Grid ColumnDefinitions="80,*,Auto">
+                                        <!-- Series Cover Thumbnail -->
+                                        <Border Grid.Column="0" Width="70" Height="100" Background="#313244" CornerRadius="4" ClipToBounds="True">
+                                            <Panel>
+                                                <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                                                <TextBlock Text="No Cover" FontSize="10" Foreground="#6C7086" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
+                                            </Panel>
+                                        </Border>
+
+                                        <!-- Series Info -->
+                                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="4">
+                                            <TextBlock Text="{Binding SeriesTitle}" FontSize="16" FontWeight="Bold" Foreground="#89B4FA"/>
+                                            <TextBlock Text="{Binding PublisherAndYear}" FontSize="13" Foreground="#BAC2DE"/>
+                                            <TextBlock Text="{Binding Description}" FontSize="12" Foreground="#A6ADC8" TextWrapping="Wrap" MaxLines="2"/>
+                                        </StackPanel>
+
+                                        <!-- Select Button -->
+                                        <Button Grid.Column="2" Classes="primary" Content="View Issues ➔" VerticalAlignment="Center" Click="SelectSeriesItem_Click" Tag="{Binding}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Loading / Empty Overlay -->
+                    <TextBlock x:Name="Step1StatusText" Text="Enter a series title and click Search Series to begin." FontSize="14" Foreground="#A6ADC8" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="True"/>
+                </Grid>
+            </Grid>
+
+            <!-- STEP 2: Issues List Panel -->
+            <Grid x:Name="Step2Panel" RowDefinitions="Auto,*,Auto" IsVisible="False">
+                <!-- Header with Back Button and Selected Series Details -->
+                <Border Grid.Row="0" Background="#181825" CornerRadius="8" Padding="12" Margin="0,0,0,12" BorderBrush="#313244" BorderThickness="1">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Button Grid.Column="0" Classes="secondary" Click="BackToStep1_Click">
+                            <TextBlock Text="⬅ Back to Series"/>
+                        </Button>
+
+                        <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="SelectedSeriesTitleText" Text="Series Title" FontSize="16" FontWeight="Bold" Foreground="#F5E0DC"/>
+                            <TextBlock x:Name="SelectedSeriesSubtitleText" Text="Publisher • Start Year" FontSize="12" Foreground="#A6ADC8"/>
+                        </StackPanel>
+
+                        <!-- Pagination Controls -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button x:Name="PrevPageButton" Classes="secondary" Click="PrevPage_Click" Content="◄ Prev"/>
+                            <TextBlock x:Name="PageIndicatorText" Text="Page 1 of 1" FontSize="13" Foreground="#CDD6F4" VerticalAlignment="Center"/>
+                            <Button x:Name="NextPageButton" Classes="secondary" Click="NextPage_Click" Content="Next ►"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Issues Grid View -->
+                <Grid Grid.Row="1">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ListBox x:Name="IssuesListBox" Background="Transparent" SelectionChanged="IssuesListBox_SelectionChanged">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Width="830"/>
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CandidateItemViewModel">
+                                    <Border Width="150" Height="230" Background="#181825" CornerRadius="8" Padding="8" Margin="6" BorderBrush="#313244" BorderThickness="1">
+                                        <Grid RowDefinitions="140,*,Auto">
+                                            <!-- Issue Thumbnail -->
+                                            <Border Grid.Row="0" Background="#313244" CornerRadius="4" ClipToBounds="True">
+                                                <Panel>
+                                                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                                                    <TextBlock Text="No Cover" FontSize="10" Foreground="#6C7086" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                               IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
+                                                </Panel>
+                                            </Border>
+
+                                            <!-- Issue Title & Date -->
+                                            <StackPanel Grid.Row="1" Margin="0,4,0,0" VerticalAlignment="Top">
+                                                <TextBlock Text="{Binding DisplayTitle}" FontSize="12" FontWeight="Bold" Foreground="#89B4FA" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding CoverDate}" FontSize="11" Foreground="#A6ADC8"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </ScrollViewer>
+
+                    <!-- Loading / Empty Overlay -->
+                    <TextBlock x:Name="Step2StatusText" Text="Loading issues for series..." FontSize="14" Foreground="#A6ADC8" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False"/>
+                </Grid>
+
+                <!-- Selected Issue Information Strip -->
+                <Border Grid.Row="2" Background="#181825" CornerRadius="8" Padding="10" Margin="0,12,0,0" BorderBrush="#313244" BorderThickness="1">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock x:Name="SelectedIssueSummaryText" Text="No issue selected. Click an issue from the list above." FontSize="13" Foreground="#F5E0DC"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                            <Button x:Name="CompareApplyButton" Classes="secondary" Click="CompareApply_Click" IsEnabled="False" Content="⚙ Compare &amp; Apply Fields"/>
+                            <Button x:Name="QuickApplyButton" Classes="accent" Click="QuickApply_Click" IsEnabled="False" Content="⚡ Quick Apply All"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Window Footer -->
+        <Border Grid.Row="2" Background="#181825" Padding="16,10" BorderBrush="#313244" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="InkTag Series Match Wizard" FontSize="12" Foreground="#6C7086" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Classes="secondary" Click="Cancel_Click" Content="Cancel"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
