@@ -531,6 +531,57 @@ public class MetadataEditor
         return "string";
     }
 
+    /// <summary>
+    /// Extracts the raw bytes of the cover image from a comic archive (.cbz / .cbr).
+    /// </summary>
+    public byte[]? ExtractCoverImageBytes(string filePath)
+    {
+        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return null;
+
+        try
+        {
+            using var stream = File.OpenRead(filePath);
+            using var archive = ArchiveFactory.OpenArchive(stream);
+
+            var imageEntries = archive.Entries
+                .Where(e => !e.IsDirectory && e.Key != null && IsImageFileName(e.Key))
+                .ToList();
+
+            if (imageEntries.Count == 0) return null;
+
+            var bestEntry = imageEntries.FirstOrDefault(e => Path.GetFileName(e.Key!).Contains("cover", StringComparison.OrdinalIgnoreCase));
+            if (bestEntry == null)
+            {
+                bestEntry = imageEntries.OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase).First();
+            }
+
+            using var ms = new MemoryStream();
+            bestEntry.OpenEntryStream().CopyTo(ms);
+            return ms.ToArray();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Computes the 64-bit perceptual dHash of the comic's cover image.
+    /// </summary>
+    public ulong GetCoverHash(string filePath)
+    {
+        var bytes = ExtractCoverImageBytes(filePath);
+        return bytes != null && bytes.Length > 0 ? Images.PerceptualHashService.ComputeDHash(bytes) : 0;
+    }
+
+    private static bool IsImageFileName(string path)
+    {
+        var ext = Path.GetExtension(path);
+        if (string.IsNullOrEmpty(ext)) return false;
+        ext = ext.ToLowerInvariant();
+        return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".gif" || ext == ".bmp";
+    }
+
     #endregion
 }
 

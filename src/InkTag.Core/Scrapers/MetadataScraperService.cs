@@ -75,7 +75,7 @@ public class MetadataScraperService
         return await _provider.FetchSeriesIssuesAsync(volumeId, apiKey, page, pageSize, query, ct);
     }
 
-    public async Task<ScrapeResult> AutoScrapeComicAsync(ComicInfo existingComic, CancellationToken ct = default)
+    public async Task<ScrapeResult> AutoScrapeComicAsync(ComicInfo existingComic, ulong? localCoverHash = null, CancellationToken ct = default)
     {
         var query = ExtractQueryFromComicInfo(existingComic);
         var candidates = (await SearchCandidatesAsync(query, ct)).ToList();
@@ -90,6 +90,34 @@ public class MetadataScraperService
             };
         }
 
+        // If local cover hash is available and auto-visual match is enabled, evaluate candidate cover hashes
+        if (localCoverHash.HasValue && localCoverHash.Value != 0 && _settingsService.Settings.AutoApplyOnVisualMatch)
+        {
+            foreach (var candidate in candidates.Take(5))
+            {
+                string coverUrl = !string.IsNullOrEmpty(candidate.SmallCoverUrl) ? candidate.SmallCoverUrl : candidate.CoverUrl;
+                if (!string.IsNullOrEmpty(coverUrl))
+                {
+                    try
+                    {
+                        using var client = new System.Net.Http.HttpClient();
+                        client.DefaultRequestHeaders.Add("User-Agent", "InkTag/1.0 (ComicMetadataEditor)");
+                        byte[] bytes = await client.GetByteArrayAsync(coverUrl, ct);
+                        ulong onlineHash = InkTag.Core.Images.PerceptualHashService.ComputeDHash(bytes);
+                        candidate.CoverHash = onlineHash;
+                        candidate.MatchConfidence = ComicVineProvider.CalculateConfidence(candidate, query, localCoverHash);
+                    }
+                    catch
+                    {
+                        // Ignore individual thumbnail download errors
+                    }
+                }
+            }
+
+            // Re-order candidates by updated confidence
+            candidates = candidates.OrderByDescending(c => c.MatchConfidence).ToList();
+        }
+
         var topMatch = candidates.First();
         double threshold = _settingsService.Settings.AutoMatchConfidenceThreshold;
 
@@ -98,10 +126,14 @@ public class MetadataScraperService
             var fetchedMetadata = await FetchMetadataAsync(topMatch.IssueId, ct);
             ApplyMetadata(existingComic, fetchedMetadata, _settingsService.Settings.DefaultMergeMode);
 
+            string visualNote = topMatch.VisualSimilarity.HasValue && topMatch.VisualSimilarity.Value >= 0.70 
+                ? $" [Cover Match: {topMatch.VisualSimilarity.Value:P0}]" 
+                : "";
+
             return new ScrapeResult
             {
                 Success = true,
-                Message = $"Successfully scraped metadata from '{topMatch.SeriesTitle} #{topMatch.IssueNumber}' (Confidence: {topMatch.MatchConfidence:P0}).",
+                Message = $"Successfully scraped metadata from '{topMatch.SeriesTitle} #{topMatch.IssueNumber}'{visualNote} (Confidence: {topMatch.MatchConfidence:P0}).",
                 TargetComic = existingComic,
                 SelectedCandidate = topMatch,
                 Candidates = candidates

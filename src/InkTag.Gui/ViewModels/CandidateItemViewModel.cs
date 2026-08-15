@@ -59,7 +59,17 @@ public class CandidateItemViewModel : ObservableObject
     public string IssueTitle => Result.IssueTitle;
     public string DisplayTitle => !string.IsNullOrWhiteSpace(IssueTitle) ? $"{IssueNumber} - {IssueTitle}" : IssueNumber;
     public string CoverDate => Result.CoverDate;
-    public double MatchConfidence => Result.MatchConfidence;
+    public double MatchConfidence
+    {
+        get => Result.MatchConfidence;
+        set
+        {
+            Result.MatchConfidence = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(MatchConfidenceText));
+        }
+    }
+    public string MatchConfidenceText => $"{MatchConfidence:P0}";
     public string CoverUrl => !string.IsNullOrEmpty(Result.SmallCoverUrl) ? Result.SmallCoverUrl : Result.CoverUrl;
 
     public string VisualSimilarityBadge => VisualSimilarity.HasValue && VisualSimilarity.Value > 0 ? $"👁 {VisualSimilarity.Value:P0} Cover Match" : "";
@@ -148,6 +158,13 @@ public class CandidateItemViewModel : ObservableObject
         {
             VisualSimilarity = PerceptualHashService.CalculateSimilarity(_targetCoverHash.Value, hash);
             Result.VisualSimilarity = VisualSimilarity;
+
+            var query = new ComicSearchQuery
+            {
+                Series = Result.SeriesTitle,
+                IssueNumber = Result.IssueNumber
+            };
+            MatchConfidence = ComicVineProvider.CalculateConfidence(Result, query, _targetCoverHash);
         }
 
         OnCoverHashComputed?.Invoke(this);

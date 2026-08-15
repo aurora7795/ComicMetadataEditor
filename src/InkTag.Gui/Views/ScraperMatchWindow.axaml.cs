@@ -42,6 +42,15 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
         set { _selectedCandidateThumbnail = value; OnPropertyChanged(nameof(SelectedCandidateThumbnail)); }
     }
 
+    private string _visualSimilarityText = string.Empty;
+    public string VisualSimilarityText
+    {
+        get => _visualSimilarityText;
+        set { _visualSimilarityText = value; OnPropertyChanged(nameof(VisualSimilarityText)); OnPropertyChanged(nameof(HasVisualSimilarityText)); }
+    }
+
+    public bool HasVisualSimilarityText => !string.IsNullOrEmpty(_visualSimilarityText);
+
     public new event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     private void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
 
@@ -163,11 +172,17 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
             _subscribedCandidateVm.PropertyChanged += CandidateVm_PropertyChanged;
             selected = vm.Result;
             SelectedCandidateThumbnail = vm.Thumbnail;
+            UpdateVisualSimilarityDisplay(vm);
         }
         else if (CandidatesListBox.SelectedItem is ComicSearchResult res)
         {
             selected = res;
             SelectedCandidateThumbnail = null;
+            VisualSimilarityText = string.Empty;
+        }
+        else
+        {
+            VisualSimilarityText = string.Empty;
         }
 
         if (selected != null)
@@ -186,9 +201,28 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
 
     private void CandidateVm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(CandidateItemViewModel.Thumbnail) && sender is CandidateItemViewModel vm)
+        if (sender is CandidateItemViewModel vm)
         {
-            SelectedCandidateThumbnail = vm.Thumbnail;
+            if (e.PropertyName == nameof(CandidateItemViewModel.Thumbnail))
+            {
+                SelectedCandidateThumbnail = vm.Thumbnail;
+            }
+            if (e.PropertyName == nameof(CandidateItemViewModel.VisualSimilarity))
+            {
+                UpdateVisualSimilarityDisplay(vm);
+            }
+        }
+    }
+
+    private void UpdateVisualSimilarityDisplay(CandidateItemViewModel vm)
+    {
+        if (vm.VisualSimilarity.HasValue && vm.VisualSimilarity.Value > 0)
+        {
+            VisualSimilarityText = $"👁 {vm.VisualSimilarity.Value:P0} Cover Match";
+        }
+        else
+        {
+            VisualSimilarityText = string.Empty;
         }
     }
 
