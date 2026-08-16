@@ -41,6 +41,7 @@
       </NativeMenuItem>
       <NativeMenuItem Header="Tools">
         <NativeMenu>
+          <NativeMenuItem Header="Infer Metadata from Filename(s)" Click="NativeInferMetadataFromFilenames_Click"/>
           <NativeMenuItem Header="Open Logs Directory" Click="NativeOpenLogs_Click"/>
         </NativeMenu>
       </NativeMenuItem>
@@ -94,8 +95,9 @@
       <MenuItem Header="_Tools">
         <MenuItem Header="🔍 _Scrape Metadata (ComicVine)..." Click="ScrapeMetadata_Click"/>
         <MenuItem Header="🧙 Series _Search Wizard..." Click="SeriesSearchWizard_Click"/>
-        <MenuItem Header="Open _Logs Directory" Command="{Binding OpenLogsCommand}"/>
+        <MenuItem Header="🏷️ _Infer Metadata from Filename(s)" Click="InferMetadataFromFilenames_Click"/>
         <Separator/>
+        <MenuItem Header="Open _Logs Directory" Command="{Binding OpenLogsCommand}"/>
         <MenuItem Header="_Settings..." Click="Settings_Click"/>
       </MenuItem>
       
@@ -183,6 +185,14 @@
                   SelectionMode="Extended" AutoGenerateColumns="False" CanUserResizeColumns="True" 
                   SelectionChanged="DataGrid_SelectionChanged" GridLinesVisibility="All" Background="#1E1E1E"
                   BorderBrush="#3F3F46" BorderThickness="1">
+          <DataGrid.ContextMenu>
+            <ContextMenu>
+              <MenuItem Header="🔍 Scrape Metadata (ComicVine)..." Click="ScrapeMetadata_Click"/>
+              <MenuItem Header="🧙 Series Search Wizard..." Click="SeriesSearchWizard_Click"/>
+              <Separator/>
+              <MenuItem Header="🏷️ Infer Metadata from Filename(s)" Click="InferMetadataFromFilenames_Click"/>
+            </ContextMenu>
+          </DataGrid.ContextMenu>
           <DataGrid.Styles>
             <Style Selector="DataGridRow">
               <Setter Property="Background" Value="{Binding IsDirty, Converter={StaticResource IsDirtyToBrushConverter}}" />

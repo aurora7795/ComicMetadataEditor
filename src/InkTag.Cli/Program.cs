@@ -302,7 +302,8 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
     if (File.Exists(targetPath))
     {
         var comic = editor.ReadMetadata(targetPath);
-        var result = scraperService.AutoScrapeComicAsync(comic).GetAwaiter().GetResult();
+        ulong coverHash = editor.GetCoverHash(targetPath);
+        var result = scraperService.AutoScrapeComicAsync(comic, coverHash != 0 ? coverHash : null, targetPath).GetAwaiter().GetResult();
 
         if (result.Success && !isDryRun)
         {
@@ -349,7 +350,8 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
             try
             {
                 var comic = editor.ReadMetadata(file);
-                var result = scraperService.AutoScrapeComicAsync(comic).GetAwaiter().GetResult();
+                ulong coverHash = editor.GetCoverHash(file);
+                var result = scraperService.AutoScrapeComicAsync(comic, coverHash != 0 ? coverHash : null, file).GetAwaiter().GetResult();
                 if (result.Success)
                 {
                     if (!isDryRun)

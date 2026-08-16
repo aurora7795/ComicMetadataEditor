@@ -143,7 +143,7 @@ public partial class MainWindow : Window
             }
 
             var model = targetItem.ToModel();
-            var dialog = new ScraperMatchWindow(model, null, targetItem.CoverImage, targetItem.CoverHash != 0 ? targetItem.CoverHash : null);
+            var dialog = new ScraperMatchWindow(model, null, targetItem.CoverImage, targetItem.CoverHash != 0 ? targetItem.CoverHash : null, targetItem.FilePath);
             await dialog.ShowDialog(this);
 
             if (dialog.WasApplied)
@@ -176,7 +176,7 @@ public partial class MainWindow : Window
             }
 
             string initialQuery = targetItem.Series ?? "";
-            var wizard = new SeriesSearchWizardWindow(initialQuery, targetItem.CoverHash != 0 ? targetItem.CoverHash : null);
+            var wizard = new SeriesSearchWizardWindow(initialQuery, targetItem.CoverHash != 0 ? targetItem.CoverHash : null, targetItem.FilePath);
             await wizard.ShowDialog(this);
 
             if (wizard.WasApplied && wizard.SelectedResult != null)
@@ -184,7 +184,7 @@ public partial class MainWindow : Window
                 var model = targetItem.ToModel();
                 if (wizard.RequestCompareDiff)
                 {
-                    var matchWindow = new ScraperMatchWindow(model, new[] { wizard.SelectedResult }, targetItem.CoverImage, targetItem.CoverHash != 0 ? targetItem.CoverHash : null);
+                    var matchWindow = new ScraperMatchWindow(model, new[] { wizard.SelectedResult }, targetItem.CoverImage, targetItem.CoverHash != 0 ? targetItem.CoverHash : null, targetItem.FilePath);
                     await matchWindow.ShowDialog(this);
                     if (matchWindow.WasApplied)
                     {
@@ -203,6 +203,57 @@ public partial class MainWindow : Window
             }
         }
     }
+
+    private void InferMetadataFromFilenames_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            var targetComics = ComicsGrid.SelectedItems?.Cast<ComicItemViewModel>().ToList();
+            if (targetComics == null || targetComics.Count == 0)
+            {
+                targetComics = vm.Comics.ToList();
+            }
+
+            foreach (var item in targetComics)
+            {
+                if (string.IsNullOrEmpty(item.FilePath)) continue;
+
+                var parsed = InkTag.Core.Parsing.ComicFilenameParser.Parse(item.FilePath);
+                bool modified = false;
+
+                if (string.IsNullOrWhiteSpace(item.Series) && !string.IsNullOrWhiteSpace(parsed.Series))
+                {
+                    item.Series = parsed.Series;
+                    modified = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(item.Number) && !string.IsNullOrWhiteSpace(parsed.IssueNumber))
+                {
+                    item.Number = parsed.IssueNumber;
+                    modified = true;
+                }
+
+                if ((!item.Year.HasValue || item.Year == 0) && parsed.Year.HasValue)
+                {
+                    item.Year = parsed.Year.Value;
+                    modified = true;
+                }
+
+                if ((!item.Volume.HasValue || item.Volume == 0) && parsed.Volume.HasValue)
+                {
+                    item.Volume = parsed.Volume.Value;
+                    modified = true;
+                }
+
+                if (modified)
+                {
+                    item.IsDirty = true;
+                }
+            }
+        }
+    }
+
+    private void NativeInferMetadataFromFilenames_Click(object? sender, EventArgs e) => InferMetadataFromFilenames_Click(sender, new RoutedEventArgs());
 
     private void NativeSeriesSearchWizard_Click(object? sender, EventArgs e) => SeriesSearchWizard_Click(sender, new RoutedEventArgs());
 

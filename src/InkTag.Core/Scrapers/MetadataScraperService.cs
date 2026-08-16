@@ -105,9 +105,9 @@ public class MetadataScraperService
         return await _provider.FetchSeriesIssuesAsync(volumeId, apiKey, page, pageSize, query, ct);
     }
 
-    public async Task<ScrapeResult> AutoScrapeComicAsync(ComicInfo existingComic, ulong? localCoverHash = null, CancellationToken ct = default)
+    public async Task<ScrapeResult> AutoScrapeComicAsync(ComicInfo existingComic, ulong? localCoverHash = null, string? filePath = null, CancellationToken ct = default)
     {
-        var query = ExtractQueryFromComicInfo(existingComic);
+        var query = ExtractQueryFromComicInfo(existingComic, filePath);
         var candidates = (await SearchCandidatesAsync(query, ct)).ToList();
 
         if (!candidates.Any())
@@ -213,13 +213,35 @@ public class MetadataScraperService
         }
     }
 
-    public static ComicSearchQuery ExtractQueryFromComicInfo(ComicInfo comic)
+    public static ComicSearchQuery ExtractQueryFromComicInfo(ComicInfo comic, string? filePath = null)
     {
+        string series = comic.Series ?? string.Empty;
+        string issue = comic.Number ?? string.Empty;
+        int? year = comic.Year;
+
+        // If Series, Issue, or Year is missing and filePath is provided, infer from filename
+        if ((string.IsNullOrWhiteSpace(series) || string.IsNullOrWhiteSpace(issue) || !year.HasValue) && !string.IsNullOrWhiteSpace(filePath))
+        {
+            var parsed = InkTag.Core.Parsing.ComicFilenameParser.Parse(filePath);
+            if (string.IsNullOrWhiteSpace(series) && !string.IsNullOrWhiteSpace(parsed.Series))
+            {
+                series = parsed.Series;
+            }
+            if (string.IsNullOrWhiteSpace(issue) && !string.IsNullOrWhiteSpace(parsed.IssueNumber))
+            {
+                issue = parsed.IssueNumber;
+            }
+            if (!year.HasValue && parsed.Year.HasValue)
+            {
+                year = parsed.Year;
+            }
+        }
+
         return new ComicSearchQuery
         {
-            Series = comic.Series ?? string.Empty,
-            IssueNumber = comic.Number ?? string.Empty,
-            Year = comic.Year
+            Series = series,
+            IssueNumber = issue,
+            Year = year
         };
     }
 

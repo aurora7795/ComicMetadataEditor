@@ -171,7 +171,7 @@ public static class ComicTools
         var service = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);
         var comic = _editor.ReadMetadata(path);
         ulong coverHash = _editor.GetCoverHash(path);
-        var result = service.AutoScrapeComicAsync(comic, coverHash != 0 ? coverHash : null).GetAwaiter().GetResult();
+        var result = service.AutoScrapeComicAsync(comic, coverHash != 0 ? coverHash : null, path).GetAwaiter().GetResult();
 
         if (result.Success && !dryRun)
         {

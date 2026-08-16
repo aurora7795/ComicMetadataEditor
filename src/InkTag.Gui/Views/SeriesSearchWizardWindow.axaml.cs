@@ -31,15 +31,25 @@ public partial class SeriesSearchWizardWindow : Window
     {
     }
 
-    public SeriesSearchWizardWindow(string initialSeriesQuery, ulong? localCoverHash = null)
+    public SeriesSearchWizardWindow(string initialSeriesQuery, ulong? localCoverHash = null, string? filePath = null)
     {
         InitializeComponent();
         _localCoverHash = localCoverHash;
         _scraperService = new MetadataScraperService(new AppSettingsService());
 
-        if (!string.IsNullOrWhiteSpace(initialSeriesQuery))
+        string query = initialSeriesQuery;
+        if (string.IsNullOrWhiteSpace(query) && !string.IsNullOrWhiteSpace(filePath))
         {
-            SeriesTitleTextBox.Text = initialSeriesQuery;
+            var parsed = InkTag.Core.Parsing.ComicFilenameParser.Parse(filePath);
+            if (!string.IsNullOrWhiteSpace(parsed.Series))
+            {
+                query = parsed.Series;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            SeriesTitleTextBox.Text = query;
             _ = PerformSeriesSearchAsync();
         }
     }

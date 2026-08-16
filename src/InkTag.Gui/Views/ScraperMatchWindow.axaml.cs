@@ -61,7 +61,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
     {
     }
 
-    public ScraperMatchWindow(ComicInfo targetComic, IEnumerable<ComicSearchResult>? initialCandidates = null, Avalonia.Media.Imaging.Bitmap? localCover = null, ulong? localCoverHash = null)
+    public ScraperMatchWindow(ComicInfo targetComic, IEnumerable<ComicSearchResult>? initialCandidates = null, Avalonia.Media.Imaging.Bitmap? localCover = null, ulong? localCoverHash = null, string? filePath = null)
     {
         InitializeComponent();
         DataContext = this;
@@ -72,10 +72,31 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
 
         DiffDataGrid.ItemsSource = FieldDiffs;
 
-        // Populate search queries from target comic
-        SeriesTextBox.Text = targetComic.Series ?? "";
-        IssueTextBox.Text = targetComic.Number ?? "";
-        YearTextBox.Text = targetComic.Year?.ToString() ?? "";
+        // Populate search queries from target comic or fallback to filename parser
+        string series = targetComic.Series ?? "";
+        string issue = targetComic.Number ?? "";
+        string year = targetComic.Year?.ToString() ?? "";
+
+        if ((string.IsNullOrWhiteSpace(series) || string.IsNullOrWhiteSpace(issue) || string.IsNullOrWhiteSpace(year)) && !string.IsNullOrWhiteSpace(filePath))
+        {
+            var parsed = InkTag.Core.Parsing.ComicFilenameParser.Parse(filePath);
+            if (string.IsNullOrWhiteSpace(series) && !string.IsNullOrWhiteSpace(parsed.Series))
+            {
+                series = parsed.Series;
+            }
+            if (string.IsNullOrWhiteSpace(issue) && !string.IsNullOrWhiteSpace(parsed.IssueNumber))
+            {
+                issue = parsed.IssueNumber;
+            }
+            if (string.IsNullOrWhiteSpace(year) && parsed.Year.HasValue)
+            {
+                year = parsed.Year.Value.ToString();
+            }
+        }
+
+        SeriesTextBox.Text = series;
+        IssueTextBox.Text = issue;
+        YearTextBox.Text = year;
 
         if (initialCandidates != null && initialCandidates.Any())
         {
@@ -83,7 +104,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
             CandidatesListBox.ItemsSource = viewModels;
             CandidatesListBox.SelectedIndex = 0;
         }
-        else
+        else if (!string.IsNullOrWhiteSpace(series))
         {
             _ = PerformSearchAsync();
         }
