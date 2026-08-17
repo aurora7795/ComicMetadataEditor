@@ -56,15 +56,21 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 
 ### Core & Agent API Method Signatures
 
+#### `OpenReadOptimized`
+* **Signature**: `public static FileStream OpenReadOptimized(string filePath, int bufferSize = 65536)`
+* **Description**: Opens a `FileStream` configured with a 64KB buffer, `FileShare.ReadWrite` (eliminating sharing collisions with media servers like Komga/Kavita/Plex), and `FileOptions.None` (enabling bidirectional backward seeks over Linux FUSE / GVFS / FTP / SMB network mounts).
+
 #### `ReadMetadata` / `ReadMetadataAsJson`
 * **Signature**: `public ComicInfo ReadMetadata(string filePath)`
 * **Signature**: `public string ReadMetadataAsJson(string filePath)`
-* **Description**: Parses `ComicInfo.xml` from the target `.cbz` or `.cbr` (RAR format) archive using random-access `ArchiveFactory.OpenArchive(stream)`, validates it against `ComicInfo.xsd`, and returns the `ComicInfo` object or its JSON representation.
+* **Description**: Parses `ComicInfo.xml` directly in-memory with zero temporary disk extraction.
+  1. *Fast-Path (.cbz)*: Reads the Central Directory using .NET's built-in `System.IO.Compression.ZipArchive` for 1-seek metadata access.
+  2. *Fallback & .cbr (RAR)*: Reads via SharpCompress `ArchiveFactory.OpenArchive(stream, new ReaderOptions { LookForHeader = true })` to safely recover metadata across high-latency network shares.
 
 #### `EditMetadata` / `EditMetadataFromJson`
 * **Signature**: `public void EditMetadata(string filePath, Action<ComicInfo> editAction)`
 * **Signature**: `public void EditMetadataFromJson(string filePath, string jsonPatch)`
-* **Description**: Unpacks the file using random-access `ArchiveFactory.OpenArchive(stream)`, deserializes existing metadata or creates a new instance, applies edits (via lambda or dynamic JSON patch), serializes back to XML, compresses to `.tmp`, validates, and performs an atomic backup swap.
+* **Description**: Unpacks the file into a temporary folder, deserializes existing metadata or creates a new instance, applies edits (via lambda or dynamic JSON patch), serializes back to XML, compresses to `.tmp`, validates, and performs an atomic backup swap.
 
 #### `BulkEditMetadata` / `BulkEditMetadataFromJson`
 * **Signature**: `public BulkEditReport BulkEditMetadata(string directoryPath, Action<ComicInfo> editAction)`
@@ -79,9 +85,10 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 * **Signature**: `public static void ApplyJsonPatch(ComicInfo comicInfo, string jsonPatch)`
 * **Description**: Mutates a `ComicInfo` instance in-place by parsing property key-values from a JSON patch string.
 
-#### `ExtractCoverImage`
+#### `ExtractCoverImage` / `ExtractCoverImageBytes`
 * **Signature**: `public string? ExtractCoverImage(string comicFilePath, string outputFilePath)`
-* **Description**: Extracts the front cover image or first page image from a `.cbz` or `.cbr` (RAR format) archive using random-access `ArchiveFactory.OpenArchive(stream)` for visual inspection.
+* **Signature**: `public byte[]? ExtractCoverImageBytes(string filePath)`
+* **Description**: Extracts front cover art or first page image from a `.cbz` or `.cbr` archive in-memory via stream decoding.
 
 #### `ExportJsonSchema`
 * **Signature**: `public static string ExportJsonSchema()`
@@ -89,7 +96,30 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 
 ---
 
-## 3. Interfaces (`InkTag.Mcp` & `InkTag.Cli`)
+## 3. Supplementary Core Services
+
+### `ImageHasher.cs` (Perceptual Image Hashing)
+* **Namespace**: `InkTag.Core`
+* **Method**: `public static ulong ComputeDHash64(ReadOnlySpan<byte> imageBytes)`
+* **Method**: `public static int HammingDistance(ulong hashA, ulong hashB)`
+* **Description**: Computes a 64-bit difference hash (dHash) by downscaling image bytes to 9×8 grayscale and comparing horizontal gradient intensities. Used for cover deduplication and visual matching against scraper candidates.
+
+### `ComicFilenameParser.cs` (Smart Filename Parsing)
+* **Namespace**: `InkTag.Core`
+* **Method**: `public static ParsedComicFilename ParseFilename(string fileName)`
+* **Description**: Extracts `Series`, `Number` (including alphanumeric/decimal/annual issues like `#005`, `1.5`, `Annual #1`), `Volume`, and `Year` from raw filenames (e.g. `"100 Bullets The Deluxe Edition #004 (2013).cbz"` -> Series: `"100 Bullets The Deluxe Edition"`, Issue: `"4"`, Year: `2013`).
+
+### `MetadataScraperService.cs` & `ComicVineProvider.cs` (Scraping)
+* **Namespace**: `InkTag.Core.Scrapers`
+* **Methods**:
+  * `SearchSeriesAsync(string query, CancellationToken ct)`: Queries series/volumes by name.
+  * `MatchIssueAsync(string series, string issueNumber, int? year, CancellationToken ct)`: Queries issues and calculates candidate confidence scores.
+  * `FetchIssueMetadataAsync(string issueId, CancellationToken ct)`: Retrieves complete issue metadata, creators, characters, locations, and cover art.
+* **Features**: HTML stripping & entity decoding for volume/issue descriptions, publication edition aliases, and rate-limited HTTP dispatch.
+
+---
+
+## 4. Interfaces (`InkTag.Mcp` & `InkTag.Cli`)
 
 ### Model Context Protocol (`InkTag.Mcp`) Tools
 * **`read_comic_metadata`**: Reads metadata XML as JSON object (`path`).

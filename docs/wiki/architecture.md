@@ -7,11 +7,13 @@ This page outlines the high-level architecture of the InkTag solution.
 ## 🏗️ Solution Overview
 
 The solution is organized into standard `src/` and `tests/` layers:
-1. **`InkTag.Core` (Domain Library)**: Provides the domain models (`ComicInfo`), dynamic JSON patching, cover art extraction, and archive manipulation logic (`MetadataEditor` wrapping `SharpCompress` random-access `ArchiveFactory.OpenArchive()`).
+1. **`InkTag.Core` (Domain & Services Library)**:
+   * Provides domain models (`ComicInfo`), schema validation (`ComicInfo.xsd`), dynamic JSON patching, in-memory streaming, and atomic archive repackaging (`MetadataEditor`).
+   * Provides supplementary domain services: smart filename parsing (`ComicFilenameParser`), 64-bit difference perceptual image hashing (`ImageHasher`), and ComicVine metadata scraping (`MetadataScraperService`, `ComicVineProvider`).
 2. **`InkTag.Cli` (Agentic CLI Utility)**: Allows scanning folders, structured `--json` execution, reading, updating, cover extraction, and schema exporting from the command line.
 3. **`InkTag.Mcp` (MCP Server)**: Exposes stdio Model Context Protocol tools for AI agents (Claude Desktop, Cursor, Antigravity). Published as a single-file executable (`PublishSingleFile=true`) and bundled inside the macOS app bundle (`InkTag.app/Contents/MacOS/InkTag.Mcp`).
-4. **`InkTag.Gui` (InkTag Desktop)**: Offers a multi-platform visual spreadsheet and bulk-edit panel built with Avalonia UI. Integrated with `Velopack` (`UpdateService`) for rate-limited silent auto-updating against GitHub Releases.
-5. **`InkTag.Tests` (Test Suite)**: Automated unit tests using xUnit.
+4. **`InkTag.Gui` (InkTag Desktop)**: Multi-platform visual spreadsheet and bulk-edit panel built with Avalonia UI. Features bounded parallel scanning, Series Search Wizard, perceptual cover matching, and Velopack auto-updating.
+5. **`InkTag.Tests` (Test Suite)**: Comprehensive unit and integration test suite using xUnit.
 
 ```mermaid
 graph TD
@@ -22,12 +24,16 @@ graph TD
         UPD[Velopack UpdateService]
     end
 
-    subgraph Core Library
+    subgraph Core Services
         ME[MetadataEditor]
-        CI[ComicInfo]
+        CI[ComicInfo Model]
+        CFP[ComicFilenameParser]
+        IH[ImageHasher]
+        MSS[MetadataScraperService]
     end
 
-    subgraph Storage Layer
+    subgraph External APIs & Storage
+        CV[ComicVine REST API]
         CBZ[Comic Archive .cbz]
         CBR[Comic Archive .cbr]
     end
@@ -35,27 +41,36 @@ graph TD
     CLI -->|Calls| ME
     MCP -->|Calls| ME
     GUI -->|Calls| ME
+    GUI -->|Parses Filenames| CFP
+    GUI -->|Matches Covers| IH
+    GUI -->|Scrapes Metadata| MSS
     GUI -->|Polls GitHub Releases| UPD
+    MSS -->|Queries| CV
+    ME -->|In-Memory Fast Seek| CBZ
+    ME -->|In-Memory Stream / Repack| CBR
     ME -->|Loads/Saves| CI
-    ME -->|Extracts/Repacks ArchiveFactory| CBZ
-    ME -->|Reads/Repacks ArchiveFactory| CBR
 ```
 
 ---
 
-## 🔄 Core Data Flow (Archive repackaging)
+## 🔄 Data Access & Repackaging Lifecycles
 
-Because comic archives are compressed zip or rar files, modifying `ComicInfo.xml` directly inside them is not feasible. The library implements a **safe, atomic-like repackaging flow**:
+### 1. In-Memory Read Lifecycle (Fast Path)
+* `OpenReadOptimized` opens a buffered stream with `FileShare.ReadWrite` and `FileOptions.None` (compatible with Linux FUSE / GVFS / FTP / SMB mounts).
+* `.cbz` archives read `ComicInfo.xml` directly from memory using .NET's `ZipArchive` (0 temporary disk I/O).
+* `.cbr` (RAR) archives and fallback streams use SharpCompress in-memory readers with `LookForHeader = true`.
 
-1. **Extraction**: The file is parsed into a temporary folder using `SharpCompress` random-access `ArchiveFactory.OpenArchive(stream)`, ensuring reliable handling of both `.cbz` and `.cbr` (RAR v4 / RAR v5) archives and stream endpoints.
-2. **XML Manipulation**: `ComicInfo.xml` is read, edited (or created if missing), validated against `ComicInfo.xsd`, and serialized back into the folder.
-3. **Zipping**: The directory is compressed to a temporary `.tmp` archive.
-4. **Validation**: The new `.tmp` archive is scanned using `ArchiveFactory.OpenArchive()` to verify it is uncorrupted and contains readable entries.
-5. **Atomic Swap**: 
-   * The original archive is renamed to `.bak`.
-   * The `.tmp` archive is moved into the target filename slot.
-   * If any step fails, the system executes a rollback, restoring the original archive from `.bak`.
-   * On complete success, the `.bak` files are deleted.
+### 2. Archive Repackaging Lifecycle (Write Path)
+Modifying compressed archives requires safe, atomic-like repackaging:
+1. **Extraction**: Unpacks archive entries to a unique temporary working directory.
+2. **XML Manipulation**: `ComicInfo.xml` is deserialized, modified, validated against `ComicInfo.xsd`, and written to the working folder.
+3. **Compression**: Repacks files into a temporary `.tmp` archive.
+4. **Integrity Validation**: Verifies the newly created archive is readable and uncorrupted.
+5. **Atomic Swap & Rollback**:
+   * Renames the original archive to `.bak`.
+   * Swaps `.tmp` into the destination filename slot.
+   * If any exception occurs, the system automatically restores `.bak`.
+   * On verified success, `.bak` is cleanly removed.
 
 ---
 
