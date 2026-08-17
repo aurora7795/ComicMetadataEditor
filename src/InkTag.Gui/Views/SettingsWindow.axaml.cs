@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using InkTag.Core.Configuration;
 using InkTag.Core.Scrapers;
+using InkTag.Gui.Services;
 
 namespace InkTag.Gui.Views;
 
@@ -79,6 +80,11 @@ public partial class SettingsWindow : Window
 
         _settingsService.SaveSettings(settings);
         Close();
+    }
+
+    private void OpenApiUrl_Click(object? sender, RoutedEventArgs e)
+    {
+        UpdateService.OpenUrlInBrowser("https://comicvine.gamespot.com/api/");
     }
 
     private void Cancel_Click(object? sender, RoutedEventArgs e)

@@ -34,7 +34,7 @@ public class MetadataScraperService
         string apiKey = _settingsService.GetEffectiveComicVineApiKey();
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            throw new InvalidOperationException("ComicVine API key is not configured. Please set your API key in Settings or COMICVINE_API_KEY environment variable.");
+            throw new InvalidOperationException("ComicVine API key is not configured. Please set your API key in Settings or COMICVINE_API_KEY environment variable. Acquire a free API key at https://comicvine.gamespot.com/api/");
         }
 
         var globalResults = (await _provider.SearchAsync(query, apiKey, ct)).ToList();
@@ -75,7 +75,7 @@ public class MetadataScraperService
         string apiKey = _settingsService.GetEffectiveComicVineApiKey();
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            throw new InvalidOperationException("ComicVine API key is not configured.");
+            throw new InvalidOperationException("ComicVine API key is not configured. Please set your API key in Settings or COMICVINE_API_KEY environment variable. Acquire a free API key at https://comicvine.gamespot.com/api/");
         }
 
         return await _provider.FetchComicMetadataAsync(issueId, apiKey, ct);
@@ -88,7 +88,7 @@ public class MetadataScraperService
         string apiKey = _settingsService.GetEffectiveComicVineApiKey();
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            throw new InvalidOperationException("ComicVine API key is not configured. Please set your API key in Settings or COMICVINE_API_KEY environment variable.");
+            throw new InvalidOperationException("ComicVine API key is not configured. Please set your API key in Settings or COMICVINE_API_KEY environment variable. Acquire a free API key at https://comicvine.gamespot.com/api/");
         }
 
         return await _provider.SearchSeriesAsync(seriesTitle, apiKey, ct);
@@ -99,7 +99,7 @@ public class MetadataScraperService
         string apiKey = _settingsService.GetEffectiveComicVineApiKey();
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            throw new InvalidOperationException("ComicVine API key is not configured. Please set your API key in Settings or COMICVINE_API_KEY environment variable.");
+            throw new InvalidOperationException("ComicVine API key is not configured. Please set your API key in Settings or COMICVINE_API_KEY environment variable. Acquire a free API key at https://comicvine.gamespot.com/api/");
         }
 
         return await _provider.FetchSeriesIssuesAsync(volumeId, apiKey, page, pageSize, query, ct);

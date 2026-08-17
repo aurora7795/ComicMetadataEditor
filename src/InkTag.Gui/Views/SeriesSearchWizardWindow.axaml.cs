@@ -95,6 +95,13 @@ public partial class SeriesSearchWizardWindow : Window
 
     private async Task PerformSeriesSearchAsync()
     {
+        if (!await ApiKeyRequiredWindow.EnsureApiKeyConfiguredAsync(this))
+        {
+            Step1StatusText.Text = "ComicVine API key is required. Acquire a free key at https://comicvine.gamespot.com/api/";
+            Step1StatusText.IsVisible = true;
+            return;
+        }
+
         string query = SeriesTitleTextBox.Text?.Trim() ?? "";
         if (string.IsNullOrWhiteSpace(query))
         {

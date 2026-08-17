@@ -21,7 +21,10 @@
             <Button Grid.Column="1" Content="Test Key" Click="TestApiKey_Click" Padding="12,6" Background="#2D2D30" Margin="8,0,0,0"/>
           </Grid>
           <TextBlock Name="StatusTextBlock" Text="" FontSize="11" Foreground="Gray"/>
-          <TextBlock Text="Get a free key at https://comicvine.gamespot.com/api/" FontSize="11" Foreground="#555"/>
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <TextBlock Text="Get a free key at" FontSize="11" Foreground="#888" VerticalAlignment="Center"/>
+            <Button Content="https://comicvine.gamespot.com/api/" Click="OpenApiUrl_Click" Classes="linkButton" FontSize="11" VerticalAlignment="Center"/>
+          </StackPanel>
         </StackPanel>
 
         <!-- Default Merge Policy -->
@@ -60,4 +63,19 @@
       </StackPanel>
     </Grid>
   </Border>
+
+  <Window.Styles>
+    <Style Selector="Button.linkButton">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Foreground" Value="#569CD6"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Button.linkButton:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="TextBlock.Foreground" Value="#9CDCFE"/>
+      <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
+    </Style>
+  </Window.Styles>
 </Window>

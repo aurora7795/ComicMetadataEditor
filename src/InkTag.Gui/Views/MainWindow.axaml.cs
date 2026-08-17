@@ -131,6 +131,11 @@ public partial class MainWindow : Window
                 return;
             }
 
+            if (!await ApiKeyRequiredWindow.EnsureApiKeyConfiguredAsync(this))
+            {
+                return;
+            }
+
             if (vm.ActiveComic == null)
             {
                 vm.ActiveComic = targetItem;
@@ -160,6 +165,11 @@ public partial class MainWindow : Window
         {
             var targetItem = vm.ActiveComic ?? vm.Comics.FirstOrDefault();
             if (targetItem == null)
+            {
+                return;
+            }
+
+            if (!await ApiKeyRequiredWindow.EnsureApiKeyConfiguredAsync(this))
             {
                 return;
             }

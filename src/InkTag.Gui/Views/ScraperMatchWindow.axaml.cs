@@ -117,6 +117,11 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
 
     private async void SeriesWizard_Click(object? sender, RoutedEventArgs e)
     {
+        if (!await ApiKeyRequiredWindow.EnsureApiKeyConfiguredAsync(this))
+        {
+            return;
+        }
+
         string initialQuery = SeriesTextBox.Text?.Trim() ?? _targetComic.Series ?? "";
         var wizard = new SeriesSearchWizardWindow(initialQuery, _localCoverHash);
         await wizard.ShowDialog(this);
@@ -146,6 +151,11 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
 
     private async Task PerformSearchAsync()
     {
+        if (!await ApiKeyRequiredWindow.EnsureApiKeyConfiguredAsync(this))
+        {
+            return;
+        }
+
         SearchButton.IsEnabled = false;
         try
         {

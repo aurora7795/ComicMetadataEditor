@@ -431,5 +431,37 @@ public class ScraperTests
         double confidence = ComicVineProvider.CalculateConfidence(candidate2006, target2006Query, null);
         Assert.Equal(1.0, confidence); // 0.50 (title) + 0.35 (issue) + 0.25 (year) = 1.0 (100%)
     }
+
+    [Fact]
+    public async Task MetadataScraperService_ThrowsWhenApiKeyMissing_IncludesAcquisitionUrl()
+    {
+        string tempFile = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
+        try
+        {
+            var settingsService = new AppSettingsService(tempFile);
+            settingsService.Settings.ComicVineApiKey = "";
+            var scraperService = new MetadataScraperService(settingsService);
+
+            var ex1 = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                scraperService.SearchCandidatesAsync(new ComicSearchQuery { Series = "Spider-Man" }));
+            Assert.Contains("https://comicvine.gamespot.com/api/", ex1.Message);
+
+            var ex2 = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                scraperService.FetchMetadataAsync("4000-12345"));
+            Assert.Contains("https://comicvine.gamespot.com/api/", ex2.Message);
+
+            var ex3 = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                scraperService.SearchSeriesAsync("Batman"));
+            Assert.Contains("https://comicvine.gamespot.com/api/", ex3.Message);
+
+            var ex4 = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                scraperService.FetchSeriesIssuesAsync("4050-12345"));
+            Assert.Contains("https://comicvine.gamespot.com/api/", ex4.Message);
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
 }
 
