@@ -49,29 +49,14 @@ public class ArchiveCoverService
         {
             try
             {
-                using var stream = File.OpenRead(archivePath);
-                using var archive = ArchiveFactory.OpenArchive(stream);
-
-                var imageEntries = archive.Entries
-                    .Where(e => !e.IsDirectory && e.Key != null && IsImageFile(e.Key!))
-                    .ToList();
-
-                if (imageEntries.Count == 0)
+                var editor = new InkTag.Core.MetadataEditor();
+                byte[]? bytes = editor.ExtractCoverImageBytes(archivePath);
+                if (bytes == null || bytes.Length == 0)
                 {
                     return (null, 0);
                 }
 
-                var bestEntry = imageEntries.FirstOrDefault(e => Path.GetFileName(e.Key!).Contains("cover", StringComparison.OrdinalIgnoreCase));
-                if (bestEntry == null)
-                {
-                    bestEntry = imageEntries.OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase).First();
-                }
-
-                using var memoryStream = new MemoryStream();
-                bestEntry.OpenEntryStream().CopyTo(memoryStream);
-                byte[] bytes = memoryStream.ToArray();
-
-                memoryStream.Position = 0;
+                using var memoryStream = new MemoryStream(bytes);
                 var bitmap = new Bitmap(memoryStream);
                 ulong hash = InkTag.Core.Images.PerceptualHashService.ComputeDHash(bytes);
 

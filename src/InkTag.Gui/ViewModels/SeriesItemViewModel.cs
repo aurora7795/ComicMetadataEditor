@@ -25,6 +25,12 @@ public class SeriesItemViewModel : ObservableObject
     public string PublisherAndYear => $"{Publisher} • {StartYear} • {IssueCount}";
     public string CoverUrl => !string.IsNullOrEmpty(Result.SmallCoverUrl) ? Result.SmallCoverUrl : Result.CoverUrl;
     public string Description => Result.Description;
+    public bool HasDescription => !string.IsNullOrWhiteSpace(Result.Description);
+    public string DescriptionSnippet => string.IsNullOrWhiteSpace(Result.Description) ? "No series description available." : Result.Description;
+    public bool IsDescriptionTruncated => !string.IsNullOrWhiteSpace(Result.Description) && (Result.Description.Length > 160 || Result.Description.Contains('\n'));
+    public string? DescriptionToolTip => IsDescriptionTruncated ? Result.Description : null;
+    public string? Aliases => Result.Aliases;
+    public bool HasAliases => !string.IsNullOrWhiteSpace(Result.Aliases);
 
     public SeriesItemViewModel(SeriesSearchResult result)
     {

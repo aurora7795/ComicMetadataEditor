@@ -41,6 +41,18 @@
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="8,6"/>
         </Style>
+        <Style Selector="ToolTip">
+            <Setter Property="MaxWidth" Value="650"/>
+            <Setter Property="MaxHeight" Value="450"/>
+            <Setter Property="Background" Value="#181825"/>
+            <Setter Property="BorderBrush" Value="#45475A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="TextBlock.TextWrapping" Value="Wrap"/>
+            <Setter Property="TextBlock.FontSize" Value="12"/>
+            <Setter Property="TextBlock.Foreground" Value="#CDD6F4"/>
+        </Style>
     </Window.Styles>
 
     <Grid RowDefinitions="Auto,*,Auto">
@@ -104,10 +116,37 @@
                                         </Border>
 
                                         <!-- Series Info -->
-                                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="4">
+                                        <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="5">
                                             <TextBlock Text="{Binding SeriesTitle}" FontSize="16" FontWeight="Bold" Foreground="#89B4FA"/>
-                                            <TextBlock Text="{Binding PublisherAndYear}" FontSize="13" Foreground="#BAC2DE"/>
-                                            <TextBlock Text="{Binding Description}" FontSize="12" Foreground="#A6ADC8" TextWrapping="Wrap" MaxLines="2"/>
+                                            
+                                            <!-- Badges Row: Publisher, Start Year, Issue Count -->
+                                            <WrapPanel Orientation="Horizontal">
+                                                <!-- Publisher Badge -->
+                                                <Border Background="#24273A" BorderBrush="#74C7EC" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,6,4">
+                                                    <TextBlock Text="{Binding Publisher}" FontSize="11" FontWeight="SemiBold" Foreground="#CDD6F4" VerticalAlignment="Center"/>
+                                                </Border>
+
+                                                <!-- Start Year Badge -->
+                                                <Border Background="#313244" CornerRadius="4" Padding="6,2" Margin="0,0,6,4">
+                                                    <TextBlock Text="{Binding StartYear}" FontSize="11" Foreground="#BAC2DE" VerticalAlignment="Center"/>
+                                                </Border>
+
+                                                <!-- Issue Count Badge -->
+                                                <Border Background="#313244" CornerRadius="4" Padding="6,2" Margin="0,0,6,4">
+                                                    <TextBlock Text="{Binding IssueCount}" FontSize="11" Foreground="#BAC2DE" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </WrapPanel>
+
+                                            <!-- Aliases / Foreign Titles (if present) -->
+                                            <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasAliases}">
+                                                <TextBlock Text="🏷️ Aliases:" FontSize="11" Foreground="#F5C2E7" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Aliases}" FontSize="11" Foreground="#BAC2DE" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+
+                                            <!-- Description / Deck preview with conditional ToolTip (only when truncated) -->
+                                            <TextBlock Text="{Binding DescriptionSnippet}" FontSize="12" Foreground="#A6ADC8" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis"
+                                                       ToolTip.Tip="{Binding DescriptionToolTip}"
+                                                       ToolTip.Placement="Top" ToolTip.ShowDelay="100"/>
                                         </StackPanel>
 
                                         <!-- Select Button -->

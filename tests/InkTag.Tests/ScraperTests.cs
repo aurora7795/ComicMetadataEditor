@@ -287,6 +287,79 @@ public class ScraperTests
     }
 
     [Fact]
+    public async Task ComicVineProvider_ParsesSeriesSearchResults_WithDescriptionFallbackAndAliases()
+    {
+        string json = @"{
+            ""status_code"": 1,
+            ""results"": [
+                {
+                    ""id"": ""4050-1001"",
+                    ""name"": ""Blankets"",
+                    ""start_year"": ""2003"",
+                    ""count_of_issues"": 1,
+                    ""publisher"": { ""name"": ""Top Shelf"" },
+                    ""deck"": null,
+                    ""description"": ""<p>An autobiographical graphic novel by <b>Craig Thompson</b> &amp; published by Top Shelf.</p>"",
+                    ""aliases"": ""Blankets US\nBlankets HC"",
+                    ""image"": { ""medium_url"": ""https://example.com/cover1.jpg"", ""small_url"": ""https://example.com/small1.jpg"" }
+                },
+                {
+                    ""id"": ""4050-1002"",
+                    ""name"": ""Blankets"",
+                    ""start_year"": ""2010"",
+                    ""count_of_issues"": 1,
+                    ""publisher"": { ""name"": ""Rizzoli Lizard"" },
+                    ""deck"": ""Italian translation published by Rizzoli."",
+                    ""description"": null,
+                    ""aliases"": ""Blankets (Italy); Blankets Edizione Italiana"",
+                    ""image"": { ""medium_url"": ""https://example.com/cover2.jpg"", ""small_url"": ""https://example.com/small2.jpg"" }
+                }
+            ]
+        }";
+
+        var mockHandler = new MockHttpMessageHandler { ResponseContent = json };
+        var rateClient = new RateLimitedHttpClient(new HttpClient(mockHandler));
+        var provider = new ComicVineProvider(rateClient);
+
+        var results = (await provider.SearchSeriesAsync("Blankets", "valid_key")).ToList();
+
+        Assert.Equal(2, results.Count);
+
+        var item1 = results[0];
+        Assert.Equal("Top Shelf", item1.Publisher);
+        Assert.Equal("An autobiographical graphic novel by Craig Thompson & published by Top Shelf.", item1.Description);
+        Assert.Equal("Blankets US, Blankets HC", item1.Aliases);
+
+        var item2 = results[1];
+        Assert.Equal("Rizzoli Lizard", item2.Publisher);
+        Assert.Equal("Italian translation published by Rizzoli.", item2.Description);
+        Assert.Equal("Blankets (Italy), Blankets Edizione Italiana", item2.Aliases);
+    }
+
+    [Fact]
+    public void SeriesItemViewModel_OnlyProvidesToolTip_WhenDescriptionIsTruncated()
+    {
+        var shortResult = new SeriesSearchResult
+        {
+            SeriesTitle = "Short Series",
+            Description = "Four issue mini-series. Collected in Eden."
+        };
+        var shortVm = new InkTag.Gui.ViewModels.SeriesItemViewModel(shortResult);
+        Assert.False(shortVm.IsDescriptionTruncated);
+        Assert.Null(shortVm.DescriptionToolTip);
+
+        var longResult = new SeriesSearchResult
+        {
+            SeriesTitle = "Long Series",
+            Description = "5 issue digital comic series. When a heist to steal an expensive piece of scientific technology goes wrong, Henry Quan, a selfish career criminal, is unmoored in both space and time. Thrown in and out of parallel lives across the multiverse, he struggles to find his way back home."
+        };
+        var longVm = new InkTag.Gui.ViewModels.SeriesItemViewModel(longResult);
+        Assert.True(longVm.IsDescriptionTruncated);
+        Assert.NotNull(longVm.DescriptionToolTip);
+        Assert.Equal(longResult.Description, longVm.DescriptionToolTip);
+    }
+
+    [Fact]
     public async Task ComicVineProvider_ParsesSeriesIssuesResults()
     {
         string json = @"{

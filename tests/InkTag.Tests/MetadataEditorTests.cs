@@ -392,4 +392,192 @@ public class MetadataEditorTests
             if (File.Exists(invalidXmlFile)) File.Delete(invalidXmlFile);
         }
     }
+
+    [Fact]
+    public void ReadMetadata_InMemory_ReadsCBZDirectlyAndCorrectly()
+    {
+        var editor = new MetadataEditor();
+        string tempCbz = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".cbz");
+        string tempXml = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".xml");
+
+        try
+        {
+            File.WriteAllText(tempXml, @"<ComicInfo>
+                <Title>Direct Memory Title</Title>
+                <Series>Memory Series</Series>
+                <Number>42</Number>
+                <Year>2026</Year>
+            </ComicInfo>");
+
+            using (var stream = File.OpenWrite(tempCbz))
+            using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+            {
+                writer.Write("ComicInfo.xml", tempXml);
+            }
+
+            var result = editor.ReadMetadata(tempCbz);
+
+            Assert.Equal("Direct Memory Title", result.Title);
+            Assert.Equal("Memory Series", result.Series);
+            Assert.Equal("42", result.Number);
+            Assert.Equal(2026, result.Year);
+        }
+        finally
+        {
+            if (File.Exists(tempXml)) File.Delete(tempXml);
+            if (File.Exists(tempCbz)) File.Delete(tempCbz);
+        }
+    }
+
+    [Fact]
+    public void OpenReadOptimized_AllowsConcurrentReads_WhenOtherProcessHoldsOpenStream()
+    {
+        string tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".txt");
+        try
+        {
+            File.WriteAllText(tempFile, "Test file content for concurrent reading simulation.");
+
+            // Simulate another process (e.g. Komga, Kavita, Plex) holding the file open with FileShare.ReadWrite
+            using var lockedStream = new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+
+            // OpenReadOptimized should succeed and read without throwing IOException
+            using var optimizedStream = MetadataEditor.OpenReadOptimized(tempFile);
+            using var reader = new StreamReader(optimizedStream);
+            string content = reader.ReadToEnd();
+
+            Assert.Equal("Test file content for concurrent reading simulation.", content);
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task ComicScannerService_ScansParallelDirectory_PreservingOrder()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "ScannerTest_" + Guid.NewGuid());
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            var editor = new MetadataEditor();
+
+            // Create 10 numbered CBZ files
+            for (int i = 1; i <= 10; i++)
+            {
+                string file = Path.Combine(tempDir, $"Issue_{i:D2}.cbz");
+                string xml = Path.Combine(tempDir, $"temp_{i}.xml");
+                File.WriteAllText(xml, $"<ComicInfo><Title>Issue #{i}</Title><Number>{i}</Number></ComicInfo>");
+
+                using (var stream = File.OpenWrite(file))
+                using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+                {
+                    writer.Write("ComicInfo.xml", xml);
+                }
+                File.Delete(xml);
+            }
+
+            var scanner = new InkTag.Gui.Services.ComicScannerService();
+            var results = await scanner.ScanDirectoryAsync(tempDir, recursive: false, System.Threading.CancellationToken.None);
+
+            Assert.Equal(10, results.Count);
+            for (int i = 0; i < 10; i++)
+            {
+                Assert.Equal((i + 1).ToString(), results[i].Number);
+                Assert.Equal($"Issue #{i + 1}", results[i].Title);
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                try { Directory.Delete(tempDir, true); } catch { }
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ComicScannerService_ReportsProgressAndHandlesCancellation()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "ProgressCancelTest_" + Guid.NewGuid());
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            for (int i = 1; i <= 6; i++)
+            {
+                string file = Path.Combine(tempDir, $"Issue_{i:D2}.cbz");
+                string xml = Path.Combine(tempDir, $"temp_{i}.xml");
+                File.WriteAllText(xml, $"<ComicInfo><Title>Issue #{i}</Title><Number>{i}</Number></ComicInfo>");
+
+                using (var stream = File.OpenWrite(file))
+                using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+                {
+                    writer.Write("ComicInfo.xml", xml);
+                }
+                File.Delete(xml);
+            }
+
+            var progressReports = new System.Collections.Generic.List<(int Processed, int Total)>();
+            var lockObj = new object();
+            var progress = new DirectProgress<(int Processed, int Total)>(r => { lock (lockObj) progressReports.Add(r); });
+
+            var scanner = new InkTag.Gui.Services.ComicScannerService();
+            var results = await scanner.ScanDirectoryAsync(tempDir, recursive: false, System.Threading.CancellationToken.None, progress);
+
+            Assert.Equal(6, results.Count);
+            Assert.NotEmpty(progressReports);
+            Assert.Equal(6, progressReports.Last().Total);
+            Assert.Equal(6, progressReports.Last().Processed);
+
+            // Test cancellation
+            using var cts = new System.Threading.CancellationTokenSource();
+            cts.Cancel(); // Cancel immediately
+            var cancelledResults = await scanner.ScanDirectoryAsync(tempDir, recursive: false, cts.Token);
+            Assert.NotNull(cancelledResults);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                try { Directory.Delete(tempDir, true); } catch { }
+            }
+        }
+    }
+
+    [Fact]
+    public void ExtractCoverImageBytes_ExtractsCoverSuccessfully_FromValidCBZ()
+    {
+        var editor = new MetadataEditor();
+        string tempCbz = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".cbz");
+        string tempImg = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".jpg");
+
+        try
+        {
+            File.WriteAllBytes(tempImg, new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46 }); // Minimal JPEG header
+
+            using (var stream = File.OpenWrite(tempCbz))
+            using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+            {
+                writer.Write("cover.jpg", tempImg);
+            }
+
+            var coverBytes = editor.ExtractCoverImageBytes(tempCbz);
+            Assert.NotNull(coverBytes);
+            Assert.NotEmpty(coverBytes);
+        }
+        finally
+        {
+            if (File.Exists(tempImg)) File.Delete(tempImg);
+            if (File.Exists(tempCbz)) File.Delete(tempCbz);
+        }
+    }
+
+    private class DirectProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> _handler;
+        public DirectProgress(Action<T> handler) => _handler = handler;
+        public void Report(T value) => _handler(value);
+    }
 }

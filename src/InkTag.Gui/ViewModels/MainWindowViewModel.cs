@@ -190,29 +190,64 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void CancelScan()
+    {
+        if (IsLoading && _scanCts != null && !_scanCts.IsCancellationRequested)
+        {
+            _scanCts.Cancel();
+            ProgressText = "Cancelling scan...";
+        }
+    }
+
+    [RelayCommand]
     private async Task LoadDirectoryAsync()
     {
         if (string.IsNullOrEmpty(SelectedDirectory) || !Directory.Exists(SelectedDirectory)) return;
 
         IsLoading = true;
-        ProgressText = "Scanning folder...";
+        ProgressText = "Discovering comic files...";
         ProgressValue = 0;
 
         _scanCts?.Cancel();
         _scanCts = new CancellationTokenSource();
+        var ct = _scanCts.Token;
+
+        var progress = new Progress<(int Processed, int Total)>(report =>
+        {
+            if (report.Total > 0)
+            {
+                ProgressValue = (report.Processed * 100) / report.Total;
+                ProgressText = $"Scanning: {report.Processed}/{report.Total} files ({ProgressValue}%)...";
+            }
+            else
+            {
+                ProgressText = "Discovering comic files...";
+            }
+        });
 
         try
         {
             Comics.Clear();
             ActiveComic = null;
 
-            var items = await _scannerService.ScanDirectoryAsync(SelectedDirectory, IsRecursive, _scanCts.Token);
+            var items = await _scannerService.ScanDirectoryAsync(SelectedDirectory, IsRecursive, ct, progress);
             foreach (var item in items)
             {
                 Comics.Add(item);
             }
 
-            ProgressText = $"Loaded {Comics.Count} comics successfully.";
+            if (ct.IsCancellationRequested)
+            {
+                ProgressText = $"Scan cancelled ({Comics.Count} files loaded).";
+            }
+            else
+            {
+                ProgressText = $"Loaded {Comics.Count} comics successfully.";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            ProgressText = $"Scan cancelled ({Comics.Count} files loaded).";
         }
         catch (Exception ex)
         {

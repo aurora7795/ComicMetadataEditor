@@ -130,7 +130,37 @@ public class ComicVineProvider : IMetadataScraperProvider
             string id = elem.TryGetProperty("id", out var idProp) ? idProp.ToString() : string.Empty;
             string name = elem.TryGetProperty("name", out var nameProp) && nameProp.ValueKind == JsonValueKind.String ? nameProp.GetString() ?? "" : "";
             string siteUrl = elem.TryGetProperty("site_detail_url", out var urlProp) && urlProp.ValueKind == JsonValueKind.String ? urlProp.GetString() ?? "" : "";
-            string desc = elem.TryGetProperty("deck", out var deckProp) && deckProp.ValueKind == JsonValueKind.String ? deckProp.GetString() ?? "" : "";
+            string deck = elem.TryGetProperty("deck", out var deckProp) && deckProp.ValueKind == JsonValueKind.String ? deckProp.GetString() ?? "" : "";
+            string fullDesc = elem.TryGetProperty("description", out var fullDescProp) && fullDescProp.ValueKind == JsonValueKind.String ? fullDescProp.GetString() ?? "" : "";
+
+            string desc = "";
+            string strippedDesc = StripHtml(fullDesc);
+            string strippedDeck = StripHtml(deck);
+
+            if (!string.IsNullOrWhiteSpace(strippedDesc))
+            {
+                desc = strippedDesc;
+            }
+            else if (!string.IsNullOrWhiteSpace(strippedDeck))
+            {
+                desc = strippedDeck;
+            }
+
+            string? aliases = null;
+            if (elem.TryGetProperty("aliases", out var aliasesProp) && aliasesProp.ValueKind == JsonValueKind.String)
+            {
+                string rawAliases = aliasesProp.GetString() ?? "";
+                if (!string.IsNullOrWhiteSpace(rawAliases))
+                {
+                    var aliasList = rawAliases.Split(new[] { '\r', '\n', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                                              .Where(a => !string.IsNullOrWhiteSpace(a))
+                                              .Distinct();
+                    if (aliasList.Any())
+                    {
+                        aliases = string.Join(", ", aliasList);
+                    }
+                }
+            }
 
             int? startYear = null;
             if (elem.TryGetProperty("start_year", out var yrProp))
@@ -169,7 +199,8 @@ public class ComicVineProvider : IMetadataScraperProvider
                 CoverUrl = mediumUrl,
                 SmallCoverUrl = smallUrl,
                 SiteDetailUrl = siteUrl,
-                Description = desc
+                Description = desc,
+                Aliases = aliases
             });
         }
 

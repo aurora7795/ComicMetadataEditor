@@ -114,7 +114,7 @@
     <Border Grid.Row="1" Background="#2D2D30" Padding="8,6" BorderBrush="#3F3F46" BorderThickness="0,0,0,1">
       <Grid ColumnDefinitions="Auto, Auto, Auto, Auto, *, Auto">
         <!-- Open Folder Button -->
-        <Button Grid.Column="0" Click="OpenFolder_Click" Padding="12,6" Background="#3E3E42" Foreground="White" CornerRadius="4">
+        <Button Grid.Column="0" Click="OpenFolder_Click" Padding="12,6" Background="#3E3E42" Foreground="White" CornerRadius="4" IsEnabled="{Binding !IsLoading}">
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Text="📁" VerticalAlignment="Center"/>
             <TextBlock Text="Open Folder..." VerticalAlignment="Center" FontWeight="SemiBold"/>
@@ -122,7 +122,7 @@
         </Button>
 
         <!-- Save All Button -->
-        <Button Grid.Column="1" Command="{Binding SaveAllCommand}" Padding="12,6" Background="#007ACC" Foreground="White" CornerRadius="4" Margin="8,0,0,0">
+        <Button Grid.Column="1" Command="{Binding SaveAllCommand}" Padding="12,6" Background="#007ACC" Foreground="White" CornerRadius="4" Margin="8,0,0,0" IsEnabled="{Binding !IsLoading}">
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Text="💾" VerticalAlignment="Center"/>
             <TextBlock Text="Save All" VerticalAlignment="Center" FontWeight="SemiBold"/>
@@ -133,28 +133,28 @@
         <Rectangle Grid.Column="2" Width="1" Fill="#3F3F46" Margin="12,3"/>
 
         <!-- Scan Recursively CheckBox Toggle -->
-        <CheckBox Grid.Column="3" IsChecked="{Binding IsRecursive}" Content="Scan Subfolders Recursively" VerticalAlignment="Center" Margin="0,0,12,0"/>
+        <CheckBox Grid.Column="3" IsChecked="{Binding IsRecursive}" Content="Scan Subfolders Recursively" VerticalAlignment="Center" Margin="0,0,12,0" IsEnabled="{Binding !IsLoading}"/>
 
         <!-- Active Folder Path Display -->
         <TextBlock Grid.Column="4" Text="{Binding SelectedDirectory}" TextTrimming="CharacterEllipsis" Foreground="#9CDCFE" VerticalAlignment="Center" Margin="10,0" FontStyle="Italic"/>
 
         <!-- Right Side Controls: Scrape, Refresh & Inspector Toggle -->
         <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8">
-          <Button Click="ScrapeMetadata_Click" Padding="8,5" Background="#007ACC" Foreground="White" CornerRadius="4" ToolTip.Tip="Scrape metadata from ComicVine">
+          <Button Click="ScrapeMetadata_Click" Padding="8,5" Background="#007ACC" Foreground="White" CornerRadius="4" ToolTip.Tip="Scrape metadata from ComicVine" IsEnabled="{Binding !IsLoading}">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Text="🌐" VerticalAlignment="Center"/>
               <TextBlock Text="Scrape" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
 
-          <Button Click="SeriesSearchWizard_Click" Padding="8,5" Background="#313244" Foreground="#CDD6F4" CornerRadius="4" ToolTip.Tip="Series Search Wizard">
+          <Button Click="SeriesSearchWizard_Click" Padding="8,5" Background="#313244" Foreground="#CDD6F4" CornerRadius="4" ToolTip.Tip="Series Search Wizard" IsEnabled="{Binding !IsLoading}">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Text="🧙" VerticalAlignment="Center"/>
               <TextBlock Text="Series Wizard" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
 
-          <Button Command="{Binding RefreshGridCommand}" Padding="8,5" Background="#3E3E42" Foreground="White" CornerRadius="4" ToolTip.Tip="Refresh Grid (F5)">
+          <Button Command="{Binding RefreshGridCommand}" Padding="8,5" Background="#3E3E42" Foreground="White" CornerRadius="4" ToolTip.Tip="Refresh Grid (F5)" IsEnabled="{Binding !IsLoading}">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Text="🔄" VerticalAlignment="Center"/>
               <TextBlock Text="Refresh" VerticalAlignment="Center"/>
@@ -363,20 +363,164 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <Grid ColumnDefinitions="*, *">
-                  <Button Content="+ Add Rule" Command="{Binding AddBulkRuleCommand}" Grid.Column="0" Margin="0,0,4,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#2D2D30"/>
-                  <Button Content="Clear Rules" Command="{Binding ClearBulkRulesCommand}" Grid.Column="1" Margin="4,0,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#2D2D30"/>
+                <!-- Core Details Group -->
+                <TextBlock Text="Core Information" FontWeight="SemiBold" Foreground="#4EC9B0" FontSize="12"/>
+                <TextBlock Text="Title" Foreground="Gray" FontSize="11"/>
+                <TextBox Text="{Binding ActiveComic.Title}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Series" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Series}" Background="#1E1E1E"/>
+
+                <Grid ColumnDefinitions="*, *, *">
+                  <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                    <TextBlock Text="Issue #" Foreground="Gray" FontSize="11"/>
+                    <TextBox Text="{Binding ActiveComic.Number}" Background="#1E1E1E"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Margin="2,0,2,0">
+                    <TextBlock Text="Count" Foreground="Gray" FontSize="11"/>
+                    <TextBox Text="{Binding ActiveComic.Count}" Background="#1E1E1E"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="2" Margin="4,0,0,0">
+                    <TextBlock Text="Volume" Foreground="Gray" FontSize="11"/>
+                    <TextBox Text="{Binding ActiveComic.Volume}" Background="#1E1E1E"/>
+                  </StackPanel>
                 </Grid>
 
-                <Button Content="Apply to Selected Rows" Command="{Binding BulkApplyCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,10,0,0" Padding="10" Background="#0E639C" Foreground="White"/>
+                <TextBlock Text="Publisher" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Publisher}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Imprint" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Imprint}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Series Group" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.SeriesGroup}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Story Arc" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.StoryArc}" Background="#1E1E1E"/>
+
+                <Grid ColumnDefinitions="*, *, *" Margin="0,5,0,0">
+                  <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                    <TextBlock Text="Year" Foreground="Gray" FontSize="11"/>
+                    <TextBox Text="{Binding ActiveComic.Year}" Background="#1E1E1E"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Margin="2,0,2,0">
+                    <TextBlock Text="Month" Foreground="Gray" FontSize="11"/>
+                    <TextBox Text="{Binding ActiveComic.Month}" Background="#1E1E1E"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="2" Margin="4,0,0,0">
+                    <TextBlock Text="Day" Foreground="Gray" FontSize="11"/>
+                    <TextBox Text="{Binding ActiveComic.Day}" Background="#1E1E1E"/>
+                  </StackPanel>
+                </Grid>
+
+                <!-- Creators Group -->
+                <TextBlock Text="Creators" FontWeight="SemiBold" Foreground="#4EC9B0" FontSize="12" Margin="0,10,0,0"/>
+                
+                <TextBlock Text="Writer" Foreground="Gray" FontSize="11"/>
+                <TextBox Text="{Binding ActiveComic.Writer}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Penciller" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Penciller}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Inker" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Inker}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Colorist" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Colorist}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Letterer" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Letterer}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Cover Artist" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.CoverArtist}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Editor" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Editor}" Background="#1E1E1E"/>
+
+                <!-- Content & Classification -->
+                <TextBlock Text="Content &amp; Classification" FontWeight="SemiBold" Foreground="#4EC9B0" FontSize="12" Margin="0,10,0,0"/>
+
+                <TextBlock Text="Summary" Foreground="Gray" FontSize="11"/>
+                <TextBox Text="{Binding ActiveComic.Summary}" Height="60" TextWrapping="Wrap" AcceptsReturn="True" Background="#1E1E1E"/>
+
+                <TextBlock Text="Genre" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Genre}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Tags" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Tags}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Notes" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Notes}" Background="#1E1E1E"/>
+
+                <Grid ColumnDefinitions="*, *">
+                  <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                    <TextBlock Text="Format" Foreground="Gray" FontSize="11"/>
+                    <TextBox Text="{Binding ActiveComic.Format}" Background="#1E1E1E"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                    <TextBlock Text="Age Rating" Foreground="Gray" FontSize="11"/>
+                    <TextBox Text="{Binding ActiveComic.AgeRating}" Background="#1E1E1E"/>
+                  </StackPanel>
+                </Grid>
+
+                <Grid ColumnDefinitions="*, *">
+                  <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                    <TextBlock Text="Language ISO" Foreground="Gray" FontSize="11"/>
+                    <TextBox Text="{Binding ActiveComic.LanguageISO}" Background="#1E1E1E"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                    <TextBlock Text="Page Count" Foreground="Gray" FontSize="11"/>
+                    <TextBox Text="{Binding ActiveComic.PageCount}" Background="#1E1E1E"/>
+                  </StackPanel>
+                </Grid>
+
+                <TextBlock Text="Characters" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Characters}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Teams" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Teams}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Locations" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Locations}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Scan Info" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.ScanInformation}" Background="#1E1E1E"/>
+
+                <TextBlock Text="Web Link" Foreground="Gray" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ActiveComic.Web}" Background="#1E1E1E"/>
+
+                <CheckBox IsChecked="{Binding ActiveComic.BlackAndWhite}" Content="Black &amp; White" Margin="0,5,0,0"/>
+                <CheckBox IsChecked="{Binding ActiveComic.Manga}" Content="Manga (Right-to-Left)" Margin="0,2,0,10"/>
               </StackPanel>
             </ScrollViewer>
           </TabItem>
 
-          <!-- Tab 3: Batch Find & Replace -->
-          <TabItem Header="Find &amp; Replace" FontSize="13">
-            <StackPanel Spacing="12" Margin="0,15,0,0">
-              <TextBlock Text="Find &amp; Replace Text" FontWeight="Bold" FontSize="12"/>
+          <!-- TAB 2: Multi-Item Bulk Tools -->
+          <TabItem Header="Bulk Tools" FontSize="12">
+            <StackPanel Spacing="8" Margin="10">
+              <TextBlock Text="Bulk Edit Controls" FontWeight="Bold" FontSize="14" Foreground="#9CDCFE" Margin="0,0,0,5"/>
+
+              <CheckBox IsChecked="{Binding BulkSeriesEnabled}" Content="Set Series"/>
+              <TextBox Text="{Binding BulkSeries}" IsEnabled="{Binding BulkSeriesEnabled}" Background="#1E1E1E"/>
+
+              <CheckBox IsChecked="{Binding BulkPublisherEnabled}" Content="Set Publisher" Margin="0,5,0,0"/>
+              <TextBox Text="{Binding BulkPublisher}" IsEnabled="{Binding BulkPublisherEnabled}" Background="#1E1E1E"/>
+
+              <CheckBox IsChecked="{Binding BulkYearEnabled}" Content="Set Year" Margin="0,5,0,0"/>
+              <TextBox Text="{Binding BulkYear}" IsEnabled="{Binding BulkYearEnabled}" Background="#1E1E1E"/>
+
+              <CheckBox IsChecked="{Binding BulkGenreEnabled}" Content="Set Genre" Margin="0,5,0,0"/>
+              <TextBox Text="{Binding BulkGenre}" IsEnabled="{Binding BulkGenreEnabled}" Background="#1E1E1E"/>
+
+              <CheckBox IsChecked="{Binding BulkMangaEnabled}" Content="Set Manga Direction" Margin="0,5,0,0"/>
+              <ComboBox ItemsSource="{Binding MangaOptions}" SelectedItem="{Binding BulkManga}" IsEnabled="{Binding BulkMangaEnabled}" HorizontalAlignment="Stretch" Background="#1E1E1E"/>
+
+              <Button Content="Apply to Selected / All" Command="{Binding BulkApplyCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,15,0,0" Padding="10" Background="#007ACC" Foreground="White"/>
+              <TextBlock Text="Tip: Applies only to selected rows, or all rows if none are highlighted." Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0"/>
+
+              <Separator Background="#3F3F46" Margin="0,10"/>
+
+              <TextBlock Text="Find &amp; Replace" FontWeight="Bold" FontSize="14" Foreground="#9CDCFE"/>
 
               <TextBlock Text="Target Column" Foreground="Gray" FontSize="11"/>
               <ComboBox ItemsSource="{Binding ReplaceColumns}" SelectedItem="{Binding SelectedReplaceColumn}" HorizontalAlignment="Stretch" Background="#1E1E1E"/>
@@ -405,10 +549,19 @@
 
         <!-- Progress Tracker in Status Bar -->
         <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="1" VerticalAlignment="Center" Margin="15,0,0,0">
-          <Separator Width="1" Background="#55FFFFFF" Height="10" VerticalAlignment="Center" IsVisible="{Binding !!ProgressValue}"/>
-          <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Width="120" Height="10" 
-                       IsVisible="{Binding !!ProgressValue}" VerticalAlignment="Center"/>
+          <Separator Width="1" Background="#55FFFFFF" Height="10" VerticalAlignment="Center"/>
+          
+          <!-- Animated Progress Bar -->
+          <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Width="130" Height="10" 
+                       IsVisible="{Binding IsLoading}" VerticalAlignment="Center"
+                       Background="#313244" Foreground="#A6E3A1"/>
+          
           <TextBlock Text="{Binding ProgressText}" Foreground="#E0F2FE" VerticalAlignment="Center" FontSize="11"/>
+
+          <!-- Cancel Scan Button -->
+          <Button Command="{Binding CancelScanCommand}" Content="✕ Cancel" IsVisible="{Binding IsLoading}"
+                  Padding="6,2" FontSize="11" Background="#313244" Foreground="#F38BA8" CornerRadius="3"
+                  VerticalAlignment="Center"/>
         </StackPanel>
 
         <!-- Update Status Text -->

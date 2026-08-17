@@ -69,44 +69,98 @@ public class MetadataEditor
         return report;
     }
 
+    /// <summary>
+    /// Opens a network-optimized FileStream with 64KB buffer and non-exclusive FileShare.ReadWrite.
+    /// Uses FileOptions.None to ensure full compatibility with Linux FUSE mounts (GVFS, FTP, SSHFS, SMB).
+    /// </summary>
+    public static FileStream OpenReadOptimized(string filePath, int bufferSize = 65536)
+    {
+        return new FileStream(
+            filePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite,
+            bufferSize,
+            FileOptions.None);
+    }
+
     public ComicInfo ReadMetadata(string filePath)
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(tempDir);
+        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+        {
+            return new ComicInfo();
+        }
+
+        string ext = Path.GetExtension(filePath) ?? "";
+
+        // Fast in-memory path for .cbz (ZIP) archives
+        if (ext.Equals(".cbz", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                using var fileStream = OpenReadOptimized(filePath);
+                using var zipArchive = new System.IO.Compression.ZipArchive(fileStream, System.IO.Compression.ZipArchiveMode.Read);
+                var entry = zipArchive.Entries.FirstOrDefault(e =>
+                    Path.GetFileName(e.FullName).Equals("ComicInfo.xml", StringComparison.OrdinalIgnoreCase));
+
+                if (entry != null)
+                {
+                    using var entryStream = entry.Open();
+                    using var ms = new MemoryStream();
+                    entryStream.CopyTo(ms);
+                    ms.Position = 0;
+                    return DeserializeComicInfo(ms);
+                }
+
+                return new ComicInfo();
+            }
+            catch (Exception ex) when (ex is not IOException)
+            {
+                // Fall back to SharpCompress for non-standard ZIP containers, RAR named .cbz, or FUSE seek issues
+            }
+        }
+
+        // Random-access in-memory path for .cbr (RAR) or fallback archives
         try
         {
-            using (Stream stream = File.OpenRead(filePath))
-            using (var archive = ArchiveFactory.OpenArchive(stream))
+            using var stream = OpenReadOptimized(filePath);
+            using var archive = ArchiveFactory.OpenArchive(stream, new ReaderOptions { LookForHeader = true });
+
+            foreach (var entry in archive.Entries)
             {
-                foreach (var entry in archive.Entries)
+                if (!entry.IsDirectory && 
+                    entry.Key != null &&
+                    Path.GetFileName(entry.Key).Equals("ComicInfo.xml", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (!entry.IsDirectory && 
-                        entry.Key != null &&
-                        Path.GetFileName(entry.Key).Equals("ComicInfo.xml", StringComparison.OrdinalIgnoreCase))
-                    {
-                        entry.WriteToDirectory(tempDir, new ExtractionOptions { Overwrite = true, ExtractFullPath = false });
-                    }
+                    using var entryStream = entry.OpenEntryStream();
+                    using var ms = new MemoryStream();
+                    entryStream.CopyTo(ms);
+                    ms.Position = 0;
+                    return DeserializeComicInfo(ms);
                 }
             }
 
-            string xmlPath = Path.Combine(tempDir, "ComicInfo.xml");
-            if (File.Exists(xmlPath))
-            {
-                ValidateXml(xmlPath);
-                XmlSerializer serializer = new XmlSerializer(typeof(ComicInfo));
-                using (FileStream fs = new FileStream(xmlPath, FileMode.Open, FileAccess.Read))
-                {
-                    return (ComicInfo)serializer.Deserialize(fs)!;
-                }
-            }
             return new ComicInfo();
         }
-        finally
+        catch (Exception ex)
         {
-            if (Directory.Exists(tempDir))
-            {
-                try { Directory.Delete(tempDir, true); } catch { }
-            }
+            AppLogger.LogWarning($"Failed to read archive metadata from '{filePath}': {ex.Message}");
+        }
+
+        return new ComicInfo();
+    }
+
+    private static ComicInfo DeserializeComicInfo(Stream stream)
+    {
+        try
+        {
+            XmlSerializer serializer = new XmlSerializer(typeof(ComicInfo));
+            return (ComicInfo)serializer.Deserialize(stream)!;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogWarning($"Failed to deserialize ComicInfo XML: {ex.Message}");
+            return new ComicInfo();
         }
     }
 
@@ -531,33 +585,66 @@ public class MetadataEditor
         return "string";
     }
 
-    /// <summary>
-    /// Extracts the raw bytes of the cover image from a comic archive (.cbz / .cbr).
-    /// </summary>
     public byte[]? ExtractCoverImageBytes(string filePath)
     {
         if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return null;
 
+        string ext = Path.GetExtension(filePath) ?? "";
+
+        // Fast path for .cbz (ZIP)
+        if (ext.Equals(".cbz", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                using var stream = OpenReadOptimized(filePath);
+                using var zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Read);
+                var imageEntries = zip.Entries
+                    .Where(e => IsImageFileName(e.FullName))
+                    .ToList();
+
+                if (imageEntries.Count > 0)
+                {
+                    var bestEntry = imageEntries.FirstOrDefault(e => Path.GetFileName(e.FullName).Contains("cover", StringComparison.OrdinalIgnoreCase))
+                                 ?? imageEntries.OrderBy(e => e.FullName, StringComparer.OrdinalIgnoreCase).First();
+
+                    using var entryStream = bestEntry.Open();
+                    using var ms = new MemoryStream();
+                    entryStream.CopyTo(ms);
+                    return ms.ToArray();
+                }
+
+                return null;
+            }
+            catch (System.IO.InvalidDataException)
+            {
+                // Fall back to SharpCompress
+            }
+            catch (Exception ex) when (ex is not IOException)
+            {
+                // Fall back to SharpCompress
+            }
+        }
+
         try
         {
-            using var stream = File.OpenRead(filePath);
-            using var archive = ArchiveFactory.OpenArchive(stream);
+            using var stream = OpenReadOptimized(filePath);
+            using var archive = ArchiveFactory.OpenArchive(stream, new ReaderOptions { LookForHeader = true });
 
             var imageEntries = archive.Entries
                 .Where(e => !e.IsDirectory && e.Key != null && IsImageFileName(e.Key))
                 .ToList();
 
-            if (imageEntries.Count == 0) return null;
-
-            var bestEntry = imageEntries.FirstOrDefault(e => Path.GetFileName(e.Key!).Contains("cover", StringComparison.OrdinalIgnoreCase));
-            if (bestEntry == null)
+            if (imageEntries.Count > 0)
             {
-                bestEntry = imageEntries.OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase).First();
+                var bestEntry = imageEntries.FirstOrDefault(e => Path.GetFileName(e.Key!).Contains("cover", StringComparison.OrdinalIgnoreCase))
+                             ?? imageEntries.OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase).First();
+
+                using var ms = new MemoryStream();
+                bestEntry.OpenEntryStream().CopyTo(ms);
+                return ms.ToArray();
             }
 
-            using var ms = new MemoryStream();
-            bestEntry.OpenEntryStream().CopyTo(ms);
-            return ms.ToArray();
+            return null;
         }
         catch
         {

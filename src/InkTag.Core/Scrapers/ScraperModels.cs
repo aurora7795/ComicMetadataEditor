@@ -54,5 +54,6 @@ public class SeriesSearchResult
     public string SmallCoverUrl { get; set; } = string.Empty;
     public string SiteDetailUrl { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string? Aliases { get; set; }
 }
 
