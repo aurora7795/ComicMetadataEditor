@@ -96,6 +96,7 @@ public class MetadataEditor
         // Fast in-memory path for .cbz (ZIP) archives
         if (ext.Equals(".cbz", StringComparison.OrdinalIgnoreCase))
         {
+            // 1. Fast random-access seek
             try
             {
                 using var fileStream = OpenReadOptimized(filePath);
@@ -114,9 +115,34 @@ public class MetadataEditor
 
                 return new ComicInfo();
             }
-            catch (Exception ex) when (ex is not IOException)
+            catch
             {
-                // Fall back to SharpCompress for non-standard ZIP containers, RAR named .cbz, or FUSE seek issues
+                // Fall back to sequential streaming if random seek fails (common on GVFS / FTP / FUSE)
+            }
+
+            // 2. Sequential forward-only streaming (requires 0 backwards seeking)
+            try
+            {
+                using var rawStream = OpenReadOptimized(filePath);
+                using var nonSeekable = new NonSeekableStream(rawStream);
+                using var zipArchive = new System.IO.Compression.ZipArchive(nonSeekable, System.IO.Compression.ZipArchiveMode.Read);
+                foreach (var entry in zipArchive.Entries)
+                {
+                    if (Path.GetFileName(entry.FullName).Equals("ComicInfo.xml", StringComparison.OrdinalIgnoreCase))
+                    {
+                        using var entryStream = entry.Open();
+                        using var ms = new MemoryStream();
+                        entryStream.CopyTo(ms);
+                        ms.Position = 0;
+                        return DeserializeComicInfo(ms);
+                    }
+                }
+
+                return new ComicInfo();
+            }
+            catch
+            {
+                // Fall back to SharpCompress
             }
         }
 
@@ -615,11 +641,40 @@ public class MetadataEditor
 
                 return null;
             }
-            catch (System.IO.InvalidDataException)
+            catch
             {
-                // Fall back to SharpCompress
+                // Fall back to sequential streaming if random seek fails
             }
-            catch (Exception ex) when (ex is not IOException)
+
+            // 2. Sequential forward-only streaming
+            try
+            {
+                using var rawStream = OpenReadOptimized(filePath);
+                using var nonSeekable = new NonSeekableStream(rawStream);
+                using var zip = new System.IO.Compression.ZipArchive(nonSeekable, System.IO.Compression.ZipArchiveMode.Read);
+
+                byte[]? firstImage = null;
+                foreach (var entry in zip.Entries)
+                {
+                    if (IsImageFileName(entry.FullName))
+                    {
+                        using var entryStream = entry.Open();
+                        using var ms = new MemoryStream();
+                        entryStream.CopyTo(ms);
+                        byte[] bytes = ms.ToArray();
+
+                        if (Path.GetFileName(entry.FullName).Contains("cover", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return bytes;
+                        }
+
+                        firstImage ??= bytes;
+                    }
+                }
+
+                if (firstImage != null) return firstImage;
+            }
+            catch
             {
                 // Fall back to SharpCompress
             }
@@ -670,5 +725,50 @@ public class MetadataEditor
     }
 
     #endregion
+}
+
+/// <summary>
+/// Stream wrapper that hides CanSeek / Seek capabilities, forcing ZipArchive to read sequentially
+/// from byte 0 without issuing backwards seek syscalls. Essential for GVFS FTP / FUSE virtual mounts.
+/// </summary>
+internal sealed class NonSeekableStream : Stream
+{
+    private readonly Stream _inner;
+
+    public NonSeekableStream(Stream inner)
+    {
+        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+    }
+
+    public override bool CanRead => _inner.CanRead;
+    public override bool CanSeek => false;
+    public override bool CanWrite => false;
+    public override long Length => throw new NotSupportedException();
+    public override long Position
+    {
+        get => throw new NotSupportedException();
+        set => throw new NotSupportedException();
+    }
+
+    public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
+    public override int Read(Span<byte> buffer) => _inner.Read(buffer);
+    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+        _inner.ReadAsync(buffer, offset, count, cancellationToken);
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
+        _inner.ReadAsync(buffer, cancellationToken);
+
+    public override void Flush() => _inner.Flush();
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _inner.Dispose();
+        }
+        base.Dispose(disposing);
+    }
 }
 

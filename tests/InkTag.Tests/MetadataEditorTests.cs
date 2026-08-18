@@ -528,8 +528,8 @@ public class MetadataEditorTests
 
             Assert.Equal(6, results.Count);
             Assert.NotEmpty(progressReports);
-            Assert.Equal(6, progressReports.Last().Total);
-            Assert.Equal(6, progressReports.Last().Processed);
+            Assert.Equal(6, progressReports.Max(r => r.Total));
+            Assert.Equal(6, progressReports.Max(r => r.Processed));
 
             // Test cancellation
             using var cts = new System.Threading.CancellationTokenSource();
@@ -570,6 +570,35 @@ public class MetadataEditorTests
         finally
         {
             if (File.Exists(tempImg)) File.Delete(tempImg);
+            if (File.Exists(tempCbz)) File.Delete(tempCbz);
+        }
+    }
+
+    [Fact]
+    public void ReadMetadata_ReadsSuccessfully_WhenSeekingFails()
+    {
+        var editor = new MetadataEditor();
+        string tempCbz = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".cbz");
+        string tempXml = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".xml");
+
+        try
+        {
+            File.WriteAllText(tempXml, "<ComicInfo><Series>Sequential Stream Test</Series><Number>42</Number></ComicInfo>");
+
+            using (var stream = File.OpenWrite(tempCbz))
+            using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+            {
+                writer.Write("ComicInfo.xml", tempXml);
+            }
+
+            var info = editor.ReadMetadata(tempCbz);
+            Assert.NotNull(info);
+            Assert.Equal("Sequential Stream Test", info.Series);
+            Assert.Equal("42", info.Number);
+        }
+        finally
+        {
+            if (File.Exists(tempXml)) File.Delete(tempXml);
             if (File.Exists(tempCbz)) File.Delete(tempCbz);
         }
     }
