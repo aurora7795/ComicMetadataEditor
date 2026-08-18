@@ -26,71 +26,87 @@ public class ComicScannerService
         {
             return await Task.Run(async () =>
             {
-            var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-            var editor = new MetadataEditor();
+                var totalSw = System.Diagnostics.Stopwatch.StartNew();
+                Core.Logging.AppLogger.LogDebug($"[Scanner] Starting scan of '{directoryPath}' (Recursive: {recursive})...");
 
-            var files = Directory.GetFiles(directoryPath, "*.*", searchOption)
-                .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || 
-                            f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
-                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+                var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+                var editor = new MetadataEditor();
 
-            if (files.Count == 0)
-            {
-                return new List<ComicItemViewModel>();
-            }
+                var enumSw = System.Diagnostics.Stopwatch.StartNew();
+                var files = Directory.GetFiles(directoryPath, "*.*", searchOption)
+                    .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || 
+                                f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                enumSw.Stop();
 
-            var indexedResults = new System.Collections.Concurrent.ConcurrentDictionary<int, ComicItemViewModel>();
-            int maxConcurrency = Math.Clamp(Environment.ProcessorCount, 2, 8);
-            var parallelOptions = new ParallelOptions
-            {
-                MaxDegreeOfParallelism = maxConcurrency,
-                CancellationToken = cancellationToken
-            };
+                Core.Logging.AppLogger.LogDebug($"[Scanner] Directory enumeration discovered {files.Count} comic archive files in {enumSw.ElapsedMilliseconds}ms.");
 
-            int processedCount = 0;
-            progress?.Report((0, files.Count));
+                if (files.Count == 0)
+                {
+                    return new List<ComicItemViewModel>();
+                }
 
-            try
-            {
-                await Parallel.ForEachAsync(
-                    Enumerable.Range(0, files.Count),
-                    parallelOptions,
-                    async (index, ct) =>
-                    {
-                        ct.ThrowIfCancellationRequested();
-                        string file = files[index];
-                        try
+                var indexedResults = new System.Collections.Concurrent.ConcurrentDictionary<int, ComicItemViewModel>();
+                int maxConcurrency = Math.Clamp(Environment.ProcessorCount, 2, 8);
+                Core.Logging.AppLogger.LogDebug($"[Scanner] Launching parallel processing with {maxConcurrency} workers...");
+
+                var parallelOptions = new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = maxConcurrency,
+                    CancellationToken = cancellationToken
+                };
+
+                int processedCount = 0;
+                progress?.Report((0, files.Count));
+
+                try
+                {
+                    await Parallel.ForEachAsync(
+                        Enumerable.Range(0, files.Count),
+                        parallelOptions,
+                        async (index, ct) =>
                         {
-                            var model = editor.ReadMetadata(file);
-                            var viewModel = new ComicItemViewModel(file, model);
-                            indexedResults[index] = viewModel;
-                        }
-                        catch (Exception ex)
-                        {
-                            var viewModel = new ComicItemViewModel(file, new ComicInfo())
+                            ct.ThrowIfCancellationRequested();
+                            string file = files[index];
+                            var fileSw = System.Diagnostics.Stopwatch.StartNew();
+                            try
                             {
-                                HasReadError = true,
-                                ReadErrorMessage = ex.Message
-                            };
-                            indexedResults[index] = viewModel;
-                        }
+                                var model = editor.ReadMetadata(file);
+                                var viewModel = new ComicItemViewModel(file, model);
+                                indexedResults[index] = viewModel;
+                                Core.Logging.AppLogger.LogDebug($"[Scanner] [{index + 1}/{files.Count}] Parsed '{Path.GetFileName(file)}' in {fileSw.ElapsedMilliseconds}ms.");
+                            }
+                            catch (Exception ex)
+                            {
+                                var viewModel = new ComicItemViewModel(file, new ComicInfo())
+                                {
+                                    HasReadError = true,
+                                    ReadErrorMessage = ex.Message
+                                };
+                                indexedResults[index] = viewModel;
+                                Core.Logging.AppLogger.LogWarning($"[Scanner] [{index + 1}/{files.Count}] Failed to parse '{Path.GetFileName(file)}' in {fileSw.ElapsedMilliseconds}ms: {ex.Message}");
+                            }
 
-                        int current = Interlocked.Increment(ref processedCount);
-                        progress?.Report((current, files.Count));
-                        await Task.Yield();
-                    });
-            }
-            catch (OperationCanceledException)
-            {
-                // Gracefully return whatever items were parsed prior to cancellation
-            }
+                            int current = Interlocked.Increment(ref processedCount);
+                            progress?.Report((current, files.Count));
+                            await Task.Yield();
+                        });
+                }
+                catch (OperationCanceledException)
+                {
+                    Core.Logging.AppLogger.LogDebug($"[Scanner] Directory scan cancelled by user after {processedCount}/{files.Count} items.");
+                }
 
-            return Enumerable.Range(0, files.Count)
-                .Where(indexedResults.ContainsKey)
-                .Select(i => indexedResults[i])
-                .ToList();
-        }, cancellationToken);
+                totalSw.Stop();
+                var finalResults = Enumerable.Range(0, files.Count)
+                    .Where(indexedResults.ContainsKey)
+                    .Select(i => indexedResults[i])
+                    .ToList();
+
+                Core.Logging.AppLogger.LogDebug($"[Scanner] Scan completed: Loaded {finalResults.Count}/{files.Count} comics in {totalSw.ElapsedMilliseconds}ms total.");
+                return finalResults;
+            }, cancellationToken);
         }
         catch (OperationCanceledException)
         {

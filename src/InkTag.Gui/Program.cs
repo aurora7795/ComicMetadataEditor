@@ -14,6 +14,9 @@ class Program
     public static void Main(string[] args)
     {
         AppLogger.Initialize();
+        var settingsService = new InkTag.Core.Configuration.AppSettingsService();
+        AppLogger.IsDebugEnabled = settingsService.Settings.EnableDebugLogging;
+
         VelopackApp.Build().Run();
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }

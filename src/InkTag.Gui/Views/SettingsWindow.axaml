@@ -54,6 +54,12 @@
             <Button Grid.Column="1" Content="Clear Cache" Click="ClearCache_Click" Padding="10,5" Background="#3E3E42"/>
           </Grid>
         </StackPanel>
+
+        <!-- Diagnostics & Verbose Logging -->
+        <StackPanel Spacing="5" Margin="0,10,0,0">
+          <TextBlock Text="Diagnostics &amp; Logging:" FontWeight="Medium"/>
+          <CheckBox Name="DebugLoggingCheckBox" Content="Enable Verbose / Debug Logging (file timings and network diagnostics)"/>
+        </StackPanel>
       </StackPanel>
 
       <!-- Action Buttons -->

@@ -5,6 +5,7 @@ using Xunit;
 
 namespace InkTag.Tests.Logging;
 
+[Collection("AppLogger")]
 public class AppLoggerTests
 {
     [Fact]
@@ -41,6 +42,71 @@ public class AppLoggerTests
             if (Directory.Exists(tempDir))
             {
                 try { Directory.Delete(tempDir, recursive: true); } catch { }
+            }
+        }
+    }
+
+    private static readonly object TestSync = new();
+
+    [Fact]
+    public void AppLogger_LogDebug_WritesOnlyWhenEnabled()
+    {
+        lock (TestSync)
+        {
+            string tempLog = Path.Combine(Path.GetTempPath(), $"inktag_test_log_{Guid.NewGuid()}.log");
+            try
+            {
+                AppLogger.Initialize(tempLog);
+
+                // Debug disabled
+                AppLogger.IsDebugEnabled = false;
+                AppLogger.LogDebug("SecretDebugDisabledMessage");
+
+                string logContent = File.ReadAllText(tempLog);
+                Assert.DoesNotContain("SecretDebugDisabledMessage", logContent);
+
+                // Debug enabled
+                AppLogger.IsDebugEnabled = true;
+                AppLogger.LogDebug("SecretDebugEnabledMessage");
+
+                logContent = File.ReadAllText(tempLog);
+                Assert.Contains("SecretDebugEnabledMessage", logContent);
+                Assert.Contains("[DEBUG]", logContent);
+            }
+            finally
+            {
+                AppLogger.IsDebugEnabled = false;
+                if (File.Exists(tempLog)) File.Delete(tempLog);
+            }
+        }
+    }
+
+    [Fact]
+    public void AppSettings_EnableDebugLogging_SynchronizesWithAppLogger()
+    {
+        lock (TestSync)
+        {
+            string tempConfig = Path.Combine(Path.GetTempPath(), $"settings_{Guid.NewGuid()}.json");
+            try
+            {
+                var service = new InkTag.Core.Configuration.AppSettingsService(tempConfig);
+                Assert.False(service.Settings.EnableDebugLogging);
+                Assert.False(AppLogger.IsDebugEnabled);
+
+                service.Settings.EnableDebugLogging = true;
+                service.SaveSettings(service.Settings);
+
+                Assert.True(AppLogger.IsDebugEnabled);
+
+                // Reload
+                var reloadedService = new InkTag.Core.Configuration.AppSettingsService(tempConfig);
+                Assert.True(reloadedService.Settings.EnableDebugLogging);
+                Assert.True(AppLogger.IsDebugEnabled);
+            }
+            finally
+            {
+                AppLogger.IsDebugEnabled = false;
+                if (File.Exists(tempConfig)) File.Delete(tempConfig);
             }
         }
     }

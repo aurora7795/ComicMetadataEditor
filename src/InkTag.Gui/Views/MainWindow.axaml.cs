@@ -28,6 +28,11 @@ public partial class MainWindow : Window
         vm.PropertyChanged += Vm_PropertyChanged;
 
         UpdateInspectorColumnWidth(vm.IsInspectorVisible);
+
+        if (DebugLoggingMenuCheckBox != null)
+        {
+            DebugLoggingMenuCheckBox.IsChecked = InkTag.Core.Logging.AppLogger.IsDebugEnabled;
+        }
     }
 
     private void Vm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -300,6 +305,24 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel vm) await vm.CheckForUpdatesCommand.ExecuteAsync(null);
     }
     private void NativeAbout_Click(object? sender, EventArgs e) => OpenAbout_Click(sender, new RoutedEventArgs());
+    private void NativeToggleDebugLogging_Click(object? sender, EventArgs e) => ToggleDebugLogging_Click(sender, new RoutedEventArgs());
+
+    private void ToggleDebugLogging_Click(object? sender, RoutedEventArgs e)
+    {
+        var settingsService = new InkTag.Core.Configuration.AppSettingsService();
+        var settings = settingsService.Settings;
+        bool newState = !InkTag.Core.Logging.AppLogger.IsDebugEnabled;
+        settings.EnableDebugLogging = newState;
+        settingsService.SaveSettings(settings);
+        InkTag.Core.Logging.AppLogger.IsDebugEnabled = newState;
+
+        if (DebugLoggingMenuCheckBox != null)
+        {
+            DebugLoggingMenuCheckBox.IsChecked = newState;
+        }
+
+        InkTag.Core.Logging.AppLogger.LogInfo($"Verbose / Debug logging toggled {(newState ? "ON" : "OFF")} by user.");
+    }
 
     private void DataGrid_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {

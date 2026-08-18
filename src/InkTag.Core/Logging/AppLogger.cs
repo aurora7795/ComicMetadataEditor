@@ -53,8 +53,20 @@ public static class AppLogger
         return Path.Combine(baseDir, "InkTag", "logs", "InkTag.log");
     }
 
+    /// <summary>
+    /// Gets or sets whether verbose / debug logging is active.
+    /// </summary>
+    public static bool IsDebugEnabled { get; set; } = false;
+
     public static void LogInfo(string message) => Log("INFO", message);
     public static void LogWarning(string message) => Log("WARN", message);
+    public static void LogDebug(string message)
+    {
+        if (IsDebugEnabled)
+        {
+            Log("DEBUG", message);
+        }
+    }
     
     public static void LogError(string message, Exception? ex = null)
     {

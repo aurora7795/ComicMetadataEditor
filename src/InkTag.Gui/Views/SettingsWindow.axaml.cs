@@ -26,6 +26,7 @@ public partial class SettingsWindow : Window
         MergePolicyComboBox.SelectedIndex = settings.DefaultMergeMode == ScrapeMergeMode.OverwriteAll ? 1 : 0;
         VisualMatchCheckBox.IsChecked = settings.AutoApplyOnVisualMatch;
         VisualThresholdTextBox.Text = ((int)(settings.VisualMatchConfidenceThreshold * 100)).ToString();
+        DebugLoggingCheckBox.IsChecked = settings.EnableDebugLogging;
     }
 
     private async void TestApiKey_Click(object? sender, RoutedEventArgs e)
@@ -73,6 +74,7 @@ public partial class SettingsWindow : Window
             ? ScrapeMergeMode.OverwriteAll 
             : ScrapeMergeMode.FillMissingOnly;
         settings.AutoApplyOnVisualMatch = VisualMatchCheckBox.IsChecked == true;
+        settings.EnableDebugLogging = DebugLoggingCheckBox.IsChecked == true;
         if (double.TryParse(VisualThresholdTextBox.Text, out double thresh))
         {
             settings.VisualMatchConfidenceThreshold = Math.Clamp(thresh > 1 ? thresh / 100.0 : thresh, 0.50, 1.0);

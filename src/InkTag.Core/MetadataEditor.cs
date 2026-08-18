@@ -91,6 +91,8 @@ public class MetadataEditor
             return new ComicInfo();
         }
 
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        string fileName = Path.GetFileName(filePath);
         string ext = Path.GetExtension(filePath) ?? "";
 
         // Fast in-memory path for .cbz (ZIP) archives
@@ -99,6 +101,7 @@ public class MetadataEditor
             // 1. Fast random-access seek
             try
             {
+                AppLogger.LogDebug($"[MetadataEditor] Attempting fast-path random-access seek for '{fileName}'...");
                 using var fileStream = OpenReadOptimized(filePath);
                 using var zipArchive = new System.IO.Compression.ZipArchive(fileStream, System.IO.Compression.ZipArchiveMode.Read);
                 var entry = zipArchive.Entries.FirstOrDefault(e =>
@@ -110,19 +113,23 @@ public class MetadataEditor
                     using var ms = new MemoryStream();
                     entryStream.CopyTo(ms);
                     ms.Position = 0;
-                    return DeserializeComicInfo(ms);
+                    var info = DeserializeComicInfo(ms);
+                    AppLogger.LogDebug($"[MetadataEditor] Read metadata via fast-path seek for '{fileName}' in {sw.ElapsedMilliseconds}ms (Title: '{info.Title}', Series: '{info.Series}', Issue: '{info.Number}').");
+                    return info;
                 }
 
+                AppLogger.LogDebug($"[MetadataEditor] No ComicInfo.xml found via fast-path seek in '{fileName}' ({sw.ElapsedMilliseconds}ms).");
                 return new ComicInfo();
             }
-            catch
+            catch (Exception ex)
             {
-                // Fall back to sequential streaming if random seek fails (common on GVFS / FTP / FUSE)
+                AppLogger.LogDebug($"[MetadataEditor] Fast-path seek failed for '{fileName}' ({ex.Message}). Retrying with sequential NonSeekableStream...");
             }
 
             // 2. Sequential forward-only streaming (requires 0 backwards seeking)
             try
             {
+                var seqSw = System.Diagnostics.Stopwatch.StartNew();
                 using var rawStream = OpenReadOptimized(filePath);
                 using var nonSeekable = new NonSeekableStream(rawStream);
                 using var zipArchive = new System.IO.Compression.ZipArchive(nonSeekable, System.IO.Compression.ZipArchiveMode.Read);
@@ -134,21 +141,25 @@ public class MetadataEditor
                         using var ms = new MemoryStream();
                         entryStream.CopyTo(ms);
                         ms.Position = 0;
-                        return DeserializeComicInfo(ms);
+                        var info = DeserializeComicInfo(ms);
+                        AppLogger.LogDebug($"[MetadataEditor] Read metadata via sequential NonSeekableStream for '{fileName}' in {seqSw.ElapsedMilliseconds}ms (Total: {sw.ElapsedMilliseconds}ms).");
+                        return info;
                     }
                 }
 
+                AppLogger.LogDebug($"[MetadataEditor] No ComicInfo.xml found via sequential stream in '{fileName}' ({seqSw.ElapsedMilliseconds}ms).");
                 return new ComicInfo();
             }
-            catch
+            catch (Exception ex)
             {
-                // Fall back to SharpCompress
+                AppLogger.LogDebug($"[MetadataEditor] Sequential streaming failed for '{fileName}' ({ex.Message}). Retrying with SharpCompress...");
             }
         }
 
         // Random-access in-memory path for .cbr (RAR) or fallback archives
         try
         {
+            var scSw = System.Diagnostics.Stopwatch.StartNew();
             using var stream = OpenReadOptimized(filePath);
             using var archive = ArchiveFactory.OpenArchive(stream, new ReaderOptions { LookForHeader = true });
 
@@ -162,10 +173,13 @@ public class MetadataEditor
                     using var ms = new MemoryStream();
                     entryStream.CopyTo(ms);
                     ms.Position = 0;
-                    return DeserializeComicInfo(ms);
+                    var info = DeserializeComicInfo(ms);
+                    AppLogger.LogDebug($"[MetadataEditor] Read metadata via SharpCompress fallback for '{fileName}' in {scSw.ElapsedMilliseconds}ms (Total: {sw.ElapsedMilliseconds}ms).");
+                    return info;
                 }
             }
 
+            AppLogger.LogDebug($"[MetadataEditor] No ComicInfo.xml found via SharpCompress in '{fileName}' ({scSw.ElapsedMilliseconds}ms).");
             return new ComicInfo();
         }
         catch (Exception ex)
@@ -618,6 +632,9 @@ public class MetadataEditor
         string ext = Path.GetExtension(filePath) ?? "";
 
         // Fast path for .cbz (ZIP)
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        string fileName = Path.GetFileName(filePath);
+
         if (ext.Equals(".cbz", StringComparison.OrdinalIgnoreCase))
         {
             try
@@ -636,19 +653,22 @@ public class MetadataEditor
                     using var entryStream = bestEntry.Open();
                     using var ms = new MemoryStream();
                     entryStream.CopyTo(ms);
-                    return ms.ToArray();
+                    byte[] result = ms.ToArray();
+                    AppLogger.LogDebug($"[MetadataEditor] Extracted cover for '{fileName}' via fast seek ({bestEntry.FullName}, {result.Length} bytes) in {sw.ElapsedMilliseconds}ms.");
+                    return result;
                 }
 
                 return null;
             }
-            catch
+            catch (Exception ex)
             {
-                // Fall back to sequential streaming if random seek fails
+                AppLogger.LogDebug($"[MetadataEditor] Cover fast seek failed for '{fileName}' ({ex.Message}). Retrying with sequential NonSeekableStream...");
             }
 
             // 2. Sequential forward-only streaming
             try
             {
+                var seqSw = System.Diagnostics.Stopwatch.StartNew();
                 using var rawStream = OpenReadOptimized(filePath);
                 using var nonSeekable = new NonSeekableStream(rawStream);
                 using var zip = new System.IO.Compression.ZipArchive(nonSeekable, System.IO.Compression.ZipArchiveMode.Read);
@@ -665,6 +685,7 @@ public class MetadataEditor
 
                         if (Path.GetFileName(entry.FullName).Contains("cover", StringComparison.OrdinalIgnoreCase))
                         {
+                            AppLogger.LogDebug($"[MetadataEditor] Extracted explicit cover for '{fileName}' via sequential stream in {seqSw.ElapsedMilliseconds}ms (Total: {sw.ElapsedMilliseconds}ms).");
                             return bytes;
                         }
 
@@ -672,16 +693,21 @@ public class MetadataEditor
                     }
                 }
 
-                if (firstImage != null) return firstImage;
+                if (firstImage != null)
+                {
+                    AppLogger.LogDebug($"[MetadataEditor] Extracted first image cover for '{fileName}' via sequential stream in {seqSw.ElapsedMilliseconds}ms (Total: {sw.ElapsedMilliseconds}ms).");
+                    return firstImage;
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                // Fall back to SharpCompress
+                AppLogger.LogDebug($"[MetadataEditor] Cover sequential streaming failed for '{fileName}' ({ex.Message}). Retrying with SharpCompress...");
             }
         }
 
         try
         {
+            var scSw = System.Diagnostics.Stopwatch.StartNew();
             using var stream = OpenReadOptimized(filePath);
             using var archive = ArchiveFactory.OpenArchive(stream, new ReaderOptions { LookForHeader = true });
 
@@ -696,13 +722,16 @@ public class MetadataEditor
 
                 using var ms = new MemoryStream();
                 bestEntry.OpenEntryStream().CopyTo(ms);
-                return ms.ToArray();
+                byte[] result = ms.ToArray();
+                AppLogger.LogDebug($"[MetadataEditor] Extracted cover for '{fileName}' via SharpCompress fallback in {scSw.ElapsedMilliseconds}ms (Total: {sw.ElapsedMilliseconds}ms).");
+                return result;
             }
 
             return null;
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.LogDebug($"[MetadataEditor] Cover extraction failed for '{fileName}': {ex.Message}");
             return null;
         }
     }

@@ -36,6 +36,8 @@
           <NativeMenuItem Header="Scan Recursively" ToggleType="CheckBox" IsChecked="{Binding IsRecursive}"/>
           <NativeMenuItem Header="Inspector Panel" ToggleType="CheckBox" IsChecked="{Binding IsInspectorVisible}"/>
           <NativeMenuItemSeparator/>
+          <NativeMenuItem Header="Enable Verbose / Debug Logging" ToggleType="CheckBox" Click="NativeToggleDebugLogging_Click"/>
+          <NativeMenuItemSeparator/>
           <NativeMenuItem Header="Refresh Grid" Gesture="F5" Click="NativeRefreshGrid_Click"/>
         </NativeMenu>
       </NativeMenuItem>
@@ -85,6 +87,12 @@
         <MenuItem Header="_Inspector Panel" Command="{Binding ToggleInspectorCommand}">
           <MenuItem.Icon>
             <CheckBox IsChecked="{Binding IsInspectorVisible}" VerticalAlignment="Center"/>
+          </MenuItem.Icon>
+        </MenuItem>
+        <Separator/>
+        <MenuItem Header="Enable _Verbose / Debug Logging" Click="ToggleDebugLogging_Click">
+          <MenuItem.Icon>
+            <CheckBox Name="DebugLoggingMenuCheckBox" Click="ToggleDebugLogging_Click" VerticalAlignment="Center"/>
           </MenuItem.Icon>
         </MenuItem>
         <Separator/>

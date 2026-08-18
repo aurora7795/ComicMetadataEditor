@@ -13,6 +13,7 @@ public class AppSettings
     public bool AutoApplyOnVisualMatch { get; set; } = true;
     public double VisualMatchConfidenceThreshold { get; set; } = 0.90;
     public int CacheDurationHours { get; set; } = 168; // 7 days
+    public bool EnableDebugLogging { get; set; } = false;
 }
 
 public class AppSettingsService
@@ -77,6 +78,8 @@ public class AppSettingsService
     public void SaveSettings(AppSettings settings)
     {
         Settings = settings ?? new AppSettings();
+        Logging.AppLogger.IsDebugEnabled = Settings.EnableDebugLogging;
+
         try
         {
             string? dir = Path.GetDirectoryName(_settingsFilePath);
