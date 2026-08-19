@@ -100,13 +100,77 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
 
         if (initialCandidates != null && initialCandidates.Any())
         {
-            var viewModels = initialCandidates.Select(c => new CandidateItemViewModel(c, _localCoverHash)).ToList();
-            CandidatesListBox.ItemsSource = viewModels;
-            CandidatesListBox.SelectedIndex = 0;
+            SetCandidates(initialCandidates);
         }
         else if (!string.IsNullOrWhiteSpace(series))
         {
             _ = PerformSearchAsync();
+        }
+    }
+
+    private void SetCandidates(IEnumerable<ComicSearchResult> candidates)
+    {
+        var viewModels = candidates.Select(c =>
+        {
+            var vm = new CandidateItemViewModel(c, _localCoverHash);
+            vm.OnCoverHashComputed += OnCandidateCoverHashComputed;
+            return vm;
+        }).ToList();
+
+        var sorted = viewModels
+            .OrderByDescending(c => c.VisualSimilarity ?? 0.0)
+            .ThenByDescending(c => c.MatchConfidence)
+            .ToList();
+
+        UpdateTopVisualMatchFlag(sorted);
+        CandidatesListBox.ItemsSource = sorted;
+
+        if (sorted.Any())
+        {
+            CandidatesListBox.SelectedIndex = 0;
+        }
+    }
+
+    private void OnCandidateCoverHashComputed(CandidateItemViewModel vm)
+    {
+        if (!_localCoverHash.HasValue || _localCoverHash.Value == 0) return;
+
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            if (CandidatesListBox.ItemsSource is IEnumerable<CandidateItemViewModel> currentItems)
+            {
+                var currentList = currentItems.ToList();
+                var selected = CandidatesListBox.SelectedItem as CandidateItemViewModel;
+
+                var sorted = currentList
+                    .OrderByDescending(c => c.VisualSimilarity ?? 0.0)
+                    .ThenByDescending(c => c.MatchConfidence)
+                    .ToList();
+
+                UpdateTopVisualMatchFlag(sorted);
+
+                if (!currentList.SequenceEqual(sorted))
+                {
+                    CandidatesListBox.ItemsSource = sorted;
+                    if (selected != null && sorted.Contains(selected))
+                    {
+                        CandidatesListBox.SelectedItem = selected;
+                    }
+                    else if (sorted.Any())
+                    {
+                        CandidatesListBox.SelectedIndex = 0;
+                    }
+                }
+            }
+        });
+    }
+
+    private void UpdateTopVisualMatchFlag(List<CandidateItemViewModel> items)
+    {
+        var top = items.FirstOrDefault(c => c.VisualSimilarity.HasValue && c.VisualSimilarity.Value >= 0.70);
+        foreach (var item in items)
+        {
+            item.IsTopVisualMatch = top != null && item == top;
         }
     }
 
@@ -137,9 +201,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
             };
             wizard.SelectedResult.MatchConfidence = ComicVineProvider.CalculateConfidence(wizard.SelectedResult, targetQuery, _localCoverHash);
 
-            var vm = new CandidateItemViewModel(wizard.SelectedResult, _localCoverHash);
-            CandidatesListBox.ItemsSource = new List<CandidateItemViewModel> { vm };
-            CandidatesListBox.SelectedIndex = 0;
+            SetCandidates(new[] { wizard.SelectedResult });
 
             if (!wizard.RequestCompareDiff)
             {
@@ -168,13 +230,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
             };
 
             var candidates = (await _scraperService.SearchCandidatesAsync(query)).ToList();
-            var viewModels = candidates.Select(c => new CandidateItemViewModel(c, _localCoverHash)).ToList();
-            CandidatesListBox.ItemsSource = viewModels;
-
-            if (viewModels.Any())
-            {
-                CandidatesListBox.SelectedIndex = 0;
-            }
+            SetCandidates(candidates);
         }
         catch
         {

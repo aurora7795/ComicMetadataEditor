@@ -123,7 +123,7 @@ public class MetadataScraperService
         // If local cover hash is available and auto-visual match is enabled, evaluate candidate cover hashes
         if (localCoverHash.HasValue && localCoverHash.Value != 0 && _settingsService.Settings.AutoApplyOnVisualMatch)
         {
-            foreach (var candidate in candidates.Take(5))
+            var tasks = candidates.Take(10).Select(async candidate =>
             {
                 string coverUrl = !string.IsNullOrEmpty(candidate.SmallCoverUrl) ? candidate.SmallCoverUrl : candidate.CoverUrl;
                 if (!string.IsNullOrEmpty(coverUrl))
@@ -135,6 +135,7 @@ public class MetadataScraperService
                         byte[] bytes = await client.GetByteArrayAsync(coverUrl, ct);
                         ulong onlineHash = InkTag.Core.Images.PerceptualHashService.ComputeDHash(bytes);
                         candidate.CoverHash = onlineHash;
+                        candidate.VisualSimilarity = InkTag.Core.Images.PerceptualHashService.CalculateSimilarity(localCoverHash.Value, onlineHash);
                         candidate.MatchConfidence = ComicVineProvider.CalculateConfidence(candidate, query, localCoverHash);
                     }
                     catch
@@ -142,10 +143,15 @@ public class MetadataScraperService
                         // Ignore individual thumbnail download errors
                     }
                 }
-            }
+            });
 
-            // Re-order candidates by updated confidence
-            candidates = candidates.OrderByDescending(c => c.MatchConfidence).ToList();
+            await Task.WhenAll(tasks);
+
+            // Re-order candidates so the highest visual match is at the top, then by overall confidence
+            candidates = candidates
+                .OrderByDescending(c => c.VisualSimilarity ?? 0.0)
+                .ThenByDescending(c => c.MatchConfidence)
+                .ToList();
         }
 
         var topMatch = candidates.First();

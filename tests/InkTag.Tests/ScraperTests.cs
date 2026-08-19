@@ -536,5 +536,49 @@ public class ScraperTests
             if (File.Exists(tempFile)) File.Delete(tempFile);
         }
     }
+
+    [Fact]
+    public void CandidateOrdering_HighestVisualMatchIsRankedTop()
+    {
+        ulong localCoverHash = 0b1111000011110000UL;
+
+        var candidateLowVisual = new ComicSearchResult
+        {
+            SeriesTitle = "Batman",
+            IssueNumber = "1",
+            CoverHash = 0b0000111100001111UL, // Completely different
+            MatchConfidence = 0.85
+        };
+        candidateLowVisual.VisualSimilarity = InkTag.Core.Images.PerceptualHashService.CalculateSimilarity(localCoverHash, candidateLowVisual.CoverHash.Value);
+
+        var candidateHighVisual = new ComicSearchResult
+        {
+            SeriesTitle = "Batman",
+            IssueNumber = "1",
+            CoverHash = 0b1111000011110000UL, // Exact match
+            MatchConfidence = 0.80
+        };
+        candidateHighVisual.VisualSimilarity = InkTag.Core.Images.PerceptualHashService.CalculateSimilarity(localCoverHash, candidateHighVisual.CoverHash.Value);
+
+        var candidateMediumVisual = new ComicSearchResult
+        {
+            SeriesTitle = "Batman",
+            IssueNumber = "1",
+            CoverHash = 0b1111000011110001UL, // 1 bit diff (~98% similarity)
+            MatchConfidence = 0.90
+        };
+        candidateMediumVisual.VisualSimilarity = InkTag.Core.Images.PerceptualHashService.CalculateSimilarity(localCoverHash, candidateMediumVisual.CoverHash.Value);
+
+        var candidates = new List<ComicSearchResult> { candidateLowVisual, candidateMediumVisual, candidateHighVisual };
+
+        var sorted = candidates
+            .OrderByDescending(c => c.VisualSimilarity ?? 0.0)
+            .ThenByDescending(c => c.MatchConfidence)
+            .ToList();
+
+        Assert.Same(candidateHighVisual, sorted[0]); // 100% visual match at top
+        Assert.Same(candidateMediumVisual, sorted[1]); // ~98% visual match second
+        Assert.Same(candidateLowVisual, sorted[2]); // low visual match last
+    }
 }
 

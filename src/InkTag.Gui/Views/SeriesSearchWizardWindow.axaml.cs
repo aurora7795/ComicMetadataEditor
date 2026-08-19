@@ -214,8 +214,9 @@ public partial class SeriesSearchWizardWindow : Window
 
     private void OnCandidateCoverHashComputed(CandidateItemViewModel vm)
     {
-        if (IssuesListBox.ItemsSource is List<CandidateItemViewModel> list)
+        if (IssuesListBox.ItemsSource is IEnumerable<CandidateItemViewModel> currentItems)
         {
+            var list = currentItems.ToList();
             Avalonia.Threading.Dispatcher.UIThread.Post(() => EvaluateTopVisualMatch(list));
         }
     }
@@ -241,8 +242,29 @@ public partial class SeriesSearchWizardWindow : Window
             item.IsTopVisualMatch = topMatch != null && item == topMatch && bestSim >= 0.70;
         }
 
-        // Auto-select if top match is high confidence (>= 85%) and user hasn't made a manual pick yet
-        if (!_hasUserManuallySelected && topMatch != null && bestSim >= 0.85 && IssuesListBox.SelectedItem != topMatch)
+        // Order issues list so that visual matches (highest visual similarity) are placed at the top,
+        // followed by natural issue number ordering
+        var sorted = list
+            .OrderByDescending(c => c.VisualSimilarity ?? 0.0)
+            .ThenBy(i => GetNumericIssueNumber(i.IssueNumber))
+            .ThenBy(i => i.IssueNumber)
+            .ToList();
+
+        if (!list.SequenceEqual(sorted))
+        {
+            var selected = IssuesListBox.SelectedItem as CandidateItemViewModel;
+            IssuesListBox.ItemsSource = sorted;
+
+            if (!_hasUserManuallySelected && topMatch != null && bestSim >= 0.70)
+            {
+                IssuesListBox.SelectedItem = topMatch;
+            }
+            else if (selected != null && sorted.Contains(selected))
+            {
+                IssuesListBox.SelectedItem = selected;
+            }
+        }
+        else if (!_hasUserManuallySelected && topMatch != null && bestSim >= 0.85 && IssuesListBox.SelectedItem != topMatch)
         {
             IssuesListBox.SelectedItem = topMatch;
         }
