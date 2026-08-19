@@ -96,8 +96,7 @@ The main workspace area (`Grid.Row="2"`) uses a 3-column layout equipped with an
 |                                                    | p |  +---------------------------+                          |
 |                                                    | l |  |  [Cover Image Thumbnail]  |                          |
 |                                                    | i |  |  Title: [100 Bullets    ] |                          |
-|                                                    | t |  |  Series: [The Deluxe Ed ] |                          |
 +----------------------------------------------------+---+---------------------------------------------------------+
-| Status Bar: X files loaded | [ProgressBar] Scanning: 45/200 (22%) [✕ Cancel] | UpdateStatus | InkTag v0.8.0      |
+| Status Bar: X files loaded | [ProgressBar] Scanning: 45/200 (22%) [✕ Cancel] | UpdateStatus | InkTag v0.9.0      |
 +------------------------------------------------------------------------------------------------------------------+
 ```
