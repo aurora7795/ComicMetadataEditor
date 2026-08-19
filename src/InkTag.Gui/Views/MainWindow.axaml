@@ -244,6 +244,31 @@
             <DataGridCheckBoxColumn Header="Manga (RTL)" Binding="{Binding Manga}" Width="100"/>
           </DataGrid.Columns>
         </DataGrid>
+
+        <!-- Loading & Progress Overlay -->
+        <Border IsVisible="{Binding IsLoading}" Background="#90000000" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+          <Border Background="#252526" BorderBrush="#007ACC" BorderThickness="1" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" BoxShadow="0 4 16 #80000000">
+            <StackPanel Spacing="14" HorizontalAlignment="Center">
+              <ProgressBar Value="{Binding ProgressValue}" Minimum="0" Maximum="100" Height="6" Width="300" Foreground="#007ACC"/>
+              <TextBlock Text="{Binding ProgressText}" Foreground="White" FontSize="12" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="460"/>
+
+              <!-- Slow Network Share Warning Card -->
+              <Border IsVisible="{Binding IsSlowShareWarningVisible}" Background="#3A2A18" BorderBrush="#E5A00D" BorderThickness="1" CornerRadius="6" Padding="10">
+                <StackPanel Spacing="5">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="⚠️" FontSize="13"/>
+                    <TextBlock Text="Slow Virtual Share Detected" FontWeight="Bold" Foreground="#FFD54F" FontSize="12"/>
+                  </StackPanel>
+                  <TextBlock Text="This remote mount does not support archive seeking and requires streaming complete files over the network. For instant performance, mount via SMB/CIFS."
+                             FontSize="11" Foreground="#DDD" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Border>
+
+              <Button Content="✕ Cancel Scan" Command="{Binding CancelScanCommand}"
+                      Background="#C42B1C" Foreground="White" FontWeight="SemiBold" Padding="16,6" HorizontalAlignment="Center" CornerRadius="4"/>
+            </StackPanel>
+          </Border>
+        </Border>
       </Grid>
 
       <!-- Splitter Column: GridSplitter between DataGrid and Inspector -->

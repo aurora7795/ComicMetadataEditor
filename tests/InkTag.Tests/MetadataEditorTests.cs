@@ -519,9 +519,9 @@ public class MetadataEditorTests
                 File.Delete(xml);
             }
 
-            var progressReports = new System.Collections.Generic.List<(int Processed, int Total)>();
+            var progressReports = new System.Collections.Generic.List<InkTag.Gui.Services.ScanProgressReport>();
             var lockObj = new object();
-            var progress = new DirectProgress<(int Processed, int Total)>(r => { lock (lockObj) progressReports.Add(r); });
+            var progress = new DirectProgress<InkTag.Gui.Services.ScanProgressReport>(r => { lock (lockObj) progressReports.Add(r); });
 
             var scanner = new InkTag.Gui.Services.ComicScannerService();
             var results = await scanner.ScanDirectoryAsync(tempDir, recursive: false, System.Threading.CancellationToken.None, progress);
@@ -530,6 +530,7 @@ public class MetadataEditorTests
             Assert.NotEmpty(progressReports);
             Assert.Equal(6, progressReports.Max(r => r.Total));
             Assert.Equal(6, progressReports.Max(r => r.Processed));
+            Assert.Contains(progressReports, r => !string.IsNullOrEmpty(r.CurrentFileName));
 
             // Test cancellation
             using var cts = new System.Threading.CancellationTokenSource();

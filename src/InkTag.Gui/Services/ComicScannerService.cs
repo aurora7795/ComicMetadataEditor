@@ -9,13 +9,32 @@ using InkTag.Gui.ViewModels;
 
 namespace InkTag.Gui.Services;
 
+public record struct ScanProgressReport(
+    int Processed,
+    int Total,
+    string? CurrentFileName = null,
+    long? CurrentFileSizeBytes = null,
+    bool IsUnseekableStream = false);
+
 public class ComicScannerService
 {
+    public Task<List<ComicItemViewModel>> ScanDirectoryAsync(
+        string directoryPath, 
+        bool recursive, 
+        CancellationToken cancellationToken,
+        IProgress<(int Processed, int Total)>? progress)
+    {
+        IProgress<ScanProgressReport>? mappedProgress = progress == null 
+            ? null 
+            : new Progress<ScanProgressReport>(r => progress.Report((r.Processed, r.Total)));
+        return ScanDirectoryAsync(directoryPath, recursive, cancellationToken, mappedProgress);
+    }
+
     public async Task<List<ComicItemViewModel>> ScanDirectoryAsync(
         string directoryPath, 
         bool recursive, 
         CancellationToken cancellationToken,
-        IProgress<(int Processed, int Total)>? progress = null)
+        IProgress<ScanProgressReport>? progress = null)
     {
         if (string.IsNullOrEmpty(directoryPath) || !Directory.Exists(directoryPath) || cancellationToken.IsCancellationRequested)
         {
@@ -58,7 +77,8 @@ public class ComicScannerService
                 };
 
                 int processedCount = 0;
-                progress?.Report((0, files.Count));
+                int unseekableDetected = 0;
+                progress?.Report(new ScanProgressReport(0, files.Count));
 
                 try
                 {
@@ -69,13 +89,34 @@ public class ComicScannerService
                         {
                             ct.ThrowIfCancellationRequested();
                             string file = files[index];
+                            string fileName = Path.GetFileName(file);
+                            long fileSizeBytes = 0;
+                            try
+                            {
+                                var fi = new FileInfo(file);
+                                if (fi.Exists) fileSizeBytes = fi.Length;
+                            }
+                            catch { }
+
+                            progress?.Report(new ScanProgressReport(
+                                Volatile.Read(ref processedCount),
+                                files.Count,
+                                fileName,
+                                fileSizeBytes,
+                                Volatile.Read(ref unseekableDetected) > 0));
+
                             var fileSw = System.Diagnostics.Stopwatch.StartNew();
                             try
                             {
-                                var model = editor.ReadMetadata(file);
+                                var model = editor.ReadMetadata(file, out bool usedSequential);
+                                if (usedSequential)
+                                {
+                                    Interlocked.Exchange(ref unseekableDetected, 1);
+                                }
+
                                 var viewModel = new ComicItemViewModel(file, model);
                                 indexedResults[index] = viewModel;
-                                Core.Logging.AppLogger.LogDebug($"[Scanner] [{index + 1}/{files.Count}] Parsed '{Path.GetFileName(file)}' in {fileSw.ElapsedMilliseconds}ms.");
+                                Core.Logging.AppLogger.LogDebug($"[Scanner] [{index + 1}/{files.Count}] Parsed '{fileName}' in {fileSw.ElapsedMilliseconds}ms (Sequential fallback: {usedSequential}).");
                             }
                             catch (Exception ex)
                             {
@@ -85,11 +126,16 @@ public class ComicScannerService
                                     ReadErrorMessage = ex.Message
                                 };
                                 indexedResults[index] = viewModel;
-                                Core.Logging.AppLogger.LogWarning($"[Scanner] [{index + 1}/{files.Count}] Failed to parse '{Path.GetFileName(file)}' in {fileSw.ElapsedMilliseconds}ms: {ex.Message}");
+                                Core.Logging.AppLogger.LogWarning($"[Scanner] [{index + 1}/{files.Count}] Failed to parse '{fileName}' in {fileSw.ElapsedMilliseconds}ms: {ex.Message}");
                             }
 
                             int current = Interlocked.Increment(ref processedCount);
-                            progress?.Report((current, files.Count));
+                            progress?.Report(new ScanProgressReport(
+                                current,
+                                files.Count,
+                                fileName,
+                                fileSizeBytes,
+                                Volatile.Read(ref unseekableDetected) > 0));
                             await Task.Yield();
                         });
                 }

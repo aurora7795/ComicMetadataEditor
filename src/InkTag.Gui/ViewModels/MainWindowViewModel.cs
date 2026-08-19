@@ -182,6 +182,12 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [ObservableProperty]
+    private bool _isSlowShareWarningVisible;
+
+    [ObservableProperty]
+    private string _slowShareWarningMessage = string.Empty;
+
     [RelayCommand]
     private void ClearBulkRules()
     {
@@ -205,19 +211,35 @@ public partial class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrEmpty(SelectedDirectory) || !Directory.Exists(SelectedDirectory)) return;
 
         IsLoading = true;
+        IsSlowShareWarningVisible = false;
+        SlowShareWarningMessage = string.Empty;
         ProgressText = "Discovering comic files...";
         ProgressValue = 0;
 
         _scanCts?.Cancel();
         _scanCts = new CancellationTokenSource();
         var ct = _scanCts.Token;
+        bool unseekableDetected = false;
 
-        var progress = new Progress<(int Processed, int Total)>(report =>
+        var progress = new Progress<ScanProgressReport>(report =>
         {
+            if (report.IsUnseekableStream)
+            {
+                unseekableDetected = true;
+                IsSlowShareWarningVisible = true;
+                SlowShareWarningMessage = "Slow network share detected: Virtual FTP/FUSE mounts do not support archive seeking and require streaming entire files. For instant loading, mount your share via SMB/CIFS.";
+            }
+
             if (report.Total > 0)
             {
                 ProgressValue = (report.Processed * 100) / report.Total;
-                ProgressText = $"Scanning: {report.Processed}/{report.Total} files ({ProgressValue}%)...";
+                double mb = (report.CurrentFileSizeBytes ?? 0) / (1024.0 * 1024.0);
+                string sizeStr = mb > 0 ? $" ({mb:F0} MB)" : "";
+                string unseekablePrefix = report.IsUnseekableStream ? "⚠️ Slow Virtual Share: " : "";
+                string activeFileStr = !string.IsNullOrEmpty(report.CurrentFileName)
+                    ? $" • {unseekablePrefix}Streaming '{report.CurrentFileName}'{sizeStr}..."
+                    : "";
+                ProgressText = $"Scanning: {report.Processed}/{report.Total} files ({ProgressValue}%){activeFileStr}";
             }
             else
             {
@@ -236,18 +258,20 @@ public partial class MainWindowViewModel : ViewModelBase
                 Comics.Add(item);
             }
 
+            string tip = unseekableDetected ? " (Slow virtual share detected • Tip: Mount via SMB/CIFS for instant loading)" : "";
             if (ct.IsCancellationRequested)
             {
-                ProgressText = $"Scan cancelled ({Comics.Count} files loaded).";
+                ProgressText = $"Scan cancelled ({Comics.Count} files loaded{tip}).";
             }
             else
             {
-                ProgressText = $"Loaded {Comics.Count} comics successfully.";
+                ProgressText = $"Loaded {Comics.Count} comics successfully{tip}.";
             }
         }
         catch (OperationCanceledException)
         {
-            ProgressText = $"Scan cancelled ({Comics.Count} files loaded).";
+            string tip = unseekableDetected ? " (Slow virtual share detected • Tip: Mount via SMB/CIFS for instant loading)" : "";
+            ProgressText = $"Scan cancelled ({Comics.Count} files loaded{tip}).";
         }
         catch (Exception ex)
         {

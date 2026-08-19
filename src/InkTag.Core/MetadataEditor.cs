@@ -84,8 +84,11 @@ public class MetadataEditor
             FileOptions.None);
     }
 
-    public ComicInfo ReadMetadata(string filePath)
+    public ComicInfo ReadMetadata(string filePath) => ReadMetadata(filePath, out _);
+
+    public ComicInfo ReadMetadata(string filePath, out bool usedSequentialFallback)
     {
+        usedSequentialFallback = false;
         if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
         {
             return new ComicInfo();
@@ -129,6 +132,7 @@ public class MetadataEditor
             // 2. Sequential forward-only streaming (requires 0 backwards seeking)
             try
             {
+                usedSequentialFallback = true;
                 var seqSw = System.Diagnostics.Stopwatch.StartNew();
                 using var rawStream = OpenReadOptimized(filePath);
                 using var nonSeekable = new NonSeekableStream(rawStream);
