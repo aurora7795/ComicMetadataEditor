@@ -23,7 +23,7 @@ The desktop client follows the standard MVVM design pattern:
   * `SettingsViewModel`: User preferences manager.
   * `BulkEditRuleViewModel`: Multi-rule batch modifier.
 * **Services**:
-  * `ComicScannerService`: Bounded parallel directory scanner (`Parallel.ForEachAsync` with 2–8 workers, real-time `IProgress` callbacks, and cancellation).
+  * `ComicScannerService`: Bounded parallel directory scanner (`Parallel.ForEachAsync` with 2–8 workers, real-time `ScanProgressReport` callbacks reporting active files and sizes, unseekable virtual mount detection, and microsecond cancellation).
   * `ArchiveCoverService`: Asynchronous thumbnail extractor with size-capped LRU bitmap cache.
   * `UpdateService`: Dual-mode update manager (Velopack in-place + direct GitHub Releases API fallback).
 * **Converters**:
@@ -56,9 +56,12 @@ The desktop client follows the standard MVVM design pattern:
 * **Inheritance**: `ViewModelBase` (inherits `ObservableObject`)
 * **Core Collections**:
   * `Comics`: `ObservableCollection<ComicItemViewModel>` (populates the DataGrid).
+* **Key Observable Properties**:
+  * `IsLoading` / `ProgressValue` / `ProgressText`: Real-time scan progress counter and dynamic streaming diagnostics.
+  * `IsSlowShareWarningVisible` / `SlowShareWarningMessage`: Flags unseekable remote mounts (FTP/FUSE) and presents overlay advisory guidance.
 * **Core Commands**:
-  * `LoadDirectoryCommand`: Triggers directory scanning with bounded parallel concurrency and live progress reporting.
-  * `CancelScanCommand`: Aborts active folder scanning while preserving whatever files were already parsed.
+  * `LoadDirectoryCommand`: Triggers directory scanning with bounded parallel concurrency, active file tracking, and live progress reporting.
+  * `CancelScanCommand`: Aborts active folder scanning in milliseconds via stream-level `CancellationToken` checks while preserving whatever files were already parsed.
   * `SaveAllCommand`: Asynchronously writes all `IsDirty` items to disk using atomic repackaging.
   * `BulkApplyCommand`: Iterates selected grid items and applies sidebar-checked metadata fields.
   * `FindReplaceCommand`: Executes search-and-replace strings across target columns.

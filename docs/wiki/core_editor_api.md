@@ -61,11 +61,13 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 * **Description**: Opens a `FileStream` configured with a 64KB buffer, `FileShare.ReadWrite` (eliminating sharing collisions with media servers like Komga/Kavita/Plex), and `FileOptions.None` (enabling bidirectional backward seeks over Linux FUSE / GVFS / FTP / SMB network mounts).
 
 #### `ReadMetadata` / `ReadMetadataAsJson`
-* **Signature**: `public ComicInfo ReadMetadata(string filePath)`
+* **Signature**: `public ComicInfo ReadMetadata(string filePath, CancellationToken cancellationToken = default)`
+* **Signature**: `public ComicInfo ReadMetadata(string filePath, out bool usedSequentialFallback, CancellationToken cancellationToken = default)`
 * **Signature**: `public string ReadMetadataAsJson(string filePath)`
 * **Description**: Parses `ComicInfo.xml` directly in-memory with zero temporary disk extraction.
   1. *Fast-Path (.cbz)*: Reads the Central Directory using .NET's built-in `System.IO.Compression.ZipArchive` for 1-seek metadata access.
-  2. *Fallback & .cbr (RAR)*: Reads via SharpCompress `ArchiveFactory.OpenArchive(stream, new ReaderOptions { LookForHeader = true })` to safely recover metadata across high-latency network shares.
+  2. *Sequential Forward Fallback*: If backward seeks fail on virtual mounts (e.g. Linux GVFS FTP / FUSE), wraps the stream in a `NonSeekableStream` with `CancellationToken` checks, reading local headers forward from byte 0.
+  3. *Fallback & .cbr (RAR)*: Reads via SharpCompress `ArchiveFactory.OpenArchive(stream, new ReaderOptions { LookForHeader = true })` to safely recover metadata across high-latency network shares.
 
 #### `EditMetadata` / `EditMetadataFromJson`
 * **Signature**: `public void EditMetadata(string filePath, Action<ComicInfo> editAction)`
