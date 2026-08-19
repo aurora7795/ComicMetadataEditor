@@ -84,11 +84,14 @@ public class MetadataEditor
             FileOptions.None);
     }
 
-    public ComicInfo ReadMetadata(string filePath) => ReadMetadata(filePath, out _);
+    public ComicInfo ReadMetadata(string filePath, CancellationToken cancellationToken = default) => 
+        ReadMetadata(filePath, out _, cancellationToken);
 
-    public ComicInfo ReadMetadata(string filePath, out bool usedSequentialFallback)
+    public ComicInfo ReadMetadata(string filePath, out bool usedSequentialFallback, CancellationToken cancellationToken = default)
     {
         usedSequentialFallback = false;
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
         {
             return new ComicInfo();
@@ -104,6 +107,7 @@ public class MetadataEditor
             // 1. Fast random-access seek
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 AppLogger.LogDebug($"[MetadataEditor] Attempting fast-path random-access seek for '{fileName}'...");
                 using var fileStream = OpenReadOptimized(filePath);
                 using var zipArchive = new System.IO.Compression.ZipArchive(fileStream, System.IO.Compression.ZipArchiveMode.Read);
@@ -112,6 +116,7 @@ public class MetadataEditor
 
                 if (entry != null)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     using var entryStream = entry.Open();
                     using var ms = new MemoryStream();
                     entryStream.CopyTo(ms);
@@ -124,6 +129,10 @@ public class MetadataEditor
                 AppLogger.LogDebug($"[MetadataEditor] No ComicInfo.xml found via fast-path seek in '{fileName}' ({sw.ElapsedMilliseconds}ms).");
                 return new ComicInfo();
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 AppLogger.LogDebug($"[MetadataEditor] Fast-path seek failed for '{fileName}' ({ex.Message}). Retrying with sequential NonSeekableStream...");
@@ -132,13 +141,15 @@ public class MetadataEditor
             // 2. Sequential forward-only streaming (requires 0 backwards seeking)
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 usedSequentialFallback = true;
                 var seqSw = System.Diagnostics.Stopwatch.StartNew();
                 using var rawStream = OpenReadOptimized(filePath);
-                using var nonSeekable = new NonSeekableStream(rawStream);
+                using var nonSeekable = new NonSeekableStream(rawStream, cancellationToken);
                 using var zipArchive = new System.IO.Compression.ZipArchive(nonSeekable, System.IO.Compression.ZipArchiveMode.Read);
                 foreach (var entry in zipArchive.Entries)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     if (Path.GetFileName(entry.FullName).Equals("ComicInfo.xml", StringComparison.OrdinalIgnoreCase))
                     {
                         using var entryStream = entry.Open();
@@ -154,6 +165,10 @@ public class MetadataEditor
                 AppLogger.LogDebug($"[MetadataEditor] No ComicInfo.xml found via sequential stream in '{fileName}' ({seqSw.ElapsedMilliseconds}ms).");
                 return new ComicInfo();
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 AppLogger.LogDebug($"[MetadataEditor] Sequential streaming failed for '{fileName}' ({ex.Message}). Retrying with SharpCompress...");
@@ -163,12 +178,14 @@ public class MetadataEditor
         // Random-access in-memory path for .cbr (RAR) or fallback archives
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var scSw = System.Diagnostics.Stopwatch.StartNew();
             using var stream = OpenReadOptimized(filePath);
             using var archive = ArchiveFactory.OpenArchive(stream, new ReaderOptions { LookForHeader = true });
 
             foreach (var entry in archive.Entries)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!entry.IsDirectory && 
                     entry.Key != null &&
                     Path.GetFileName(entry.Key).Equals("ComicInfo.xml", StringComparison.OrdinalIgnoreCase))
@@ -185,6 +202,10 @@ public class MetadataEditor
 
             AppLogger.LogDebug($"[MetadataEditor] No ComicInfo.xml found via SharpCompress in '{fileName}' ({scSw.ElapsedMilliseconds}ms).");
             return new ComicInfo();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -767,10 +788,12 @@ public class MetadataEditor
 internal sealed class NonSeekableStream : Stream
 {
     private readonly Stream _inner;
+    private readonly CancellationToken _cancellationToken;
 
-    public NonSeekableStream(Stream inner)
+    public NonSeekableStream(Stream inner, CancellationToken cancellationToken = default)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+        _cancellationToken = cancellationToken;
     }
 
     public override bool CanRead => _inner.CanRead;
@@ -783,12 +806,31 @@ internal sealed class NonSeekableStream : Stream
         set => throw new NotSupportedException();
     }
 
-    public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
-    public override int Read(Span<byte> buffer) => _inner.Read(buffer);
-    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
-        _inner.ReadAsync(buffer, offset, count, cancellationToken);
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
-        _inner.ReadAsync(buffer, cancellationToken);
+    public override int Read(byte[] buffer, int offset, int count)
+    {
+        _cancellationToken.ThrowIfCancellationRequested();
+        return _inner.Read(buffer, offset, count);
+    }
+
+    public override int Read(Span<byte> buffer)
+    {
+        _cancellationToken.ThrowIfCancellationRequested();
+        return _inner.Read(buffer);
+    }
+
+    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        _cancellationToken.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
+        return _inner.ReadAsync(buffer, offset, count, cancellationToken);
+    }
+
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        _cancellationToken.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
+        return _inner.ReadAsync(buffer, cancellationToken);
+    }
 
     public override void Flush() => _inner.Flush();
     public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();

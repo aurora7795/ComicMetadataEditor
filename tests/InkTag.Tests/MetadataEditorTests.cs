@@ -604,6 +604,35 @@ public class MetadataEditorTests
         }
     }
 
+    [Fact]
+    public void ReadMetadata_HonorsCancellationToken_ThrowsOperationCanceledException()
+    {
+        var editor = new MetadataEditor();
+        string tempCbz = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".cbz");
+        string tempXml = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".xml");
+
+        try
+        {
+            File.WriteAllText(tempXml, "<ComicInfo><Series>Cancel Test</Series></ComicInfo>");
+
+            using (var stream = File.OpenWrite(tempCbz))
+            using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+            {
+                writer.Write("ComicInfo.xml", tempXml);
+            }
+
+            using var cts = new CancellationTokenSource();
+            cts.Cancel(); // Pre-cancel
+
+            Assert.Throws<OperationCanceledException>(() => editor.ReadMetadata(tempCbz, cts.Token));
+        }
+        finally
+        {
+            if (File.Exists(tempXml)) File.Delete(tempXml);
+            if (File.Exists(tempCbz)) File.Delete(tempCbz);
+        }
+    }
+
     private class DirectProgress<T> : IProgress<T>
     {
         private readonly Action<T> _handler;
