@@ -17,6 +17,9 @@ All properties are nullable to avoid writing default XML tags when optional meta
 | `Number` | `<Number>` | `string?` | Issue number (supports decimal/alphanumeric like "1.5") |
 | `Count` | `<Count>` | `int?` | Total issue count in series |
 | `Volume` | `<Volume>` | `int?` | Series volume number |
+| `AlternateSeries` | `<AlternateSeries>` | `string?` | Alternate / cross-over series name |
+| `AlternateNumber` | `<AlternateNumber>` | `string?` | Alternate issue number |
+| `AlternateCount` | `<AlternateCount>` | `int?` | Alternate issue count |
 | `Summary` | `<Summary>` | `string?` | Story summary / plot synopsis |
 | `Notes` | `<Notes>` | `string?` | General notes |
 | `Year` | `<Year>` | `int?` | Publication year (4-digit) |
@@ -46,6 +49,9 @@ All properties are nullable to avoid writing default XML tags when optional meta
 | `StoryArc` | `<StoryArc>` | `string?` | Story arc name |
 | `SeriesGroup` | `<SeriesGroup>` | `string?` | Series group designation |
 | `AgeRating` | `<AgeRating>` | `string?` | Content age rating |
+| `CommunityRating` | `<CommunityRating>` | `decimal?` | Community star rating (0-5) |
+| `MainCharacterOrTeam` | `<MainCharacterOrTeam>` | `string?` | Primary character or team focus |
+| `Review` | `<Review>` | `string?` | Comic review / critical remarks |
 | `Pages` | `<Pages>` | `PageCollection?` | Structured page-level array (`Page[]`) |
 
 ---

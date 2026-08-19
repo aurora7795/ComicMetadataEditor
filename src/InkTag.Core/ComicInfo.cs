@@ -32,6 +32,16 @@ public class ComicInfo
     public int? Volume { get; set; }
     public bool ShouldSerializeVolume() => Volume.HasValue;
 
+    [XmlElement("AlternateSeries")]
+    public string? AlternateSeries { get; set; }
+
+    [XmlElement("AlternateNumber")]
+    public string? AlternateNumber { get; set; }
+
+    [XmlElement("AlternateCount")]
+    public int? AlternateCount { get; set; }
+    public bool ShouldSerializeAlternateCount() => AlternateCount.HasValue;
+
     [XmlElement("Summary")]
     public string? Summary { get; set; }
 
@@ -123,6 +133,16 @@ public class ComicInfo
 
     [XmlElement("AgeRating")]
     public string? AgeRating { get; set; }
+
+    [XmlElement("CommunityRating")]
+    public decimal? CommunityRating { get; set; }
+    public bool ShouldSerializeCommunityRating() => CommunityRating.HasValue;
+
+    [XmlElement("MainCharacterOrTeam")]
+    public string? MainCharacterOrTeam { get; set; }
+
+    [XmlElement("Review")]
+    public string? Review { get; set; }
 
     [XmlElement("Pages")]
     public PageCollection? Pages { get; set; }

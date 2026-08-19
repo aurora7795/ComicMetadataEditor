@@ -286,6 +286,7 @@ public partial class MainWindow : Window
     private void NativeOpenFolder_Click(object? sender, EventArgs e) => OpenFolder_Click(sender, new RoutedEventArgs());
     private async void NativeSaveAll_Click(object? sender, EventArgs e)
     {
+        Focus();
         if (DataContext is MainWindowViewModel vm) await vm.SaveAllCommand.ExecuteAsync(null);
     }
     private void NativeExportCsv_Click(object? sender, EventArgs e) => ExportCsv_Click(sender, new RoutedEventArgs());

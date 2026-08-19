@@ -14,20 +14,25 @@
     <conv:IsDirtyToBrushConverter x:Key="IsDirtyToBrushConverter"/>
   </Window.Resources>
 
+  <Window.KeyBindings>
+    <KeyBinding Gesture="{OnPlatform 'Ctrl+S', macOS='Cmd+S'}" Command="{Binding SaveAllCommand}"/>
+    <KeyBinding Gesture="{OnPlatform 'Ctrl+A', macOS='Cmd+A'}" Command="{Binding SelectAllCommand}"/>
+  </Window.KeyBindings>
+
   <NativeMenu.Menu>
     <NativeMenu>
       <NativeMenuItem Header="File">
         <NativeMenu>
-          <NativeMenuItem Header="Open Folder..." Gesture="Ctrl+O" Click="NativeOpenFolder_Click"/>
-          <NativeMenuItem Header="Save All" Gesture="Ctrl+S" Click="NativeSaveAll_Click"/>
+          <NativeMenuItem Header="Open Folder..." Gesture="{OnPlatform 'Ctrl+O', macOS='Cmd+O'}" Click="NativeOpenFolder_Click"/>
+          <NativeMenuItem Header="Save All" Gesture="{OnPlatform 'Ctrl+S', macOS='Cmd+S'}" Click="NativeSaveAll_Click"/>
           <NativeMenuItem Header="Export CSV..." Click="NativeExportCsv_Click"/>
           <NativeMenuItemSeparator/>
-          <NativeMenuItem Header="Exit" Gesture="Ctrl+Q" Click="NativeExit_Click"/>
+          <NativeMenuItem Header="Exit" Gesture="{OnPlatform 'Ctrl+Q', macOS='Cmd+Q'}" Click="NativeExit_Click"/>
         </NativeMenu>
       </NativeMenuItem>
       <NativeMenuItem Header="Edit">
         <NativeMenu>
-          <NativeMenuItem Header="Select All" Gesture="Ctrl+A" Click="NativeSelectAll_Click"/>
+          <NativeMenuItem Header="Select All" Gesture="{OnPlatform 'Ctrl+A', macOS='Cmd+A'}" Click="NativeSelectAll_Click"/>
           <NativeMenuItem Header="Clear Selection" Click="NativeClearSelection_Click"/>
         </NativeMenu>
       </NativeMenuItem>
@@ -38,7 +43,7 @@
           <NativeMenuItemSeparator/>
           <NativeMenuItem Header="Enable Verbose / Debug Logging" ToggleType="CheckBox" Click="NativeToggleDebugLogging_Click"/>
           <NativeMenuItemSeparator/>
-          <NativeMenuItem Header="Refresh Grid" Gesture="F5" Click="NativeRefreshGrid_Click"/>
+          <NativeMenuItem Header="Refresh Grid" Gesture="{OnPlatform 'F5', macOS='Cmd+R'}" Click="NativeRefreshGrid_Click"/>
         </NativeMenu>
       </NativeMenuItem>
       <NativeMenuItem Header="Tools">

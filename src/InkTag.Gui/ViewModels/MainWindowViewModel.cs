@@ -348,8 +348,20 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task SaveAllAsync()
     {
-        var dirtyItems = Comics.Where(c => c.IsDirty && !c.HasReadError).ToList();
-        if (!dirtyItems.Any()) return;
+        var dirtyItems = Comics.Where(c => c.IsDirty && !c.HasReadError && !c.HasErrors).ToList();
+        if (!dirtyItems.Any())
+        {
+            var itemsWithErrors = Comics.Where(c => c.IsDirty && c.HasErrors).ToList();
+            if (itemsWithErrors.Any())
+            {
+                ProgressText = $"Cannot save: {itemsWithErrors.Count} comic(s) have validation errors. Please correct highlighted fields.";
+            }
+            else
+            {
+                ProgressText = "No unsaved changes detected.";
+            }
+            return;
+        }
 
         IsSaving = true;
         ProgressValue = 0;
@@ -404,6 +416,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     }
                     catch (Exception ex)
                     {
+                        Core.Logging.AppLogger.LogError($"Failed to save metadata to '{originalPath}': {ex.Message}", ex);
                         lock (SaveFailures)
                         {
                             SaveFailures.Add((item.FilePath, ex));

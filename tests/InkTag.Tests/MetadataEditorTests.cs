@@ -633,6 +633,83 @@ public class MetadataEditorTests
         }
     }
 
+    [Fact]
+    public void DeserializeComicInfo_WithEmptyNumericTags_ParsesCleanly()
+    {
+        string xml = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<ComicInfo xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"">
+  <Title>Test Comic</Title>
+  <Count></Count>
+  <Volume/>
+  <Year>0</Year>
+  <Month></Month>
+  <Day/>
+  <PageCount></PageCount>
+  <Manga>true</Manga>
+</ComicInfo>";
+
+        var result = MetadataEditor.DeserializeComicInfo(xml);
+
+        Assert.NotNull(result);
+        Assert.Equal("Test Comic", result.Title);
+        Assert.Null(result.Count);
+        Assert.Null(result.Volume);
+        Assert.Null(result.Year);
+        Assert.Null(result.Month);
+        Assert.Null(result.Day);
+        Assert.Null(result.PageCount);
+        Assert.Equal(MangaDirection.Yes, result.Manga);
+    }
+
+    [Fact]
+    public void DeserializeComicInfo_WithInvalidControlCharacters_SanitizesAndParses()
+    {
+        string xml = "<ComicInfo><Title>Title with \x00\x01\x08 control chars</Title><Writer>Stan Lee</Writer></ComicInfo>";
+
+        var result = MetadataEditor.DeserializeComicInfo(xml);
+
+        Assert.NotNull(result);
+        Assert.Equal("Title with  control chars", result.Title);
+        Assert.Equal("Stan Lee", result.Writer);
+    }
+
+    [Fact]
+    public void EditMetadata_WithMalformedExistingComicInfo_OverwritesCleanlyWithoutCrashing()
+    {
+        var editor = new MetadataEditor();
+        string tempCbz = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".cbz");
+        string tempXml = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".xml");
+
+        try
+        {
+            // Write malformed XML that would break basic XmlSerializer
+            File.WriteAllText(tempXml, "<ComicInfo><Year>INVALID_YEAR</Year><Manga>invalid_enum</Manga><BrokenTag");
+
+            using (var stream = File.OpenWrite(tempCbz))
+            using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+            {
+                writer.Write("ComicInfo.xml", tempXml);
+            }
+
+            // Edit metadata should succeed without throwing
+            editor.EditMetadata(tempCbz, comic =>
+            {
+                comic.Title = "Recovered Title";
+                comic.Year = 2026;
+            });
+
+            var updated = editor.ReadMetadata(tempCbz);
+            Assert.NotNull(updated);
+            Assert.Equal("Recovered Title", updated.Title);
+            Assert.Equal(2026, updated.Year);
+        }
+        finally
+        {
+            if (File.Exists(tempXml)) File.Delete(tempXml);
+            if (File.Exists(tempCbz)) File.Delete(tempCbz);
+        }
+    }
+
     private class DirectProgress<T> : IProgress<T>
     {
         private readonly Action<T> _handler;
