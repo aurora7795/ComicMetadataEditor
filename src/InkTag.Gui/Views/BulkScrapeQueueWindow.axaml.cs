@@ -90,6 +90,53 @@ public partial class BulkScrapeQueueWindow : Window
         }
     }
 
+    private void ItemCheckBox_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox cb && cb.DataContext is BulkScrapeItemViewModel clickedItem)
+        {
+            bool isChecked = cb.IsChecked ?? false;
+            var selectedRows = QueueDataGrid.SelectedItems?.OfType<BulkScrapeItemViewModel>().ToList();
+
+            // If multiple rows are highlighted/selected and the user clicked one of them,
+            // propagate the checked state to all highlighted rows
+            if (selectedRows != null && selectedRows.Count > 1 && selectedRows.Contains(clickedItem))
+            {
+                foreach (var row in selectedRows)
+                {
+                    row.IsSelected = isChecked;
+                }
+            }
+
+            if (DataContext is BulkScrapeQueueViewModel vm)
+            {
+                vm.UpdateCounts();
+            }
+        }
+    }
+
+    private void QueueDataGrid_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (e.Key == Avalonia.Input.Key.Space)
+        {
+            var selectedRows = QueueDataGrid.SelectedItems?.OfType<BulkScrapeItemViewModel>().ToList();
+            if (selectedRows != null && selectedRows.Count > 0)
+            {
+                // Toggle state of all selected rows based on the inverted state of the first item
+                bool newState = !selectedRows[0].IsSelected;
+                foreach (var row in selectedRows)
+                {
+                    row.IsSelected = newState;
+                }
+                e.Handled = true;
+
+                if (DataContext is BulkScrapeQueueViewModel vm)
+                {
+                    vm.UpdateCounts();
+                }
+            }
+        }
+    }
+
     private void Close_Click(object? sender, RoutedEventArgs e)
     {
         Close();

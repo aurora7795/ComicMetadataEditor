@@ -40,7 +40,7 @@ public class BulkScrapeQueueViewModel : ObservableObject
         }
     }
 
-    public bool CanStart => !IsRunning && Items.Count > 0;
+    public bool CanStart => !IsRunning && Items.Any(i => i.IsSelected);
     public bool CanApply => !IsRunning && Items.Any(i => i.IsSelected && i.MatchedCandidate != null);
     public bool CanChangeSelection => !IsRunning;
 
@@ -109,6 +109,7 @@ public class BulkScrapeQueueViewModel : ObservableObject
                 {
                     item.IsSelected = value;
                 }
+                OnPropertyChanged(nameof(CanStart));
                 OnPropertyChanged(nameof(CanApply));
             }
         }
@@ -132,6 +133,7 @@ public class BulkScrapeQueueViewModel : ObservableObject
             {
                 if (e.PropertyName == nameof(BulkScrapeItemViewModel.IsSelected))
                 {
+                    OnPropertyChanged(nameof(CanStart));
                     OnPropertyChanged(nameof(CanApply));
                 }
             };
@@ -144,15 +146,22 @@ public class BulkScrapeQueueViewModel : ObservableObject
 
     public async Task StartQueueAsync()
     {
-        if (IsRunning || Items.Count == 0) return;
+        if (IsRunning) return;
+
+        var selectedItems = Items.Where(i => i.IsSelected).ToList();
+        if (selectedItems.Count == 0)
+        {
+            ProgressStatus = "No items selected to scrape. Please check the items you want to scrape.";
+            return;
+        }
 
         IsRunning = true;
         _cts = new CancellationTokenSource();
         ProgressPercentage = 0;
-        ProgressStatus = "Starting bulk scrape queue...";
+        ProgressStatus = $"Starting bulk scrape for {selectedItems.Count} selected items...";
 
-        var rawQueue = Items.Select(i => i.Item).ToList();
-        var itemMap = Items.ToDictionary(i => i.Item);
+        var rawQueue = selectedItems.Select(i => i.Item).ToList();
+        var itemMap = selectedItems.ToDictionary(i => i.Item);
 
         var progress = new Progress<BulkScrapeProgressReport>(report =>
         {

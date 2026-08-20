@@ -78,23 +78,23 @@
       <!-- Main Queue DataGrid -->
       <Border Grid.Row="1" Background="#252526" CornerRadius="6" Padding="6" BorderBrush="#333338" BorderThickness="1">
         <DataGrid Name="QueueDataGrid" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
-                  AutoGenerateColumns="False" CanUserResizeColumns="True" CanUserSortColumns="True"
+                  SelectionMode="Extended" AutoGenerateColumns="False" CanUserResizeColumns="True" CanUserSortColumns="True"
                   GridLinesVisibility="Horizontal" HeadersVisibility="Column" Background="#1E1E1E"
-                  BorderBrush="#3F3F46" BorderThickness="1">
+                  BorderBrush="#3F3F46" BorderThickness="1" KeyDown="QueueDataGrid_KeyDown">
           
           <DataGrid.Columns>
             
             <!-- Checkbox Selection -->
-            <DataGridTemplateColumn Header="Apply" Width="55">
+            <DataGridTemplateColumn Header="Include" Width="70">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
-                  <CheckBox IsChecked="{Binding IsSelected}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  <CheckBox IsChecked="{Binding IsSelected}" Click="ItemCheckBox_Click" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
 
             <!-- Local Cover Thumbnail -->
-            <DataGridTemplateColumn Header="Local Cover" Width="75">
+            <DataGridTemplateColumn Header="Local Cover" Width="90">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
                   <Border Width="40" Height="58" Background="#181818" CornerRadius="3" ClipToBounds="True" Margin="4"
@@ -122,7 +122,7 @@
             </DataGridTemplateColumn>
 
             <!-- Archive File & Parsed Query -->
-            <DataGridTemplateColumn Header="Archive File / Detected Query" Width="240">
+            <DataGridTemplateColumn Header="Archive File / Detected Query" Width="260">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
                   <StackPanel Spacing="3" VerticalAlignment="Center" Margin="6,0">
@@ -137,7 +137,7 @@
             </DataGridTemplateColumn>
 
             <!-- Matched Cover Thumbnail -->
-            <DataGridTemplateColumn Header="Online Cover" Width="85">
+            <DataGridTemplateColumn Header="Online Cover" Width="105">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
                   <Border Width="40" Height="58" Background="#181818" CornerRadius="3" ClipToBounds="True" Margin="4"
