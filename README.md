@@ -160,6 +160,7 @@ bool isMatch = PerceptualHashService.IsVisualMatch(coverHash, onlineCoverHash, t
 ## 🗺️ Roadmap & Milestones
 
 ### Completed Milestones
+* **[x] Metadata Deserialization & Archive Recovery (`v0.9.1`):** Resilient handling of malformed or out-of-order `ComicInfo.xml` files during metadata edit operations, preventing save failures and guaranteeing XML schema compliance upon repack.
 * **[x] Network Mount Resilience & Diagnostics (`v0.9.0`):** Slow virtual remote share detection (GVFS FTP / FUSE), sequential forward-only streaming fallback, real-time file download diagnostics, in-overlay advisory guidance, and sub-10ms instantaneous stream cancellation.
 * **[x] Perceptual Cover Hashing & Visual Matching (`v0.8.0`):** 64-bit `dHash` image fingerprinting, live cover match badging (`👁 XX% Cover Match`), and Visual Override matching for unorganized files.
 * **[x] Series Search Wizard (`v0.7.0`):** 2-step volume and issue search wizard with natural numerical ordering (`1, 2, 3... 10, 11`) and quick apply workflows.
