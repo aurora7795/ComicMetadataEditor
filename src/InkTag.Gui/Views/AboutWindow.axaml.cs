@@ -9,6 +9,7 @@ public partial class AboutWindow : Window
     public AboutWindow()
     {
         InitializeComponent();
+        VersionTextBlock.Text = $"Version {UpdateService.CurrentAppVersion.ToString(3)}";
     }
 
     private void OpenGitHubRepoClick(object? sender, RoutedEventArgs e)

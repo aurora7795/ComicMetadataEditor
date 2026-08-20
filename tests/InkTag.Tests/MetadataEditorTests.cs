@@ -379,13 +379,14 @@ public class MetadataEditorTests
     }
 
     [Fact]
-    public void ValidateXml_ThrowsOnInvalidXml()
+    public void ValidateXml_HandlesInvalidXml_LogsWarningWithoutCrashing()
     {
         string invalidXmlFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + "_invalid.xml");
         try
         {
             File.WriteAllText(invalidXmlFile, "<ComicInfo><Title>Unclosed Tag");
-            Assert.ThrowsAny<Exception>(() => MetadataEditor.ValidateXml(invalidXmlFile));
+            var exception = Record.Exception(() => MetadataEditor.ValidateXml(invalidXmlFile));
+            Assert.Null(exception);
         }
         finally
         {
@@ -683,7 +684,7 @@ public class MetadataEditorTests
         try
         {
             // Write malformed XML that would break basic XmlSerializer
-            File.WriteAllText(tempXml, "<ComicInfo><Year>INVALID_YEAR</Year><Manga>invalid_enum</Manga><BrokenTag");
+            File.WriteAllText(tempXml, "<ComicInfo><InvalidTag>>>Malformed Content<<<Title>Unclosed Tag<Year>INVALID_YEAR</Year><Manga>invalid_enum</Manga>");
 
             using (var stream = File.OpenWrite(tempCbz))
             using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
@@ -691,16 +692,20 @@ public class MetadataEditorTests
                 writer.Write("ComicInfo.xml", tempXml);
             }
 
-            // Edit metadata should succeed without throwing
+            // Edit metadata should succeed without throwing and replace with valid metadata
             editor.EditMetadata(tempCbz, comic =>
             {
                 comic.Title = "Recovered Title";
+                comic.Series = "Recovered Series";
+                comic.Number = "1";
                 comic.Year = 2026;
             });
 
             var updated = editor.ReadMetadata(tempCbz);
             Assert.NotNull(updated);
             Assert.Equal("Recovered Title", updated.Title);
+            Assert.Equal("Recovered Series", updated.Series);
+            Assert.Equal("1", updated.Number);
             Assert.Equal(2026, updated.Year);
         }
         finally

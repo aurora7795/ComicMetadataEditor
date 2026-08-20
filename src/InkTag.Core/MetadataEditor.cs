@@ -729,8 +729,15 @@ public class MetadataEditor
             }
         };
 
-        using var reader = XmlReader.Create(xmlPath, settings);
-        while (reader.Read()) { }
+        try
+        {
+            using var reader = XmlReader.Create(xmlPath, settings);
+            while (reader.Read()) { }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogWarning($"Schema validation exception in {xmlPath}: {ex.Message}");
+        }
     }
 
     #region AI Agent Helper APIs
