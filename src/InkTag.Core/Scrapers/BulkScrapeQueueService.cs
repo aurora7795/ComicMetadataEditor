@@ -1,9 +1,10 @@
-using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using InkTag.Core.Configuration;
 using InkTag.Core.Images;
@@ -141,7 +142,9 @@ public class BulkScrapeQueueService
     }
 
     /// <summary>
-    /// Processes all items in the queue using Smart Series Grouping and Perceptual Cover Visual Hashing.
+    /// <summary>
+    /// Processes all items in the queue using pipelined parallel cover extraction and real-time visual cover matching.
+    /// Covers are extracted across parallel background workers, feeding matched candidates into the ComicVine resolution engine concurrently.
     /// </summary>
     public async Task<BulkScrapeSummaryReport> ProcessQueueAsync(
         IList<BulkScrapeQueueItem> queue,
@@ -166,85 +169,91 @@ public class BulkScrapeQueueService
             return report;
         }
 
-        // Phase 1: Extract covers and compute local dHash for all items
-        for (int i = 0; i < queue.Count; i++)
+        int processedCount = 0;
+        var volumeCache = new ConcurrentDictionary<string, Task<List<ComicSearchResult>>>(StringComparer.OrdinalIgnoreCase);
+        var channel = Channel.CreateBounded<BulkScrapeQueueItem>(new BoundedChannelOptions(Math.Max(16, queue.Count))
         {
-            ct.ThrowIfCancellationRequested();
-            var item = queue[i];
-            item.Status = BulkScrapeItemStatus.ExtractingCover;
-            item.StatusMessage = "Extracting cover...";
-            
-            ReportProgress(progress, queue, i, item, $"Extracting cover for {item.Filename}...");
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = false,
+            SingleWriter = false
+        });
 
+        // 1. Producer: Parallel Cover Extractor (4-6 workers)
+        int extractionConcurrency = Math.Clamp(Environment.ProcessorCount, 2, 6);
+        var parallelOptions = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = extractionConcurrency,
+            CancellationToken = ct
+        };
+
+        var producerTask = Task.Run(async () =>
+        {
             try
             {
-                item.LocalCoverBytes = _metadataEditor.ExtractCoverImageBytes(item.FilePath);
-                if (item.LocalCoverBytes != null && item.LocalCoverBytes.Length > 0)
+                await Parallel.ForEachAsync(queue, parallelOptions, async (item, token) =>
                 {
-                    item.LocalCoverHash = PerceptualHashService.ComputeDHash(item.LocalCoverBytes);
-                }
+                    token.ThrowIfCancellationRequested();
+                    item.Status = BulkScrapeItemStatus.ExtractingCover;
+                    item.StatusMessage = "Extracting cover...";
+                    ReportProgress(progress, queue, processedCount, item, $"Extracting cover for {item.Filename}...");
+
+                    try
+                    {
+                        item.LocalCoverBytes = _metadataEditor.ExtractCoverImageBytes(item.FilePath);
+                        if (item.LocalCoverBytes != null && item.LocalCoverBytes.Length > 0)
+                        {
+                            item.LocalCoverHash = PerceptualHashService.ComputeDHash(item.LocalCoverBytes);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        item.ErrorMessage = $"Cover extraction error: {ex.Message}";
+                        AppLogger.LogWarning($"Bulk scrape cover extraction failed for '{item.FilePath}': {ex.Message}");
+                    }
+
+                    await channel.Writer.WriteAsync(item, token);
+                });
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                item.ErrorMessage = $"Cover extraction error: {ex.Message}";
+                AppLogger.LogWarning($"Producer extraction error: {ex.Message}");
             }
-        }
+            finally
+            {
+                channel.Writer.Complete();
+            }
+        }, ct);
 
-        // Phase 2: Group by Series if Smart Series Grouping is enabled
-        var processedSet = new HashSet<BulkScrapeQueueItem>();
-
-        if (options.EnableSmartSeriesGrouping && _scraperService.SupportsSeriesSearch)
+        // 2. Consumer: Concurrent Matcher (processes items as soon as their covers are extracted)
+        var consumerTask = Task.Run(async () =>
         {
-            // Cluster by parsed series title (case-insensitive)
-            var seriesGroups = queue
-                .Where(item => !string.IsNullOrWhiteSpace(item.ParsedQuery.Series))
-                .GroupBy(item => item.ParsedQuery.Series.Trim(), StringComparer.OrdinalIgnoreCase)
-                .Where(g => g.Count() >= 2) // Runs of 2 or more issues
-                .ToList();
-
-            foreach (var group in seriesGroups)
+            await foreach (var item in channel.Reader.ReadAllAsync(ct))
             {
                 ct.ThrowIfCancellationRequested();
-                string seriesName = group.Key;
-                int? sampleYear = group.FirstOrDefault(g => g.ParsedQuery.Year.HasValue)?.ParsedQuery.Year;
-
-                ReportProgress(progress, queue, processedSet.Count, null, $"Querying ComicVine series volume for '{seriesName}'...");
+                item.Status = BulkScrapeItemStatus.SearchingComicVine;
+                item.StatusMessage = $"Matching '{item.ParsedQuery.Series} #{item.ParsedQuery.IssueNumber}'...";
+                ReportProgress(progress, queue, processedCount, item, item.StatusMessage);
 
                 try
                 {
-                    var seriesResults = (await _scraperService.SearchSeriesAsync(seriesName, ct)).ToList();
-                    SeriesSearchResult? matchingVolume = null;
+                    bool matchedViaVolume = false;
 
-                    if (sampleYear.HasValue)
+                    // Try smart series volume clustering if enabled
+                    if (options.EnableSmartSeriesGrouping && _scraperService.SupportsSeriesSearch && !string.IsNullOrWhiteSpace(item.ParsedQuery.Series))
                     {
-                        matchingVolume = seriesResults.FirstOrDefault(v => v.StartYear.HasValue && Math.Abs(v.StartYear.Value - sampleYear.Value) <= 1)
-                                      ?? seriesResults.FirstOrDefault();
-                    }
-                    else
-                    {
-                        matchingVolume = seriesResults.FirstOrDefault();
-                    }
+                        string seriesKey = item.ParsedQuery.Series.Trim();
+                        var volumeIssuesTask = volumeCache.GetOrAdd(seriesKey, s => FetchVolumeIssuesForSeriesAsync(s, item.ParsedQuery.Year, ct));
+                        var volumeIssues = await volumeIssuesTask;
 
-                    if (matchingVolume != null)
-                    {
-                        // Fetch all issues for this volume
-                        var volumeIssues = (await _scraperService.FetchSeriesIssuesAsync(matchingVolume.VolumeId, 1, 100, null, ct)).ToList();
-
-                        // Fetch / compute online cover hashes for volume issues
-                        await PopulateCoverHashesForCandidatesAsync(volumeIssues.Take(50), ct);
-
-                        // Match each item in group against the volume issues
-                        foreach (var item in group)
+                        if (volumeIssues.Count > 0)
                         {
-                            ct.ThrowIfCancellationRequested();
                             item.Status = BulkScrapeItemStatus.ComparingVisuals;
-                            item.StatusMessage = $"Comparing with {matchingVolume.SeriesTitle}...";
+                            item.StatusMessage = "Comparing cover with series volume...";
 
                             var ranked = RankCandidatesAgainstLocalItem(item, volumeIssues, options);
-                            item.Candidates = ranked;
-
                             if (ranked.Count > 0)
                             {
+                                item.Candidates = ranked;
                                 var top = ranked[0];
                                 item.MatchedCandidate = top;
 
@@ -252,86 +261,60 @@ public class BulkScrapeQueueService
                                 {
                                     item.Status = BulkScrapeItemStatus.Matched;
                                     item.StatusMessage = $"Matched: {top.SeriesTitle} #{top.IssueNumber} (Visual: {top.VisualSimilarity:P0})";
+                                    matchedViaVolume = true;
                                 }
-                                else
-                                {
-                                    item.Status = BulkScrapeItemStatus.LowConfidence;
-                                    item.StatusMessage = $"Review needed (Confidence: {top.MatchConfidence:P0}, Visual: {top.VisualSimilarity:P0})";
-                                }
+                            }
+                        }
+                    }
+
+                    // Fallback to individual candidate search if volume matching did not yield a strong match
+                    if (!matchedViaVolume)
+                    {
+                        var candidates = (await _scraperService.SearchCandidatesAsync(item.ParsedQuery, ct)).ToList();
+                        if (candidates.Count == 0)
+                        {
+                            item.Status = BulkScrapeItemStatus.Unmatched;
+                            item.StatusMessage = "No results found";
+                        }
+                        else
+                        {
+                            if (item.LocalCoverHash != 0)
+                            {
+                                await PopulateCoverHashesForCandidatesAsync(candidates.Take(10), ct);
+                            }
+
+                            var ranked = RankCandidatesAgainstLocalItem(item, candidates, options);
+                            item.Candidates = ranked;
+                            var top = ranked[0];
+                            item.MatchedCandidate = top;
+
+                            if (top.VisualSimilarity >= options.VisualSimilarityThreshold || top.MatchConfidence >= options.ConfidenceThreshold)
+                            {
+                                item.Status = BulkScrapeItemStatus.Matched;
+                                item.StatusMessage = $"Matched: {top.SeriesTitle} #{top.IssueNumber} (Visual: {top.VisualSimilarity:P0})";
                             }
                             else
                             {
-                                item.Status = BulkScrapeItemStatus.Unmatched;
-                                item.StatusMessage = "No matching issue in volume";
+                                item.Status = BulkScrapeItemStatus.LowConfidence;
+                                item.StatusMessage = $"Review needed (Confidence: {top.MatchConfidence:P0}, Visual: {top.VisualSimilarity:P0})";
                             }
-
-                            processedSet.Add(item);
-                            ReportProgress(progress, queue, processedSet.Count, item, item.StatusMessage);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.LogWarning($"Smart series grouping error for '{seriesName}': {ex.Message}");
-                    // Items will fall back to Phase 3
+                    item.Status = BulkScrapeItemStatus.Error;
+                    item.StatusMessage = $"Error: {ex.Message}";
+                    item.ErrorMessage = ex.ToString();
+                    AppLogger.LogWarning($"Bulk scrape item error for '{item.FilePath}': {ex.Message}");
                 }
+
+                Interlocked.Increment(ref processedCount);
+                ReportProgress(progress, queue, processedCount, item, item.StatusMessage);
             }
-        }
+        }, ct);
 
-        // Phase 3: Process remaining items via individual search
-        var remainingItems = queue.Where(item => !processedSet.Contains(item)).ToList();
-        for (int i = 0; i < remainingItems.Count; i++)
-        {
-            ct.ThrowIfCancellationRequested();
-            var item = remainingItems[i];
-            item.Status = BulkScrapeItemStatus.SearchingComicVine;
-            item.StatusMessage = $"Searching '{item.ParsedQuery.Series} #{item.ParsedQuery.IssueNumber}'...";
-
-            ReportProgress(progress, queue, processedSet.Count, item, item.StatusMessage);
-
-            try
-            {
-                var candidates = (await _scraperService.SearchCandidatesAsync(item.ParsedQuery, ct)).ToList();
-
-                if (candidates.Count == 0)
-                {
-                    item.Status = BulkScrapeItemStatus.Unmatched;
-                    item.StatusMessage = "No results found";
-                }
-                else
-                {
-                    if (item.LocalCoverHash != 0)
-                    {
-                        await PopulateCoverHashesForCandidatesAsync(candidates.Take(10), ct);
-                    }
-
-                    var ranked = RankCandidatesAgainstLocalItem(item, candidates, options);
-                    item.Candidates = ranked;
-                    var top = ranked[0];
-                    item.MatchedCandidate = top;
-
-                    if (top.VisualSimilarity >= options.VisualSimilarityThreshold || top.MatchConfidence >= options.ConfidenceThreshold)
-                    {
-                        item.Status = BulkScrapeItemStatus.Matched;
-                        item.StatusMessage = $"Matched: {top.SeriesTitle} #{top.IssueNumber} (Visual: {top.VisualSimilarity:P0})";
-                    }
-                    else
-                    {
-                        item.Status = BulkScrapeItemStatus.LowConfidence;
-                        item.StatusMessage = $"Review needed (Confidence: {top.MatchConfidence:P0}, Visual: {top.VisualSimilarity:P0})";
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                item.Status = BulkScrapeItemStatus.Error;
-                item.StatusMessage = $"Error: {ex.Message}";
-                item.ErrorMessage = ex.ToString();
-            }
-
-            processedSet.Add(item);
-            ReportProgress(progress, queue, processedSet.Count, item, item.StatusMessage);
-        }
+        await Task.WhenAll(producerTask, consumerTask);
 
         // Populate summary metrics
         report.Matched = queue.Count(x => x.Status == BulkScrapeItemStatus.Matched);
@@ -341,6 +324,38 @@ public class BulkScrapeQueueService
 
         ReportProgress(progress, queue, queue.Count, null, $"Bulk scrape complete. {report.Matched} matched, {report.LowConfidence} need review.");
         return report;
+    }
+
+    private async Task<List<ComicSearchResult>> FetchVolumeIssuesForSeriesAsync(string seriesName, int? sampleYear, CancellationToken ct)
+    {
+        try
+        {
+            var seriesResults = (await _scraperService.SearchSeriesAsync(seriesName, ct)).ToList();
+            SeriesSearchResult? matchingVolume = null;
+
+            if (sampleYear.HasValue)
+            {
+                matchingVolume = seriesResults.FirstOrDefault(v => v.StartYear.HasValue && Math.Abs(v.StartYear.Value - sampleYear.Value) <= 1)
+                              ?? seriesResults.FirstOrDefault();
+            }
+            else
+            {
+                matchingVolume = seriesResults.FirstOrDefault();
+            }
+
+            if (matchingVolume != null)
+            {
+                var volumeIssues = (await _scraperService.FetchSeriesIssuesAsync(matchingVolume.VolumeId, 1, 100, null, ct)).ToList();
+                await PopulateCoverHashesForCandidatesAsync(volumeIssues.Take(50), ct);
+                return volumeIssues;
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogWarning($"Error fetching volume issues for series '{seriesName}': {ex.Message}");
+        }
+
+        return new List<ComicSearchResult>();
     }
 
     /// <summary>
