@@ -219,6 +219,67 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void BulkScrapeQueue_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            if (!await ApiKeyRequiredWindow.EnsureApiKeyConfiguredAsync(this))
+            {
+                return;
+            }
+
+            var targetComics = ComicsGrid.SelectedItems?.Cast<ComicItemViewModel>().ToList();
+            if (targetComics == null || targetComics.Count == 0)
+            {
+                targetComics = vm.Comics.ToList();
+            }
+
+            var filePaths = targetComics
+                .Where(c => !string.IsNullOrEmpty(c.FilePath))
+                .Select(c => c.FilePath)
+                .ToList();
+
+            if (filePaths.Count == 0)
+            {
+                // If no comics are loaded in the grid, prompt the user to select a folder
+                var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
+                if (storage != null)
+                {
+                    var folders = await storage.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions
+                    {
+                        Title = "Select Comic Folder to Bulk Scrape",
+                        AllowMultiple = false
+                    });
+
+                    if (folders.Count > 0)
+                    {
+                        string folderPath = folders[0].Path.LocalPath;
+                        filePaths = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories)
+                            .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
+                            .ToList();
+                    }
+                }
+            }
+
+            if (filePaths.Count == 0)
+            {
+                return;
+            }
+
+            var queueWindow = new BulkScrapeQueueWindow(filePaths);
+            await queueWindow.ShowDialog(this);
+
+            if (queueWindow.WasApplied)
+            {
+                // Reload comic metadata in the main grid
+                if (!string.IsNullOrEmpty(vm.SelectedDirectory))
+                {
+                    await vm.LoadDirectoryCommand.ExecuteAsync(null);
+                }
+            }
+        }
+    }
+
     private void InferMetadataFromFilenames_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainWindowViewModel vm)

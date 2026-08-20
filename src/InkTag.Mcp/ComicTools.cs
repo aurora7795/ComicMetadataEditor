@@ -196,4 +196,73 @@ public static class ComicTools
             writer = comic.Writer
         }, new JsonSerializerOptions { WriteIndented = true });
     }
+
+    [McpServerTool, Description("Queues and executes a bulk scrape on a folder using smart series volume clustering and perceptual cover visual matching.")]
+    public static string BulkScrapeDirectory(
+        [Description("Directory path containing comic archives")] string directory,
+        [Description("Merge mode: 'fill-missing' (default) or 'overwrite'")] string mode = "fill-missing",
+        [Description("If true, previews updates without writing to archives on disk")] bool dryRun = false,
+        [Description("If true, scans subdirectories recursively")] bool recursive = false,
+        [Description("Optional ComicVine API key")] string? apiKey = null)
+    {
+        if (!Directory.Exists(directory))
+        {
+            throw new DirectoryNotFoundException($"Directory not found: {directory}");
+        }
+
+        var settingsService = new InkTag.Core.Configuration.AppSettingsService();
+        if (!string.IsNullOrEmpty(apiKey))
+        {
+            settingsService.Settings.ComicVineApiKey = apiKey;
+        }
+
+        var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        var files = Directory.GetFiles(directory, "*.*", searchOption)
+            .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var scraperService = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);
+        var queueService = new InkTag.Core.Scrapers.BulkScrapeQueueService(scraperService, _editor, settingsService);
+        var queue = queueService.CreateQueue(files);
+
+        var mergeMode = string.Equals(mode, "overwrite", StringComparison.OrdinalIgnoreCase)
+            ? InkTag.Core.Scrapers.ScrapeMergeMode.OverwriteAll
+            : InkTag.Core.Scrapers.ScrapeMergeMode.FillMissingOnly;
+
+        var options = new InkTag.Core.Scrapers.BulkScrapeOptions
+        {
+            MergeMode = mergeMode,
+            ConfidenceThreshold = settingsService.Settings.AutoMatchConfidenceThreshold,
+            EnableSmartSeriesGrouping = true
+        };
+
+        var summaryReport = queueService.ProcessQueueAsync(queue, options).GetAwaiter().GetResult();
+
+        if (!dryRun)
+        {
+            queueService.ApplyMatchedMetadataAsync(queue, mergeMode).GetAwaiter().GetResult();
+        }
+
+        return JsonSerializer.Serialize(new
+        {
+            success = true,
+            directory,
+            dryRun,
+            totalFiles = summaryReport.Total,
+            matchedCount = summaryReport.Matched,
+            reviewNeededCount = summaryReport.LowConfidence,
+            unmatchedCount = summaryReport.Unmatched + summaryReport.Failed,
+            items = summaryReport.Items.Select(i => new
+            {
+                file = i.FilePath,
+                filename = i.Filename,
+                status = i.Status.ToString(),
+                matchedIssue = i.MatchedCandidate != null ? $"{i.MatchedCandidate.SeriesTitle} #{i.MatchedCandidate.IssueNumber}" : null,
+                issueTitle = i.MatchedCandidate?.IssueTitle,
+                visualSimilarity = i.MatchedCandidate?.VisualSimilarity,
+                matchConfidence = i.MatchedCandidate?.MatchConfidence,
+                message = i.StatusMessage
+            })
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
 }

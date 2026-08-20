@@ -55,6 +55,8 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
     private void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
 
     public bool WasApplied { get; private set; }
+    public ComicSearchResult? SelectedCandidate { get; private set; }
+    public ComicInfo? FetchedComic => _fetchedComic;
     public ObservableCollection<FieldDiffItem> FieldDiffs { get; } = new();
 
     public ScraperMatchWindow() : this(new ComicInfo())
@@ -358,6 +360,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
     {
         if (_fetchedComic == null) return;
 
+        SelectedCandidate = (CandidatesListBox.SelectedItem as CandidateItemViewModel)?.Result;
         var selectedFields = new HashSet<string>(FieldDiffs.Where(f => f.IsSelected).Select(f => f.FieldName));
         _scraperService.ApplyMetadata(_targetComic, _fetchedComic, ScrapeMergeMode.SelectiveFields, selectedFields);
         WasApplied = true;
@@ -368,6 +371,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
     {
         if (_fetchedComic == null) return;
 
+        SelectedCandidate = (CandidatesListBox.SelectedItem as CandidateItemViewModel)?.Result;
         _scraperService.ApplyMetadata(_targetComic, _fetchedComic, ScrapeMergeMode.OverwriteAll);
         WasApplied = true;
         Close();

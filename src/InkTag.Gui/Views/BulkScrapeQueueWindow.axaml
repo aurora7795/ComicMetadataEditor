@@ -1,0 +1,233 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:InkTag.Gui.ViewModels"
+        x:Class="InkTag.Gui.Views.BulkScrapeQueueWindow"
+        x:DataType="vm:BulkScrapeQueueViewModel"
+        Title="Bulk Scrape &amp; Cover Identification Queue"
+        Width="1100" Height="680"
+        WindowStartupLocation="CenterOwner"
+        Background="#1E1E1E" Foreground="White">
+
+  <Border Padding="16">
+    <Grid RowDefinitions="Auto, *, Auto">
+      
+      <!-- Top Control & Status Dashboard -->
+      <Border Grid.Row="0" Background="#252526" CornerRadius="6" Padding="14" Margin="0,0,0,12" BorderBrush="#333338" BorderThickness="1">
+        <Grid RowDefinitions="Auto, Auto">
+          
+          <!-- Summary Metrics & Actions Bar -->
+          <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto, Auto, Auto">
+            
+            <!-- Metric Chips -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <Border Background="#2D2D30" CornerRadius="4" Padding="10,6">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="Total:" Foreground="#AAAAAA" FontSize="12"/>
+                  <TextBlock Text="{Binding TotalCount}" FontWeight="Bold" Foreground="White" FontSize="12"/>
+                </StackPanel>
+              </Border>
+
+              <Border Background="#123B22" CornerRadius="4" Padding="10,6">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="🟢 Matched:" Foreground="#4EC9B0" FontSize="12"/>
+                  <TextBlock Text="{Binding MatchedCount}" FontWeight="Bold" Foreground="#4EC9B0" FontSize="12"/>
+                </StackPanel>
+              </Border>
+
+              <Border Background="#3B2E12" CornerRadius="4" Padding="10,6">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="🟡 Review Needed:" Foreground="#FFCC00" FontSize="12"/>
+                  <TextBlock Text="{Binding ReviewNeededCount}" FontWeight="Bold" Foreground="#FFCC00" FontSize="12"/>
+                </StackPanel>
+              </Border>
+
+              <Border Background="#2D2D30" CornerRadius="4" Padding="10,6">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="⚪ Unmatched:" Foreground="#888888" FontSize="12"/>
+                  <TextBlock Text="{Binding UnmatchedCount}" FontWeight="Bold" Foreground="#888888" FontSize="12"/>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+
+            <!-- Merge Mode Selector -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,16,0">
+              <TextBlock Text="Merge Mode:" VerticalAlignment="Center" Foreground="#AAAAAA" FontSize="12"/>
+              <ComboBox SelectedIndex="{Binding SelectedMergeModeIndex}" Width="170" IsEnabled="{Binding CanChangeSelection}">
+                <ComboBoxItem Content="Fill Missing Only"/>
+                <ComboBoxItem Content="Overwrite All Fields"/>
+              </ComboBox>
+            </StackPanel>
+
+            <!-- Start / Cancel Buttons -->
+            <Button Name="StartQueueButton" Grid.Column="3" Content="▶ Start Bulk Scrape" Click="StartQueue_Click"
+                    IsEnabled="{Binding CanStart}" Background="#007ACC" Foreground="White" FontWeight="Bold" Padding="14,8" CornerRadius="4" Margin="0,0,8,0"/>
+            <Button Name="CancelQueueButton" Grid.Column="4" Content="⏹ Cancel" Click="CancelQueue_Click"
+                    IsEnabled="{Binding IsRunning}" Background="#A80000" Foreground="White" Padding="12,8" CornerRadius="4"/>
+          </Grid>
+
+          <!-- Progress Bar & Status Text -->
+          <Grid Grid.Row="1" RowDefinitions="Auto, Auto" Margin="0,12,0,0">
+            <ProgressBar Grid.Row="0" Minimum="0" Maximum="100" Value="{Binding ProgressPercentage}" Height="6" CornerRadius="3"
+                         Foreground="#007ACC" Background="#333338" Margin="0,0,0,6"/>
+            <TextBlock Grid.Row="1" Text="{Binding ProgressStatus}" Foreground="#AAAAAA" FontSize="11" TextTrimming="CharacterEllipsis"/>
+          </Grid>
+
+        </Grid>
+      </Border>
+
+      <!-- Main Queue DataGrid -->
+      <Border Grid.Row="1" Background="#252526" CornerRadius="6" Padding="6" BorderBrush="#333338" BorderThickness="1">
+        <DataGrid Name="QueueDataGrid" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
+                  AutoGenerateColumns="False" CanUserResizeColumns="True" CanUserSortColumns="True"
+                  GridLinesVisibility="Horizontal" HeadersVisibility="Column" Background="#1E1E1E"
+                  BorderBrush="#3F3F46" BorderThickness="1">
+          
+          <DataGrid.Columns>
+            
+            <!-- Checkbox Selection -->
+            <DataGridTemplateColumn Header="Apply" Width="55">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
+                  <CheckBox IsChecked="{Binding IsSelected}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!-- Local Cover Thumbnail -->
+            <DataGridTemplateColumn Header="Local Cover" Width="75">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
+                  <Border Width="40" Height="58" Background="#181818" CornerRadius="3" ClipToBounds="True" Margin="4"
+                          HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip.ShowDelay="100">
+                    <ToolTip.Tip>
+                      <Border Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="4" Padding="6" MaxWidth="280">
+                        <StackPanel Spacing="6">
+                          <Image Source="{Binding LocalThumbnail}" Height="320" Stretch="Uniform"
+                                 IsVisible="{Binding LocalThumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                          <TextBlock Text="No Local Cover" Foreground="#888" TextAlignment="Center"
+                                     IsVisible="{Binding LocalThumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
+                          <TextBlock Text="{Binding Filename}" FontWeight="Bold" Foreground="White" TextWrapping="Wrap" FontSize="11"/>
+                        </StackPanel>
+                      </Border>
+                    </ToolTip.Tip>
+                    <Panel>
+                      <TextBlock Text="No Cover" FontSize="8" Foreground="#555" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                 IsVisible="{Binding LocalThumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
+                      <Image Source="{Binding LocalThumbnail}" Stretch="UniformToFill"
+                             IsVisible="{Binding LocalThumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    </Panel>
+                  </Border>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!-- Archive File & Parsed Query -->
+            <DataGridTemplateColumn Header="Archive File / Detected Query" Width="240">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
+                  <StackPanel Spacing="3" VerticalAlignment="Center" Margin="6,0">
+                    <TextBlock Text="{Binding Filename}" FontWeight="Bold" Foreground="White" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Text="{Binding ParsedSeries}" Foreground="#3592FF" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Text="{Binding ParsedIssue, StringFormat='#{0}'}" Foreground="#AAAAAA" FontSize="11"/>
+                    </StackPanel>
+                  </StackPanel>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!-- Matched Cover Thumbnail -->
+            <DataGridTemplateColumn Header="Online Cover" Width="85">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
+                  <Border Width="40" Height="58" Background="#181818" CornerRadius="3" ClipToBounds="True" Margin="4"
+                          HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip.ShowDelay="100">
+                    <ToolTip.Tip>
+                      <Border Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="4" Padding="6" MaxWidth="280">
+                        <StackPanel Spacing="6">
+                          <Image Source="{Binding MatchedThumbnail}" Height="320" Stretch="Uniform"
+                                 IsVisible="{Binding MatchedThumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                          <TextBlock Text="No Cover Found" Foreground="#888" TextAlignment="Center"
+                                     IsVisible="{Binding MatchedThumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
+                          <TextBlock Text="{Binding MatchedSeriesAndIssue}" FontWeight="Bold" Foreground="White" TextWrapping="Wrap" FontSize="11"/>
+                          <TextBlock Text="{Binding MatchedIssueTitle}" Foreground="#4EC9B0" TextWrapping="Wrap" FontSize="10"/>
+                        </StackPanel>
+                      </Border>
+                    </ToolTip.Tip>
+                    <Panel>
+                      <TextBlock Text="No Match" FontSize="8" Foreground="#555" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                 IsVisible="{Binding MatchedThumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
+                      <Image Source="{Binding MatchedThumbnail}" Stretch="UniformToFill"
+                             IsVisible="{Binding MatchedThumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    </Panel>
+                  </Border>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!-- Matched Issue Result -->
+            <DataGridTemplateColumn Header="Matched ComicVine Issue" Width="*">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
+                  <StackPanel Spacing="3" VerticalAlignment="Center" Margin="6,0">
+                    <TextBlock Text="{Binding MatchedSeriesAndIssue}" FontWeight="Bold" Foreground="White" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding MatchedIssueTitle}" Foreground="#AAAAAA" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                  </StackPanel>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!-- Visual Similarity Badge -->
+            <DataGridTemplateColumn Header="Visual Match" Width="110">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
+                  <Border Background="{Binding VisualBadgeBackground}" CornerRadius="10" Padding="8,3"
+                          HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding VisualSimilarityBadge}" FontSize="11" FontWeight="Bold" Foreground="White"/>
+                  </Border>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!-- Status Badge -->
+            <DataGridTemplateColumn Header="Status" Width="120">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
+                  <Border Background="{Binding StatusBadgeBackground}" CornerRadius="10" Padding="8,3"
+                          HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip.Tip="{Binding StatusMessage}">
+                    <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="Medium" Foreground="White"/>
+                  </Border>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!-- Change Match Action -->
+            <DataGridTemplateColumn Header="Action" Width="110">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
+                  <Button Content="Tweak..." Click="ChangeMatch_Click" Padding="8,4" CornerRadius="4"
+                          Background="#333338" Foreground="#CDD6F4" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+          </DataGrid.Columns>
+        </DataGrid>
+      </Border>
+
+      <!-- Bottom Confirmation Actions Bar -->
+      <Border Grid.Row="2" Background="#252526" CornerRadius="6" Padding="12,10" Margin="0,12,0,0" BorderBrush="#333338" BorderThickness="1">
+        <Grid ColumnDefinitions="Auto, *, Auto, Auto">
+          
+          <CheckBox Grid.Column="0" Content="Select / Deselect All" IsChecked="{Binding SelectAll}" VerticalAlignment="Center"/>
+
+          <Button Name="ApplyButton" Grid.Column="2" Content="💾 Apply Matched to Comic Archives" Click="ApplyMatched_Click"
+                  IsEnabled="{Binding CanApply}" Background="#107C41" Foreground="White" FontWeight="Bold" Padding="16,9" CornerRadius="4" Margin="0,0,10,0"/>
+
+          <Button Grid.Column="3" Content="Close" Click="Close_Click" Padding="14,9" CornerRadius="4" Background="#3A3A3C" Foreground="White"/>
+        </Grid>
+      </Border>
+
+    </Grid>
+  </Border>
+</Window>

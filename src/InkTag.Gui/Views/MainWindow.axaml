@@ -108,6 +108,7 @@
       <MenuItem Header="_Tools">
         <MenuItem Header="🔍 _Scrape Metadata (ComicVine)..." Click="ScrapeMetadata_Click"/>
         <MenuItem Header="🧙 Series _Search Wizard..." Click="SeriesSearchWizard_Click"/>
+        <MenuItem Header="📚 _Bulk Scrape Queue..." Click="BulkScrapeQueue_Click"/>
         <MenuItem Header="🏷️ _Infer Metadata from Filename(s)" Click="InferMetadataFromFilenames_Click"/>
         <Separator/>
         <MenuItem Header="Open _Logs Directory" Command="{Binding OpenLogsCommand}"/>
@@ -160,6 +161,13 @@
             </StackPanel>
           </Button>
 
+          <Button Click="BulkScrapeQueue_Click" Padding="8,5" Background="#107C41" Foreground="White" CornerRadius="4" ToolTip.Tip="Bulk Scrape Queue" IsEnabled="{Binding !IsLoading}">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Text="📚" VerticalAlignment="Center"/>
+              <TextBlock Text="Bulk Scrape" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+
           <Button Click="SeriesSearchWizard_Click" Padding="8,5" Background="#313244" Foreground="#CDD6F4" CornerRadius="4" ToolTip.Tip="Series Search Wizard" IsEnabled="{Binding !IsLoading}">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Text="🧙" VerticalAlignment="Center"/>
@@ -202,6 +210,7 @@
             <ContextMenu>
               <MenuItem Header="🔍 Scrape Metadata (ComicVine)..." Click="ScrapeMetadata_Click"/>
               <MenuItem Header="🧙 Series Search Wizard..." Click="SeriesSearchWizard_Click"/>
+              <MenuItem Header="📚 Bulk Scrape Selected..." Click="BulkScrapeQueue_Click"/>
               <Separator/>
               <MenuItem Header="🏷️ Infer Metadata from Filename(s)" Click="InferMetadataFromFilenames_Click"/>
             </ContextMenu>

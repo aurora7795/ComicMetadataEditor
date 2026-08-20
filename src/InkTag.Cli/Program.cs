@@ -341,36 +341,28 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
                              .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
                              .ToList();
 
-        int successCount = 0;
-        int failCount = 0;
-        var resultsList = new List<object>();
-
-        foreach (var file in files)
+        var queueService = new InkTag.Core.Scrapers.BulkScrapeQueueService(scraperService, editor, settingsService);
+        var queue = queueService.CreateQueue(files);
+        var options = new InkTag.Core.Scrapers.BulkScrapeOptions
         {
-            try
+            MergeMode = mergeMode,
+            ConfidenceThreshold = settingsService.Settings.AutoMatchConfidenceThreshold,
+            EnableSmartSeriesGrouping = true
+        };
+
+        var progress = new Progress<InkTag.Core.Scrapers.BulkScrapeProgressReport>(report =>
+        {
+            if (!isJson)
             {
-                var comic = editor.ReadMetadata(file);
-                ulong coverHash = editor.GetCoverHash(file);
-                var result = scraperService.AutoScrapeComicAsync(comic, coverHash != 0 ? coverHash : null, file).GetAwaiter().GetResult();
-                if (result.Success)
-                {
-                    if (!isDryRun)
-                    {
-                        editor.EditMetadata(file, existing => scraperService.ApplyMetadata(existing, comic, mergeMode));
-                    }
-                    successCount++;
-                }
-                else
-                {
-                    failCount++;
-                }
-                resultsList.Add(new { file, success = result.Success, message = result.Message });
+                Console.WriteLine($"[{report.ProcessedItems}/{report.TotalItems}] {report.StatusMessage}");
             }
-            catch (Exception ex)
-            {
-                failCount++;
-                resultsList.Add(new { file, success = false, message = ex.Message });
-            }
+        });
+
+        var summaryReport = queueService.ProcessQueueAsync(queue, options, progress).GetAwaiter().GetResult();
+
+        if (!isDryRun)
+        {
+            queueService.ApplyMatchedMetadataAsync(queue, mergeMode).GetAwaiter().GetResult();
         }
 
         if (isJson)
@@ -379,16 +371,30 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
             {
                 success = true,
                 dryRun = isDryRun,
-                totalFiles = files.Count,
-                scrapedCount = successCount,
-                failedCount = failCount,
-                details = resultsList
+                totalFiles = summaryReport.Total,
+                scrapedCount = summaryReport.Matched,
+                reviewNeeded = summaryReport.LowConfidence,
+                failedCount = summaryReport.Unmatched + summaryReport.Failed,
+                details = summaryReport.Items.Select(i => new
+                {
+                    file = i.FilePath,
+                    status = i.Status.ToString(),
+                    matchedIssue = i.MatchedCandidate != null ? $"{i.MatchedCandidate.SeriesTitle} #{i.MatchedCandidate.IssueNumber}" : null,
+                    visualSimilarity = i.MatchedCandidate?.VisualSimilarity,
+                    matchConfidence = i.MatchedCandidate?.MatchConfidence,
+                    message = i.StatusMessage
+                })
             };
             Console.WriteLine(JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true }));
         }
         else
         {
-            Console.WriteLine($"Scraped {successCount}/{files.Count} files successfully ({failCount} skipped/failed).");
+            Console.WriteLine($"\n--- Bulk Scrape Complete ---");
+            Console.WriteLine($"Total: {summaryReport.Total} | Matched: {summaryReport.Matched} | Review Needed: {summaryReport.LowConfidence} | Unmatched: {summaryReport.Unmatched + summaryReport.Failed}");
+            if (isDryRun)
+            {
+                Console.WriteLine("(Dry run: no changes written to files)");
+            }
         }
     }
     else
