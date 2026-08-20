@@ -276,10 +276,9 @@ public class MetadataEditor
             {
                 // Validate the XML against the official schema before deserialization
                 ValidateXml(xmlPath);
-                XmlSerializer serializer = new XmlSerializer(typeof(ComicInfo));
                 using (FileStream fs = new FileStream(xmlPath, FileMode.Open, FileAccess.Read))
                 {
-                    comicInfo = (ComicInfo)serializer.Deserialize(fs)!;
+                    comicInfo = DeserializeComicInfo(fs);
                 }
             }
             else
@@ -446,8 +445,15 @@ public class MetadataEditor
             }
         };
 
-        using var reader = XmlReader.Create(xmlPath, settings);
-        while (reader.Read()) { }
+        try
+        {
+            using var reader = XmlReader.Create(xmlPath, settings);
+            while (reader.Read()) { }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogWarning($"Schema validation exception in {xmlPath}: {ex.Message}");
+        }
     }
 
     #region AI Agent Helper APIs

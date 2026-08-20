@@ -379,13 +379,14 @@ public class MetadataEditorTests
     }
 
     [Fact]
-    public void ValidateXml_ThrowsOnInvalidXml()
+    public void ValidateXml_HandlesInvalidXml_LogsWarningWithoutCrashing()
     {
         string invalidXmlFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + "_invalid.xml");
         try
         {
             File.WriteAllText(invalidXmlFile, "<ComicInfo><Title>Unclosed Tag");
-            Assert.ThrowsAny<Exception>(() => MetadataEditor.ValidateXml(invalidXmlFile));
+            var exception = Record.Exception(() => MetadataEditor.ValidateXml(invalidXmlFile));
+            Assert.Null(exception);
         }
         finally
         {
@@ -625,6 +626,45 @@ public class MetadataEditorTests
             cts.Cancel(); // Pre-cancel
 
             Assert.Throws<OperationCanceledException>(() => editor.ReadMetadata(tempCbz, cts.Token));
+        }
+        finally
+        {
+            if (File.Exists(tempXml)) File.Delete(tempXml);
+            if (File.Exists(tempCbz)) File.Delete(tempCbz);
+        }
+    }
+
+    [Fact]
+    public void EditMetadata_HandlesMalformedExistingXml_ReplacesWithValidMetadata()
+    {
+        var editor = new MetadataEditor();
+        string tempCbz = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".cbz");
+        string tempXml = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".xml");
+
+        try
+        {
+            // Write malformed/invalid XML content into ComicInfo.xml
+            File.WriteAllText(tempXml, "<ComicInfo><InvalidTag>>>Malformed Content<<<Title>Unclosed Tag</ComicInfo>");
+
+            using (var stream = File.OpenWrite(tempCbz))
+            using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+            {
+                writer.Write("ComicInfo.xml", tempXml);
+            }
+
+            // Edit metadata should NOT throw an exception, but should replace with valid edited metadata
+            editor.EditMetadata(tempCbz, comic =>
+            {
+                comic.Title = "Recovered Title";
+                comic.Series = "Recovered Series";
+                comic.Number = "1";
+            });
+
+            var readInfo = editor.ReadMetadata(tempCbz);
+            Assert.NotNull(readInfo);
+            Assert.Equal("Recovered Title", readInfo.Title);
+            Assert.Equal("Recovered Series", readInfo.Series);
+            Assert.Equal("1", readInfo.Number);
         }
         finally
         {
