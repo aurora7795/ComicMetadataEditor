@@ -358,7 +358,7 @@ public class BulkScrapeQueueService
             {
                 matchingVolume = seriesResults
                     .Where(v => v.StartYear.HasValue && v.StartYear.Value <= sampleYear.Value)
-                    .OrderByDescending(v => v.StartYear.Value)
+                    .OrderByDescending(v => v.StartYear ?? 0)
                     .FirstOrDefault()
                     ?? seriesResults.FirstOrDefault(v => v.StartYear.HasValue && Math.Abs(v.StartYear.Value - sampleYear.Value) <= 1)
                     ?? seriesResults.FirstOrDefault();

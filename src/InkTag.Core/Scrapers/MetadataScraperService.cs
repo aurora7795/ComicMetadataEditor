@@ -48,7 +48,7 @@ public class MetadataScraperService
                 var volumes = (await _provider.SearchSeriesAsync(query.Series, apiKey, ct)).ToList();
                 var matchingVolume = volumes
                     .Where(v => v.StartYear.HasValue && v.StartYear.Value <= query.Year.Value)
-                    .OrderByDescending(v => v.StartYear.Value)
+                    .OrderByDescending(v => v.StartYear ?? 0)
                     .FirstOrDefault()
                     ?? volumes.FirstOrDefault(v => v.StartYear.HasValue && Math.Abs(v.StartYear.Value - query.Year.Value) <= 1)
                     ?? volumes.FirstOrDefault();
