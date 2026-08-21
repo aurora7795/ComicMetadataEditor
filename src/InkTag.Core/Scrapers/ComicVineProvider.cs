@@ -96,12 +96,23 @@ public class ComicVineProvider : IMetadataScraperProvider
 
         string cleanVolumeId = volumeId.StartsWith("4050-") ? volumeId.Substring(5) : volumeId;
         int offset = Math.Max(0, (page - 1) * pageSize);
-        string cacheKey = $"cv_series_issues_{cleanVolumeId}_p{page}_s{pageSize}";
+        
+        string issueFilter = string.Empty;
+        if (!string.IsNullOrWhiteSpace(query?.IssueNumber))
+        {
+            string cleanNum = NormalizeIssueNumber(query.IssueNumber);
+            if (!string.IsNullOrEmpty(cleanNum))
+            {
+                issueFilter = $",issue_number:{Uri.EscapeDataString(cleanNum)}";
+            }
+        }
+
+        string cacheKey = $"cv_series_issues_{cleanVolumeId}_p{page}_s{pageSize}_i{query?.IssueNumber ?? ""}";
 
         string? json = _cache?.Get(cacheKey, _cacheDuration);
         if (string.IsNullOrEmpty(json))
         {
-            string url = $"https://comicvine.gamespot.com/api/issues/?api_key={Uri.EscapeDataString(apiKey)}&format=json&filter=volume:{cleanVolumeId}&limit={pageSize}&offset={offset}&sort=issue_number:asc";
+            string url = $"https://comicvine.gamespot.com/api/issues/?api_key={Uri.EscapeDataString(apiKey)}&format=json&filter=volume:{cleanVolumeId}{issueFilter}&limit={pageSize}&offset={offset}&sort=cover_date:asc";
             json = await _httpClient.GetStringAsync(url, ct);
             _cache?.Set(cacheKey, json);
         }
@@ -558,8 +569,8 @@ public class ComicVineProvider : IMetadataScraperProvider
         return comic;
     }
 
-    private static string CleanString(string input) => Regex.Replace(input, @"[^\w\s]", "").Trim();
-    private static string NormalizeIssueNumber(string input) => Regex.Replace(input, @"^[^\d]+", "").TrimStart('0');
+    public static string CleanString(string input) => Regex.Replace(input, @"[^\w\s]", "").Trim();
+    public static string NormalizeIssueNumber(string input) => Regex.Replace(input, @"^[^\d]+", "").TrimStart('0');
 
     private static string StripHtml(string html)
     {

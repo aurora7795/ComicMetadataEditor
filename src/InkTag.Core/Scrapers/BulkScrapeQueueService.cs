@@ -248,10 +248,30 @@ public class BulkScrapeQueueService
 
                         if (volumeIssues.Count > 0)
                         {
+                            var candidatePool = volumeIssues.ToList();
+                            if (!string.IsNullOrWhiteSpace(item.ParsedQuery.IssueNumber))
+                            {
+                                string cleanTargetNum = ComicVineProvider.NormalizeIssueNumber(item.ParsedQuery.IssueNumber);
+                                if (!candidatePool.Any(i => ComicVineProvider.NormalizeIssueNumber(i.IssueNumber) == cleanTargetNum))
+                                {
+                                    try
+                                    {
+                                        string volumeId = volumeIssues.First().VolumeId;
+                                        var specific = (await _scraperService.FetchSeriesIssuesAsync(volumeId, 1, 10, item.ParsedQuery, ct)).ToList();
+                                        await PopulateCoverHashesForCandidatesAsync(specific, ct);
+                                        candidatePool.AddRange(specific);
+                                    }
+                                    catch
+                                    {
+                                        // Fallback to standard volume issues
+                                    }
+                                }
+                            }
+
                             item.Status = BulkScrapeItemStatus.ComparingVisuals;
                             item.StatusMessage = "Comparing cover with series volume...";
 
-                            var ranked = RankCandidatesAgainstLocalItem(item, volumeIssues, options);
+                            var ranked = RankCandidatesAgainstLocalItem(item, candidatePool, options);
                             if (ranked.Count > 0)
                             {
                                 item.Candidates = ranked;
@@ -336,8 +356,12 @@ public class BulkScrapeQueueService
 
             if (sampleYear.HasValue)
             {
-                matchingVolume = seriesResults.FirstOrDefault(v => v.StartYear.HasValue && Math.Abs(v.StartYear.Value - sampleYear.Value) <= 1)
-                              ?? seriesResults.FirstOrDefault();
+                matchingVolume = seriesResults
+                    .Where(v => v.StartYear.HasValue && v.StartYear.Value <= sampleYear.Value)
+                    .OrderByDescending(v => v.StartYear.Value)
+                    .FirstOrDefault()
+                    ?? seriesResults.FirstOrDefault(v => v.StartYear.HasValue && Math.Abs(v.StartYear.Value - sampleYear.Value) <= 1)
+                    ?? seriesResults.FirstOrDefault();
             }
             else
             {

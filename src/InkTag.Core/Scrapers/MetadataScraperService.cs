@@ -45,8 +45,13 @@ public class MetadataScraperService
         {
             try
             {
-                var volumes = await _provider.SearchSeriesAsync(query.Series, apiKey, ct);
-                var matchingVolume = volumes.FirstOrDefault(v => v.StartYear.HasValue && Math.Abs(v.StartYear.Value - query.Year.Value) <= 1);
+                var volumes = (await _provider.SearchSeriesAsync(query.Series, apiKey, ct)).ToList();
+                var matchingVolume = volumes
+                    .Where(v => v.StartYear.HasValue && v.StartYear.Value <= query.Year.Value)
+                    .OrderByDescending(v => v.StartYear.Value)
+                    .FirstOrDefault()
+                    ?? volumes.FirstOrDefault(v => v.StartYear.HasValue && Math.Abs(v.StartYear.Value - query.Year.Value) <= 1)
+                    ?? volumes.FirstOrDefault();
                 
                 if (matchingVolume != null)
                 {
@@ -147,10 +152,10 @@ public class MetadataScraperService
 
             await Task.WhenAll(tasks);
 
-            // Re-order candidates so the highest visual match is at the top, then by overall confidence
+            // Re-order candidates primarily by overall MatchConfidence, then by visual match
             candidates = candidates
-                .OrderByDescending(c => c.VisualSimilarity ?? 0.0)
-                .ThenByDescending(c => c.MatchConfidence)
+                .OrderByDescending(c => c.MatchConfidence)
+                .ThenByDescending(c => c.VisualSimilarity ?? 0.0)
                 .ToList();
         }
 
