@@ -72,6 +72,15 @@
             <TextBlock Grid.Row="1" Text="{Binding ProgressStatus}" Foreground="#AAAAAA" FontSize="11" TextTrimming="CharacterEllipsis"/>
           </Grid>
 
+          <!-- Success Completion Banner -->
+          <Border Grid.Row="2" Background="#123B22" BorderBrush="#107C41" BorderThickness="1" CornerRadius="4"
+                  Padding="12,8" Margin="0,12,0,0" IsVisible="{Binding IsSuccessBannerVisible}">
+            <Grid ColumnDefinitions="*, Auto">
+              <TextBlock Text="{Binding SuccessBannerMessage}" Foreground="#4EC9B0" FontWeight="SemiBold" VerticalAlignment="Center"/>
+              <Button Grid.Column="1" Content="✓ Return to Grid" Click="Close_Click" Padding="12,5" Background="#107C41" Foreground="White" CornerRadius="3"/>
+            </Grid>
+          </Border>
+
         </Grid>
       </Border>
 
@@ -117,40 +126,33 @@
                         <StackPanel Spacing="6">
                           <Image Source="{Binding LocalThumbnail}" Height="320" Stretch="Uniform"
                                  IsVisible="{Binding LocalThumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                          <TextBlock Text="No Local Cover" Foreground="#888" TextAlignment="Center"
+                          <TextBlock Text="No Cover Extracted" Foreground="Gray" HorizontalAlignment="Center"
                                      IsVisible="{Binding LocalThumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
-                          <TextBlock Text="{Binding Filename}" FontWeight="Bold" Foreground="White" TextWrapping="Wrap" FontSize="11"/>
+                          <TextBlock Text="{Binding Filename}" Foreground="White" FontSize="11" TextWrapping="Wrap"/>
+                          <TextBlock Text="{Binding StatusMessage}" Foreground="#AAAAAA" FontSize="10"/>
                         </StackPanel>
                       </Border>
                     </ToolTip.Tip>
-                    <Panel>
-                      <TextBlock Text="No Cover" FontSize="8" Foreground="#555" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                 IsVisible="{Binding LocalThumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
-                      <Image Source="{Binding LocalThumbnail}" Stretch="UniformToFill"
-                             IsVisible="{Binding LocalThumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                    </Panel>
+                    <Image Source="{Binding LocalThumbnail}" Stretch="UniformToFill"/>
                   </Border>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
 
             <!-- Archive File & Parsed Query -->
-            <DataGridTemplateColumn Header="Archive File / Detected Query" Width="260">
+            <DataGridTemplateColumn Header="Archive File / Detected Query" Width="*">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
-                  <StackPanel Spacing="3" VerticalAlignment="Center" Margin="6,0">
-                    <TextBlock Text="{Binding Filename}" FontWeight="Bold" Foreground="White" FontSize="12" TextTrimming="CharacterEllipsis"/>
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                      <TextBlock Text="{Binding ParsedSeries}" Foreground="#3592FF" FontSize="11" TextTrimming="CharacterEllipsis"/>
-                      <TextBlock Text="{Binding ParsedIssue, StringFormat='#{0}'}" Foreground="#AAAAAA" FontSize="11"/>
-                    </StackPanel>
+                  <StackPanel VerticalAlignment="Center" Margin="8,0">
+                    <TextBlock Text="{Binding Filename}" FontWeight="SemiBold" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding ParsedQueryText}" FontSize="11" Foreground="#569CD6" Margin="0,2,0,0"/>
                   </StackPanel>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
 
             <!-- Matched Cover Thumbnail -->
-            <DataGridTemplateColumn Header="Online Cover" Width="105">
+            <DataGridTemplateColumn Header="Online Cover" Width="90">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
                   <Border Width="40" Height="58" Background="#181818" CornerRadius="3" ClipToBounds="True" Margin="4"
@@ -160,19 +162,14 @@
                         <StackPanel Spacing="6">
                           <Image Source="{Binding MatchedThumbnail}" Height="320" Stretch="Uniform"
                                  IsVisible="{Binding MatchedThumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                          <TextBlock Text="No Cover Found" Foreground="#888" TextAlignment="Center"
+                          <TextBlock Text="No Online Cover" Foreground="Gray" HorizontalAlignment="Center"
                                      IsVisible="{Binding MatchedThumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
-                          <TextBlock Text="{Binding MatchedSeriesAndIssue}" FontWeight="Bold" Foreground="White" TextWrapping="Wrap" FontSize="11"/>
-                          <TextBlock Text="{Binding MatchedIssueTitle}" Foreground="#4EC9B0" TextWrapping="Wrap" FontSize="10"/>
+                          <TextBlock Text="{Binding MatchedTitle}" Foreground="White" FontSize="11" FontWeight="Bold" TextWrapping="Wrap"/>
+                          <TextBlock Text="{Binding MatchedIssueTitle}" Foreground="#CCCCCC" FontSize="11" TextWrapping="Wrap"/>
                         </StackPanel>
                       </Border>
                     </ToolTip.Tip>
-                    <Panel>
-                      <TextBlock Text="No Match" FontSize="8" Foreground="#555" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                 IsVisible="{Binding MatchedThumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
-                      <Image Source="{Binding MatchedThumbnail}" Stretch="UniformToFill"
-                             IsVisible="{Binding MatchedThumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                    </Panel>
+                    <Image Source="{Binding MatchedThumbnail}" Stretch="UniformToFill"/>
                   </Border>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
@@ -182,9 +179,10 @@
             <DataGridTemplateColumn Header="Matched ComicVine Issue" Width="*">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
-                  <StackPanel Spacing="3" VerticalAlignment="Center" Margin="6,0">
-                    <TextBlock Text="{Binding MatchedSeriesAndIssue}" FontWeight="Bold" Foreground="White" FontSize="12" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding MatchedIssueTitle}" Foreground="#AAAAAA" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                  <StackPanel VerticalAlignment="Center" Margin="8,0">
+                    <TextBlock Text="{Binding MatchedTitle}" FontWeight="SemiBold" Foreground="#4EC9B0" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding MatchedIssueTitle}" FontSize="11" Foreground="#AAAAAA" Margin="0,2,0,0"
+                               IsVisible="{Binding MatchedIssueTitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                   </StackPanel>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
@@ -194,9 +192,10 @@
             <DataGridTemplateColumn Header="Visual Match" Width="110">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
-                  <Border Background="{Binding VisualBadgeBackground}" CornerRadius="10" Padding="8,3"
-                          HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding VisualSimilarityBadge}" FontSize="11" FontWeight="Bold" Foreground="White"/>
+                  <Border Background="{Binding VisualBadgeBackground}" CornerRadius="3" Padding="6,2"
+                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                          IsVisible="{Binding VisualMatchText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock Text="{Binding VisualMatchText}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
                   </Border>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
@@ -241,8 +240,8 @@
                     IsVisible="{Binding AlsoRenameFiles}" VerticalAlignment="Center" MaxWidth="280"
                     Background="#1E1E1E" Foreground="White" BorderBrush="#3F3F46" Margin="0,0,10,0"/>
 
-          <Button Name="ApplyButton" Grid.Column="4" Content="💾 Apply Matched to Comic Archives" Click="ApplyMatched_Click"
-                  IsEnabled="{Binding CanApply}" Background="#107C41" Foreground="White" FontWeight="Bold" Padding="16,9" CornerRadius="4" Margin="0,0,10,0"/>
+          <Button Name="ApplyButton" Grid.Column="4" Content="{Binding ApplyButtonText}" Click="ApplyMatched_Click"
+                  IsEnabled="{Binding CanApply}" Background="{Binding ApplyButtonBackground}" Foreground="White" FontWeight="Bold" Padding="16,9" CornerRadius="4" Margin="0,0,10,0"/>
 
           <Button Grid.Column="5" Content="Close" Click="Close_Click" Padding="14,9" CornerRadius="4" Background="#3A3A3C" Foreground="White"/>
         </Grid>

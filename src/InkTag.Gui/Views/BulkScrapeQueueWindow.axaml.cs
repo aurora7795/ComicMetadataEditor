@@ -82,6 +82,12 @@ public partial class BulkScrapeQueueWindow : Window
     {
         if (DataContext is BulkScrapeQueueViewModel vm)
         {
+            if (vm.IsAllDone)
+            {
+                Close();
+                return;
+            }
+
             int savedCount = await vm.ApplyMatchedAsync();
             if (savedCount > 0)
             {

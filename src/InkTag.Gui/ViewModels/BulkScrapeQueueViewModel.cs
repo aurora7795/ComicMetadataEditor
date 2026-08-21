@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using InkTag.Core.Configuration;
 using InkTag.Core.Scrapers;
@@ -36,13 +37,52 @@ public class BulkScrapeQueueViewModel : ObservableObject
                 OnPropertyChanged(nameof(CanStart));
                 OnPropertyChanged(nameof(CanApply));
                 OnPropertyChanged(nameof(CanChangeSelection));
+                OnPropertyChanged(nameof(ApplyButtonText));
+                OnPropertyChanged(nameof(ApplyButtonBackground));
             }
         }
     }
 
+    private bool _isSuccessBannerVisible;
+    public bool IsSuccessBannerVisible
+    {
+        get => _isSuccessBannerVisible;
+        set => SetProperty(ref _isSuccessBannerVisible, value);
+    }
+
+    private string _successBannerMessage = string.Empty;
+    public string SuccessBannerMessage
+    {
+        get => _successBannerMessage;
+        set => SetProperty(ref _successBannerMessage, value);
+    }
+
+    public bool HasUnsavedMatches => Items.Any(i => i.IsSelected && i.MatchedCandidate != null && i.Status != BulkScrapeItemStatus.Saved);
+    public bool HasAnySavedItems => Items.Any(i => i.Status == BulkScrapeItemStatus.Saved);
+    public bool IsAllDone => HasAnySavedItems && !HasUnsavedMatches;
+
     public bool CanStart => !IsRunning && Items.Any(i => i.IsSelected);
-    public bool CanApply => !IsRunning && Items.Any(i => i.IsSelected && i.MatchedCandidate != null);
+    public bool CanApply => !IsRunning && (HasUnsavedMatches || IsAllDone);
     public bool CanChangeSelection => !IsRunning;
+
+    public string ApplyButtonText
+    {
+        get
+        {
+            if (IsAllDone) return "✓ Done (Close Window)";
+            if (IsRunning) return "Saving...";
+            return "💾 Apply Matched to Comic Archives";
+        }
+    }
+
+    public IBrush ApplyButtonBackground
+    {
+        get
+        {
+            if (IsAllDone) return new SolidColorBrush(Color.Parse("#007ACC"));
+            return new SolidColorBrush(Color.Parse("#107C41"));
+        }
+    }
 
     private double _progressPercentage;
     public double ProgressPercentage
@@ -316,6 +356,11 @@ public class BulkScrapeQueueViewModel : ObservableObject
             }, _cts.Token);
 
             ProgressStatus = $"Successfully saved metadata to {count} files.";
+            if (count > 0)
+            {
+                SuccessBannerMessage = $"✓ Successfully saved {count} comic archive(s). Click Done to return to the grid.";
+                IsSuccessBannerVisible = true;
+            }
             return count;
         }
         catch (OperationCanceledException)
@@ -334,9 +379,12 @@ public class BulkScrapeQueueViewModel : ObservableObject
             foreach (var itemVm in Items)
             {
                 itemVm.SyncFromItem();
+                if (itemVm.Status == BulkScrapeItemStatus.Saved)
+                {
+                    itemVm.IsSelected = false; // Auto-uncheck saved items to prevent accidental duplicate saves
+                }
             }
             UpdateCounts();
-            OnPropertyChanged(nameof(CanApply));
         }
     }
 
@@ -345,6 +393,11 @@ public class BulkScrapeQueueViewModel : ObservableObject
         MatchedCount = Items.Count(i => i.Status == BulkScrapeItemStatus.Matched || i.Status == BulkScrapeItemStatus.Saved);
         ReviewNeededCount = Items.Count(i => i.Status == BulkScrapeItemStatus.LowConfidence);
         UnmatchedCount = Items.Count(i => i.Status == BulkScrapeItemStatus.Unmatched || i.Status == BulkScrapeItemStatus.Error);
+        OnPropertyChanged(nameof(HasUnsavedMatches));
+        OnPropertyChanged(nameof(HasAnySavedItems));
+        OnPropertyChanged(nameof(IsAllDone));
         OnPropertyChanged(nameof(CanApply));
+        OnPropertyChanged(nameof(ApplyButtonText));
+        OnPropertyChanged(nameof(ApplyButtonBackground));
     }
 }
