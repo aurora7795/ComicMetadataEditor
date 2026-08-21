@@ -15,15 +15,9 @@ public class RenamePreviewViewModel : ObservableObject
 
     public ObservableCollection<RenameItemPreviewViewModel> Items { get; } = new();
 
-    public string[] TemplatePresets { get; } = new[]
-    {
-        "{Series} #{Number:3} ({Year})",
-        "{Series} #{Number:3} - {Title} ({Year})",
-        "{Series} #{Number:3} ({Year}) {ScanInfo}",
-        "{Series} {Number:3} ({Year})",
-        "{Publisher} - {Series} v{Volume} #{Number:3} ({Year})",
-        "Custom Template..."
-    };
+    public IReadOnlyList<string> TemplatePresets { get; } = ComicFileRenamer.StandardTemplates
+        .Concat(new[] { "Custom Template..." })
+        .ToList();
 
     private int _selectedPresetIndex = 0;
     public int SelectedPresetIndex
@@ -33,7 +27,7 @@ public class RenamePreviewViewModel : ObservableObject
         {
             if (SetProperty(ref _selectedPresetIndex, value))
             {
-                if (value >= 0 && value < TemplatePresets.Length - 1)
+                if (value >= 0 && value < TemplatePresets.Count - 1)
                 {
                     TemplatePattern = TemplatePresets[value];
                 }
@@ -42,7 +36,7 @@ public class RenamePreviewViewModel : ObservableObject
         }
     }
 
-    public bool IsCustomPattern => SelectedPresetIndex == TemplatePresets.Length - 1;
+    public bool IsCustomPattern => SelectedPresetIndex == TemplatePresets.Count - 1;
 
     private string _templatePattern = ComicFileRenamer.DefaultTemplate;
     public string TemplatePattern

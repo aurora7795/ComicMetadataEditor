@@ -197,4 +197,51 @@ public class RenamingTests
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
         }
     }
+
+    [Fact]
+    public void ExecuteBatchRename_RenamesValidFilesAndSkipsCollisions()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"inktag_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        string file1 = Path.Combine(tempDir, "old1.cbz");
+        string file2 = Path.Combine(tempDir, "old2.cbz");
+        File.WriteAllText(file1, "comic 1");
+        File.WriteAllText(file2, "comic 2");
+
+        try
+        {
+            var previews = new List<RenameItemPreview>
+            {
+                new RenameItemPreview
+                {
+                    OriginalFilePath = file1,
+                    ProposedFilename = "new1.cbz",
+                    ProposedFilePath = Path.Combine(tempDir, "new1.cbz"),
+                    HasCollision = false
+                },
+                new RenameItemPreview
+                {
+                    OriginalFilePath = file2,
+                    ProposedFilename = "new1.cbz", // collision
+                    ProposedFilePath = Path.Combine(tempDir, "new1.cbz"),
+                    HasCollision = true
+                }
+            };
+
+            var result = ComicFileRenamer.ExecuteBatchRename(previews);
+
+            Assert.Equal(2, result.Total);
+            Assert.Equal(1, result.Renamed);
+            Assert.Equal(0, result.Skipped);
+            Assert.Equal(1, result.Failed); // failed due to collision
+            Assert.True(File.Exists(Path.Combine(tempDir, "new1.cbz")));
+            Assert.False(File.Exists(file1));
+            Assert.True(File.Exists(file2)); // preserved due to collision failure
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
 }

@@ -40,7 +40,7 @@ public class BulkEditFieldInfo
 
 public static class BulkEditCatalog
 {
-    public static readonly BulkEditFieldInfo[] AllFields = new[]
+    public static readonly IReadOnlyList<BulkEditFieldInfo> AllFields = new BulkEditFieldInfo[]
     {
         // General / Basic
         new BulkEditFieldInfo("Series", "Series", "General", BulkEditFieldDataType.String),

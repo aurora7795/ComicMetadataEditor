@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using InkTag.Core.Configuration;
+using InkTag.Core.Renaming;
 using InkTag.Core.Scrapers;
 
 namespace InkTag.Gui.ViewModels;
@@ -75,12 +76,15 @@ public class BulkScrapeQueueViewModel : ObservableObject
         }
     }
 
+    private static readonly IBrush BrushAllDone = new SolidColorBrush(Color.Parse("#007ACC"));
+    private static readonly IBrush BrushReady = new SolidColorBrush(Color.Parse("#107C41"));
+
     public IBrush ApplyButtonBackground
     {
         get
         {
-            if (IsAllDone) return new SolidColorBrush(Color.Parse("#007ACC"));
-            return new SolidColorBrush(Color.Parse("#107C41"));
+            if (IsAllDone) return BrushAllDone;
+            return BrushReady;
         }
     }
 
@@ -137,14 +141,7 @@ public class BulkScrapeQueueViewModel : ObservableObject
         set => SetProperty(ref _unmatchedCount, value);
     }
 
-    public string[] RenameTemplates { get; } = new[]
-    {
-        "{Series} #{Number:3} ({Year})",
-        "{Series} #{Number:3} - {Title} ({Year})",
-        "{Series} #{Number:3} ({Year}) {ScanInfo}",
-        "{Series} {Number:3} ({Year})",
-        "{Publisher} - {Series} v{Volume} #{Number:3} ({Year})"
-    };
+    public IReadOnlyList<string> RenameTemplates => ComicFileRenamer.StandardTemplates;
 
     private int _selectedRenameTemplateIndex;
     public int SelectedRenameTemplateIndex
@@ -154,7 +151,7 @@ public class BulkScrapeQueueViewModel : ObservableObject
         {
             if (SetProperty(ref _selectedRenameTemplateIndex, value))
             {
-                if (value >= 0 && value < RenameTemplates.Length)
+                if (value >= 0 && value < RenameTemplates.Count)
                 {
                     _settingsService.Settings.BulkScrapeRenameTemplate = RenameTemplates[value];
                     _settingsService.SaveSettings();
@@ -207,7 +204,7 @@ public class BulkScrapeQueueViewModel : ObservableObject
         _alsoRenameFiles = _settingsService.Settings.BulkScrapeAutoRenameFiles;
 
         string currentTpl = _settingsService.Settings.BulkScrapeRenameTemplate;
-        int tplIndex = Array.IndexOf(RenameTemplates, currentTpl);
+        int tplIndex = ComicFileRenamer.StandardTemplates.ToList().IndexOf(currentTpl);
         _selectedRenameTemplateIndex = tplIndex >= 0 ? tplIndex : 0;
 
         var queuedItems = _queueService.CreateQueue(filePaths);
@@ -325,7 +322,10 @@ public class BulkScrapeQueueViewModel : ObservableObject
         ProgressPercentage = 0;
         ProgressStatus = "Writing matched metadata to comic files...";
 
-        var rawQueue = Items.Select(i => i.Item).ToList();
+        var rawQueue = Items
+            .Where(i => i.IsSelected && (i.Status == BulkScrapeItemStatus.Matched || i.Status == BulkScrapeItemStatus.LowConfidence) && i.MatchedCandidate != null)
+            .Select(i => i.Item)
+            .ToList();
         var itemMap = Items.ToDictionary(i => i.Item);
 
         var progress = new Progress<BulkScrapeProgressReport>(report =>
@@ -339,9 +339,9 @@ public class BulkScrapeQueueViewModel : ObservableObject
             }
         });
 
-        string chosenTemplate = (_selectedRenameTemplateIndex >= 0 && _selectedRenameTemplateIndex < RenameTemplates.Length)
+        string chosenTemplate = (_selectedRenameTemplateIndex >= 0 && _selectedRenameTemplateIndex < RenameTemplates.Count)
             ? RenameTemplates[_selectedRenameTemplateIndex]
-            : "{Series} #{Number:3} ({Year})";
+            : ComicFileRenamer.DefaultTemplate;
 
         try
         {

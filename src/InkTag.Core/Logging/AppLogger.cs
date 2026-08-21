@@ -74,6 +74,32 @@ public static class AppLogger
         Log("ERROR", fullMessage);
     }
 
+    public const long MaxLogFileSizeBytes = 5 * 1024 * 1024; // 5 MB
+
+    private static void RotateLogIfNeeded(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                var fileInfo = new FileInfo(path);
+                if (fileInfo.Length >= MaxLogFileSizeBytes)
+                {
+                    string backupPath = path + ".bak";
+                    if (File.Exists(backupPath))
+                    {
+                        File.Delete(backupPath);
+                    }
+                    File.Move(path, backupPath);
+                }
+            }
+        }
+        catch
+        {
+            // Ignore rotation errors
+        }
+    }
+
     private static void Log(string level, string message)
     {
         string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
@@ -92,6 +118,8 @@ public static class AppLogger
                 {
                     Directory.CreateDirectory(dir);
                 }
+
+                RotateLogIfNeeded(path);
 
                 File.AppendAllText(path, formattedLine + Environment.NewLine);
             }

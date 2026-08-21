@@ -8,13 +8,24 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using InkTag.Core.Images;
 using InkTag.Core.Scrapers;
+using InkTag.Gui.Services;
 
 namespace InkTag.Gui.ViewModels;
 
 public class CandidateItemViewModel : ObservableObject
 {
-    private static readonly ConcurrentDictionary<string, Bitmap> ImageCache = new();
+    private static readonly LruImageCache ImageCache = new(60);
     private static readonly ConcurrentDictionary<string, ulong> HashCache = new();
+    private static readonly HttpClient SharedHttpClient = new();
+
+    static CandidateItemViewModel()
+    {
+        SharedHttpClient.Timeout = TimeSpan.FromSeconds(8);
+        if (!SharedHttpClient.DefaultRequestHeaders.Contains("User-Agent"))
+        {
+            SharedHttpClient.DefaultRequestHeaders.Add("User-Agent", "InkTag/1.0 (ScraperCandidate)");
+        }
+    }
 
     public ComicSearchResult Result { get; }
     private readonly ulong? _targetCoverHash;
@@ -113,7 +124,7 @@ public class CandidateItemViewModel : ObservableObject
     {
         if (string.IsNullOrEmpty(CoverUrl)) return;
 
-        if (ImageCache.TryGetValue(CoverUrl, out var cachedBitmap))
+        if (ImageCache.TryGetValue(CoverUrl, out var cachedBitmap) && cachedBitmap != null)
         {
             Thumbnail = cachedBitmap;
             if (HashCache.TryGetValue(CoverUrl, out var cachedHash))
@@ -125,12 +136,10 @@ public class CandidateItemViewModel : ObservableObject
 
         try
         {
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("User-Agent", "InkTag/1.0 (ComicMetadataEditor)");
-            byte[] bytes = await client.GetByteArrayAsync(CoverUrl);
+            byte[] bytes = await SharedHttpClient.GetByteArrayAsync(CoverUrl);
             using var ms = new MemoryStream(bytes);
             var bitmap = new Bitmap(ms);
-            ImageCache[CoverUrl] = bitmap;
+            ImageCache.Set(CoverUrl, bitmap);
 
             // Compute perceptual dHash for online thumbnail
             ulong hash = PerceptualHashService.ComputeDHash(bytes);

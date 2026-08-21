@@ -124,11 +124,17 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 
 ### `ComicFileRenamer.cs` (Bulk File Renaming Engine)
 * **Namespace**: `InkTag.Core.Renaming`
+* **Properties**:
+  * `StandardTemplates`: `IReadOnlyList<string>` single source of truth for standard renaming templates across CLI, MCP, and GUI.
 * **Methods**:
   * `GenerateFilename(ComicInfo comic, string originalFilePath, string templatePattern, bool preserveScanInfo = false)`: Generates a sanitized, filesystem-safe filename using token replacement (`{Series}`, `#{Number:3}`, `{Year}`, `{Title}`, `{Publisher}`, `{Volume}`, `{ScanInfo}`). Automatically clears scanner/release tags by default unless `{ScanInfo}` is explicitly requested.
   * `PreviewBatchRename(IEnumerable<(string FilePath, ComicInfo Comic)> items, string templatePattern, bool preserveScanInfo = false)`: Generates batch rename previews with collision detection across the batch and against existing disk files.
   * `RenameFile(string originalFilePath, string newFilename, bool overwrite = false)`: Atomically moves the file to its new name.
   * `ExecuteBatchRename(IEnumerable<RenameItemPreview> items, bool overwrite = false)`: Executes a validated rename batch and returns a `RenameBatchResult`.
+
+### `AppLogger.cs` (Structured Diagnostics & Rotation)
+* **Namespace**: `InkTag.Core.Logging`
+* **Description**: Cross-platform thread-safe diagnostic logger with automatic 5 MB file size rotation (`InkTag.log.bak`), formatted timestamp output, and system file manager reveal.
 
 ### `BulkScrapeQueueService.cs` (Parallel Auto-Tag Queue Pipeline)
 * **Namespace**: `InkTag.Core.Scrapers`

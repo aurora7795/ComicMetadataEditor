@@ -658,6 +658,43 @@ public class ScraperTests
         Assert.Contains("ComicVine API rate limit reached", ex.Message);
     }
 
+    [Fact]
+    public void ScraperCacheService_PersistsAndLoadsFromDisk()
+    {
+        string tempCacheFile = Path.Combine(Path.GetTempPath(), $"scraper_cache_{Guid.NewGuid():N}.json");
+
+        try
+        {
+            // 1. Write entries and flush
+            using (var cache = new ScraperCacheService(tempCacheFile))
+            {
+                cache.Set("test-key-1", "{\"title\":\"Batman #1\"}");
+                cache.Set("test-key-2", "{\"title\":\"Iron Man #1\"}");
+                cache.Flush();
+            }
+
+            Assert.True(File.Exists(tempCacheFile));
+
+            // 2. Open new instance and verify persisted data
+            using (var loadedCache = new ScraperCacheService(tempCacheFile))
+            {
+                string? data1 = loadedCache.Get("test-key-1", TimeSpan.FromHours(1));
+                string? data2 = loadedCache.Get("test-key-2", TimeSpan.FromHours(1));
+                string? expired = loadedCache.Get("test-key-1", TimeSpan.FromMilliseconds(0)); // expired
+                string? missing = loadedCache.Get("non-existent", TimeSpan.FromHours(1));
+
+                Assert.Equal("{\"title\":\"Batman #1\"}", data1);
+                Assert.Equal("{\"title\":\"Iron Man #1\"}", data2);
+                Assert.Null(expired);
+                Assert.Null(missing);
+            }
+        }
+        finally
+        {
+            if (File.Exists(tempCacheFile)) File.Delete(tempCacheFile);
+        }
+    }
+
     private class CustomMockHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> _handler;

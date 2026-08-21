@@ -42,6 +42,8 @@ public class ScraperCacheService : IDisposable
         LoadCache();
     }
 
+    public const int MaxPersistedEntries = 500;
+
     public string? Get(string key, TimeSpan maxAge)
     {
         if (_cache.TryGetValue(key, out var entry))
@@ -50,9 +52,6 @@ public class ScraperCacheService : IDisposable
             {
                 return entry.JsonData;
             }
-            _cache.TryRemove(key, out _);
-            _isDirty = true;
-            ScheduleDebouncedSave();
         }
         return null;
     }
@@ -108,7 +107,13 @@ public class ScraperCacheService : IDisposable
                     Directory.CreateDirectory(dir);
                 }
 
-                string json = JsonSerializer.Serialize(_cache.Values);
+                // Cap persisted entries to the newest MaxPersistedEntries items
+                var entriesToSave = System.Linq.Enumerable.ToList(
+                    System.Linq.Enumerable.Take(
+                        System.Linq.Enumerable.OrderByDescending(_cache.Values, e => e.CachedAt),
+                        MaxPersistedEntries));
+
+                string json = JsonSerializer.Serialize(entriesToSave);
                 File.WriteAllText(_cacheFilePath, json);
                 _isDirty = false;
             }

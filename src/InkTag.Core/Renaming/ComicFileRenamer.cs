@@ -35,6 +35,15 @@ public static class ComicFileRenamer
     public const string TemplateNumberless = "{Series} {Number:3} ({Year})";
     public const string TemplatePublisherVolume = "{Publisher} - {Series} v{Volume} #{Number:3} ({Year})";
 
+    public static readonly IReadOnlyList<string> StandardTemplates = new[]
+    {
+        DefaultTemplate,
+        TemplateWithTitle,
+        TemplateWithScanInfo,
+        TemplateNumberless,
+        TemplatePublisherVolume
+    };
+
     private static readonly Regex TokenRegex = new(@"\{(?<token>[A-Za-z]+)(?::(?<format>[^}]+))?\}", RegexOptions.Compiled);
     private static readonly Regex InvalidCharsRegex = new(@"[\\/:*?""<>|]", RegexOptions.Compiled);
     private static readonly Regex MultipleSpacesRegex = new(@"[ \t]+", RegexOptions.Compiled);

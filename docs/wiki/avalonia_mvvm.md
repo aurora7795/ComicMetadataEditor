@@ -29,7 +29,8 @@ The desktop client follows the standard MVVM design pattern:
 * **Services**:
   * `ComicScannerService`: Bounded parallel directory scanner (`Parallel.ForEachAsync` with 2–8 workers, real-time `ScanProgressReport` callbacks reporting active files and sizes, unseekable virtual mount detection, and microsecond cancellation).
   * `ArchiveCoverService`: Asynchronous thumbnail extractor with size-capped LRU bitmap cache.
-  * `UpdateService`: Dual-mode update manager (Velopack in-place + direct GitHub Releases API fallback).
+  * `LruImageCache`: Thread-safe size-bounded (60-item) LRU bitmap cache with automatic `IDisposable.Dispose()` invocation for evicted web thumbnails in scraper/wizard ViewModels.
+  * `UpdateService`: Dual-mode update manager (Velopack in-place + direct GitHub Releases API fallback) with thread-safe synchronized caching.
 * **Converters**:
   * `IsDirtyToBrushConverter.cs`: Highlights rows/cells with unsaved changes.
 
