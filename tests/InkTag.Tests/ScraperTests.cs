@@ -602,5 +602,74 @@ public class ScraperTests
         Assert.Same(candidateMediumVisual, sorted[1]); // ~98% visual match second
         Assert.Same(candidateLowVisual, sorted[2]); // low visual match last
     }
+
+    [Fact]
+    public async Task RateLimitedHttpClient_RetriesOnHttp420_AndSucceeds()
+    {
+        int callCount = 0;
+        var handler = new CustomMockHandler((req, ct) =>
+        {
+            callCount++;
+            if (callCount < 3)
+            {
+                return new HttpResponseMessage((HttpStatusCode)420)
+                {
+                    Content = new StringContent("Enhance Your Calm")
+                };
+            }
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"status\":\"ok\"}")
+            };
+        });
+
+        var client = new HttpClient(handler);
+        var rateLimited = new RateLimitedHttpClient(client)
+        {
+            InitialBackoff = TimeSpan.FromMilliseconds(10),
+            MaxRetries = 3
+        };
+
+        string result = await rateLimited.GetStringAsync("https://comicvine.gamespot.com/api/test");
+
+        Assert.Equal(3, callCount);
+        Assert.Contains("status", result);
+    }
+
+    [Fact]
+    public async Task RateLimitedHttpClient_ThrowsAfterMaxRetriesOnHttp420()
+    {
+        var handler = new CustomMockHandler((req, ct) =>
+        {
+            return new HttpResponseMessage((HttpStatusCode)420)
+            {
+                Content = new StringContent("Enhance Your Calm")
+            };
+        });
+
+        var client = new HttpClient(handler);
+        var rateLimited = new RateLimitedHttpClient(client)
+        {
+            InitialBackoff = TimeSpan.FromMilliseconds(10),
+            MaxRetries = 2
+        };
+
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => rateLimited.GetStringAsync("https://comicvine.gamespot.com/api/test"));
+        Assert.Contains("ComicVine API rate limit reached", ex.Message);
+    }
+
+    private class CustomMockHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> _handler;
+        public CustomMockHandler(Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> handler)
+        {
+            _handler = handler;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_handler(request, cancellationToken));
+        }
+    }
 }
 
