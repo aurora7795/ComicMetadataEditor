@@ -1,0 +1,125 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:InkTag.Gui.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="850" d:DesignHeight="600"
+        x:Class="InkTag.Gui.Views.RenamePreviewWindow"
+        x:DataType="vm:RenamePreviewViewModel"
+        Title="Bulk Rename Files from Metadata - InkTag"
+        Width="920" Height="620"
+        WindowStartupLocation="CenterOwner"
+        Background="#1E1E1E">
+
+  <Grid RowDefinitions="Auto, *, Auto" Margin="14">
+    
+    <!-- Top Configuration Header -->
+    <Border Grid.Row="0" Background="#252526" CornerRadius="6" Padding="12" Margin="0,0,0,10" BorderBrush="#333338" BorderThickness="1">
+      <Grid RowDefinitions="Auto, Auto" ColumnDefinitions="Auto, *, Auto, Auto">
+        
+        <!-- Row 1: Template Preset Selector -->
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Pattern Preset:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#CCCCCC" Margin="0,0,12,10"/>
+        <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding TemplatePresets}" SelectedIndex="{Binding SelectedPresetIndex}"
+                  HorizontalAlignment="Stretch" Background="#1E1E1E" Foreground="White" BorderBrush="#3F3F46" Margin="0,0,12,10"/>
+
+        <CheckBox Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" IsChecked="{Binding PreserveScanInfo}"
+                  Content="Preserve scan / edition tags (e.g. (digital))" VerticalAlignment="Center" Foreground="#CCCCCC" Margin="0,0,0,10"/>
+
+        <!-- Row 2: Custom Template Input Pattern -->
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Template Pattern:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#CCCCCC" Margin="0,0,12,0"/>
+        <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding TemplatePattern, Mode=TwoWay}"
+                 Background="#1E1E1E" Foreground="White" BorderBrush="#3F3F46" CornerRadius="4" Padding="6,4"
+                 Watermark="e.g. {Series} #{Number:3} ({Year})"/>
+      </Grid>
+    </Border>
+
+    <!-- Center Live Preview Table -->
+    <Border Grid.Row="1" Background="#252526" CornerRadius="6" Padding="6" BorderBrush="#333338" BorderThickness="1">
+      <DataGrid Name="PreviewDataGrid" ItemsSource="{Binding Items}"
+                AutoGenerateColumns="False" CanUserResizeColumns="True" CanUserSortColumns="True"
+                GridLinesVisibility="Horizontal" HeadersVisibility="Column" Background="#1E1E1E"
+                BorderBrush="#3F3F46" BorderThickness="1">
+        <DataGrid.Columns>
+          
+          <!-- Include Checkbox -->
+          <DataGridTemplateColumn Header="Apply" Width="55">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:RenameItemPreviewViewModel">
+                <CheckBox IsChecked="{Binding IsSelected}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
+          <!-- Status Badge -->
+          <DataGridTemplateColumn Header="Status" Width="100">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:RenameItemPreviewViewModel">
+                <Border Background="{Binding StatusBadgeBackground}" CornerRadius="3" Padding="6,2"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding StatusText}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                </Border>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
+          <!-- Original File Name -->
+          <DataGridTemplateColumn Header="Current File Name" Width="*">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:RenameItemPreviewViewModel">
+                <TextBlock Text="{Binding OriginalFilename}" Foreground="#AAAAAA" VerticalAlignment="Center" Margin="8,0"
+                           TextTrimming="CharacterEllipsis"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
+          <!-- Proposed File Name -->
+          <DataGridTemplateColumn Header="Proposed File Name" Width="*">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:RenameItemPreviewViewModel">
+                <StackPanel VerticalAlignment="Center" Margin="8,0">
+                  <TextBlock Text="{Binding ProposedFilename}" Foreground="{Binding ProposedFilenameForeground}"
+                             FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                  <TextBlock Text="{Binding ErrorMessage}" Foreground="#FF6B6B" FontSize="10"
+                             IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
+        </DataGrid.Columns>
+      </DataGrid>
+    </Border>
+
+    <!-- Bottom Footer Bar -->
+    <Grid Grid.Row="2" ColumnDefinitions="*, Auto, Auto" Margin="0,10,0,0">
+      
+      <!-- Summary Counts -->
+      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+        <Border Background="#107C41" CornerRadius="3" Padding="8,3">
+          <TextBlock Text="{Binding RenameCount, StringFormat='{}Ready to Rename: {0}'}" Foreground="White" FontWeight="Bold" FontSize="12"/>
+        </Border>
+        <Border Background="#3F3F46" CornerRadius="3" Padding="8,3">
+          <TextBlock Text="{Binding UnchangedCount, StringFormat='{}Unchanged: {0}'}" Foreground="#CCCCCC" FontSize="12"/>
+        </Border>
+        <Border Background="#A80000" CornerRadius="3" Padding="8,3" IsVisible="{Binding CollisionCount}">
+          <TextBlock Text="{Binding CollisionCount, StringFormat='{}Collisions: {0}'}" Foreground="White" FontWeight="Bold" FontSize="12"/>
+        </Border>
+      </StackPanel>
+
+      <!-- Action Buttons -->
+      <Button Grid.Column="1" Click="Rename_Click" IsEnabled="{Binding CanExecuteRename}"
+              Background="#007ACC" Foreground="White" FontWeight="Bold" Padding="16,8" CornerRadius="4" Margin="0,0,10,0">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="✏️" VerticalAlignment="Center"/>
+          <TextBlock Text="Rename Files" VerticalAlignment="Center"/>
+        </StackPanel>
+      </Button>
+
+      <Button Grid.Column="2" Click="Cancel_Click" Background="#333338" Foreground="White" Padding="16,8" CornerRadius="4">
+        <TextBlock Text="Cancel"/>
+      </Button>
+
+    </Grid>
+
+  </Grid>
+</Window>

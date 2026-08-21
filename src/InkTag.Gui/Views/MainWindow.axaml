@@ -110,6 +110,7 @@
         <MenuItem Header="🧙 Series _Search Wizard..." Click="SeriesSearchWizard_Click"/>
         <MenuItem Header="📚 _Bulk Scrape Queue..." Click="BulkScrapeQueue_Click"/>
         <MenuItem Header="🏷️ _Infer Metadata from Filename(s)" Click="InferMetadataFromFilenames_Click"/>
+        <MenuItem Header="✏️ _Rename File(s) from Metadata..." Click="RenameFiles_Click"/>
         <Separator/>
         <MenuItem Header="Open _Logs Directory" Command="{Binding OpenLogsCommand}"/>
         <MenuItem Header="_Settings..." Click="Settings_Click"/>
@@ -213,6 +214,7 @@
               <MenuItem Header="📚 Bulk Scrape Selected..." Click="BulkScrapeQueue_Click"/>
               <Separator/>
               <MenuItem Header="🏷️ Infer Metadata from Filename(s)" Click="InferMetadataFromFilenames_Click"/>
+              <MenuItem Header="✏️ Rename File(s) from Metadata..." Click="RenameFiles_Click"/>
             </ContextMenu>
           </DataGrid.ContextMenu>
           <DataGrid.Styles>

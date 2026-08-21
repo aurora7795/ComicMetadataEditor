@@ -329,6 +329,50 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void RenameFiles_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            var targetComics = ComicsGrid.SelectedItems?.Cast<ComicItemViewModel>().ToList();
+            if (targetComics == null || targetComics.Count == 0)
+            {
+                targetComics = vm.Comics.ToList();
+            }
+
+            if (targetComics.Count == 0)
+            {
+                return;
+            }
+
+            var items = targetComics.Select(c => (c.FilePath, c.ToModel())).ToList();
+            var renameDialog = new RenamePreviewWindow(items);
+            await renameDialog.ShowDialog(this);
+
+            if (renameDialog.WasApplied && renameDialog.Result != null)
+            {
+                int renamedCount = 0;
+                foreach (var res in renameDialog.Result.Items)
+                {
+                    if (res.HasChange && string.IsNullOrEmpty(res.ErrorMessage) && !string.IsNullOrEmpty(res.ProposedFilePath))
+                    {
+                        var matchingComic = vm.Comics.FirstOrDefault(c => string.Equals(c.FilePath, res.OriginalFilePath, StringComparison.OrdinalIgnoreCase));
+                        if (matchingComic != null)
+                        {
+                            matchingComic.FilePath = res.ProposedFilePath;
+                            matchingComic.FileName = res.ProposedFilename;
+                            renamedCount++;
+                        }
+                    }
+                }
+
+                if (renamedCount > 0)
+                {
+                    vm.UpdateStatusText = $"Successfully renamed {renamedCount} file(s).";
+                }
+            }
+        }
+    }
+
     private void NativeInferMetadataFromFilenames_Click(object? sender, EventArgs e) => InferMetadataFromFilenames_Click(sender, new RoutedEventArgs());
 
     private void NativeSeriesSearchWizard_Click(object? sender, EventArgs e) => SeriesSearchWizard_Click(sender, new RoutedEventArgs());

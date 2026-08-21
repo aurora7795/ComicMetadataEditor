@@ -37,6 +37,9 @@ try
         case "scrape":
             HandleScrapeCommand(args, positionalArgs, isJsonOutput, isDryRun, editor);
             break;
+        case "rename":
+            HandleRenameCommand(args, positionalArgs, isJsonOutput, isDryRun, editor);
+            break;
         case "help":
         case "--help":
         case "-h":
@@ -403,6 +406,101 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
     }
 }
 
+static void HandleRenameCommand(string[] args, List<string> positionalArgs, bool isJson, bool isDryRun, MetadataEditor editor)
+{
+    if (positionalArgs.Count < 2)
+    {
+        throw new ArgumentException("Usage: rename <file|directory> [--template <pattern>] [--strip-scan-info] [--dry-run] [--json]");
+    }
+
+    string targetPath = positionalArgs[1];
+    string template = GetOptionValue(args, "--template") ?? InkTag.Core.Renaming.ComicFileRenamer.DefaultTemplate;
+    bool preserveScanInfo = !args.Any(a => a.Equals("--strip-scan-info", StringComparison.OrdinalIgnoreCase));
+
+    var filesToProcess = new List<string>();
+    if (File.Exists(targetPath))
+    {
+        filesToProcess.Add(targetPath);
+    }
+    else if (Directory.Exists(targetPath))
+    {
+        bool recursive = args.Any(a => a.Equals("--recursive", StringComparison.OrdinalIgnoreCase) || a.Equals("-r", StringComparison.OrdinalIgnoreCase));
+        var searchOpt = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        var exts = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".cbz", ".cbr", ".cb7", ".zip", ".rar" };
+        filesToProcess.AddRange(Directory.EnumerateFiles(targetPath, "*.*", searchOpt).Where(f => exts.Contains(Path.GetExtension(f))));
+    }
+    else
+    {
+        throw new FileNotFoundException("Target file or directory not found.", targetPath);
+    }
+
+    var items = filesToProcess.Select(f =>
+    {
+        var comic = editor.ReadMetadata(f);
+        return (FilePath: f, Comic: comic);
+    }).ToList();
+
+    var previews = InkTag.Core.Renaming.ComicFileRenamer.PreviewBatchRename(items, template, preserveScanInfo);
+
+    if (isDryRun)
+    {
+        if (isJson)
+        {
+            var jsonOut = new
+            {
+                success = true,
+                dryRun = true,
+                total = previews.Count,
+                items = previews.Select(p => new
+                {
+                    original = p.OriginalFilePath,
+                    proposed = p.ProposedFilePath,
+                    hasChange = p.HasChange,
+                    hasCollision = p.HasCollision,
+                    error = p.ErrorMessage
+                })
+            };
+            Console.WriteLine(JsonSerializer.Serialize(jsonOut, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        else
+        {
+            Console.WriteLine($"[Dry Run] Bulk Rename Preview ({previews.Count} items, template: '{template}'):");
+            foreach (var p in previews)
+            {
+                string status = p.HasCollision ? "[COLLISION]" : (!p.HasChange ? "[UNCHANGED]" : "[READY]");
+                Console.WriteLine($"  {status} {p.OriginalFilename} -> {p.ProposedFilename}");
+            }
+        }
+        return;
+    }
+
+    var result = InkTag.Core.Renaming.ComicFileRenamer.ExecuteBatchRename(previews);
+
+    if (isJson)
+    {
+        var jsonOut = new
+        {
+            success = true,
+            total = result.Total,
+            renamed = result.Renamed,
+            skipped = result.Skipped,
+            failed = result.Failed,
+            items = result.Items.Select(p => new
+            {
+                original = p.OriginalFilePath,
+                proposed = p.ProposedFilePath,
+                renamed = p.HasChange && string.IsNullOrEmpty(p.ErrorMessage),
+                error = p.ErrorMessage
+            })
+        };
+        Console.WriteLine(JsonSerializer.Serialize(jsonOut, new JsonSerializerOptions { WriteIndented = true }));
+    }
+    else
+    {
+        Console.WriteLine($"Renamed {result.Renamed} of {result.Total} file(s) ({result.Skipped} unchanged, {result.Failed} failed).");
+    }
+}
+
 static void PrintHelp(bool isJson)
 {
     var helpObj = new
@@ -415,6 +513,7 @@ static void PrintHelp(bool isJson)
             new { name = "update <file|dir> --patch '<json>' [--dry-run] [--recursive]", description = "Applies JSON property edits to one or all comic archives." },
             new { name = "scan <directory> [--missing Field1,Field2] [--recursive]", description = "Scans a directory for comic files and missing metadata." },
             new { name = "scrape <file|dir> [--api-key KEY] [--mode fill-missing|overwrite]", description = "Auto-scrapes metadata from ComicVine online database." },
+            new { name = "rename <file|dir> [--template <pattern>] [--dry-run]", description = "Bulk renames files based on metadata template pattern." },
             new { name = "cover <file> [--output <image-path>]", description = "Extracts front cover image from archive." },
             new { name = "schema", description = "Prints JSON Schema for ComicInfo metadata objects." }
         },

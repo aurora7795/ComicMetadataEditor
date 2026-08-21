@@ -265,4 +265,73 @@ public static class ComicTools
             })
         }, new JsonSerializerOptions { WriteIndented = true });
     }
+
+    [McpServerTool, Description("Bulk renames comic archive files on disk based on embedded ComicInfo metadata and a customizable template pattern.")]
+    public static string RenameComicFiles(
+        [Description("Target file or directory path")] string path,
+        [Description("Template pattern e.g. '{Series} #{Number:3} ({Year})' or '{Series} #{Number:3} - {Title} ({Year})'")] string template = "{Series} #{Number:3} ({Year})",
+        [Description("If true, preserves scanner/release tags (e.g. (digital))")] bool preserveScanInfo = true,
+        [Description("If true, previews rename operations without modifying files on disk")] bool dryRun = false,
+        [Description("If true, processes subdirectories recursively")] bool recursive = false)
+    {
+        var filesToProcess = new List<string>();
+        if (File.Exists(path))
+        {
+            filesToProcess.Add(path);
+        }
+        else if (Directory.Exists(path))
+        {
+            var searchOpt = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+            var exts = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".cbz", ".cbr", ".cb7", ".zip", ".rar" };
+            filesToProcess.AddRange(Directory.EnumerateFiles(path, "*.*", searchOpt).Where(f => exts.Contains(Path.GetExtension(f))));
+        }
+        else
+        {
+            throw new FileNotFoundException($"Path not found: '{path}'");
+        }
+
+        var items = filesToProcess.Select(f =>
+        {
+            var comic = _editor.ReadMetadata(f);
+            return (FilePath: f, Comic: comic);
+        }).ToList();
+
+        var previews = InkTag.Core.Renaming.ComicFileRenamer.PreviewBatchRename(items, template, preserveScanInfo);
+
+        if (dryRun)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                success = true,
+                dryRun = true,
+                total = previews.Count,
+                items = previews.Select(p => new
+                {
+                    original = p.OriginalFilePath,
+                    proposed = p.ProposedFilePath,
+                    hasChange = p.HasChange,
+                    hasCollision = p.HasCollision,
+                    error = p.ErrorMessage
+                })
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        var result = InkTag.Core.Renaming.ComicFileRenamer.ExecuteBatchRename(previews);
+
+        return JsonSerializer.Serialize(new
+        {
+            success = true,
+            total = result.Total,
+            renamed = result.Renamed,
+            skipped = result.Skipped,
+            failed = result.Failed,
+            items = result.Items.Select(p => new
+            {
+                original = p.OriginalFilePath,
+                proposed = p.ProposedFilePath,
+                renamed = p.HasChange && string.IsNullOrEmpty(p.ErrorMessage),
+                error = p.ErrorMessage
+            })
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
 }
