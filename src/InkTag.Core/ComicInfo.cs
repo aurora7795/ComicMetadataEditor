@@ -151,6 +151,9 @@ public class ComicInfo
     public bool HasEssentialMetadata => !string.IsNullOrWhiteSpace(Series) || !string.IsNullOrWhiteSpace(Title);
 
     [XmlIgnore]
+    public bool HasLegacyMetadata { get; set; }
+
+    [XmlIgnore]
     public bool HasAnyMetadata =>
         !string.IsNullOrWhiteSpace(Title) ||
         !string.IsNullOrWhiteSpace(Series) ||

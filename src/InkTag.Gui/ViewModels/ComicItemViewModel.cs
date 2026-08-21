@@ -149,6 +149,9 @@ public partial class ComicItemViewModel : ObservableValidator
     [ObservableProperty]
     private bool _hasEmbeddedXml = true;
 
+    [ObservableProperty]
+    private bool _hasLegacyMetadata;
+
     public bool IsUntagged => !HasEmbeddedXml || !HasEssentialMetadata;
     public bool HasEssentialMetadata => !string.IsNullOrWhiteSpace(Series) || !string.IsNullOrWhiteSpace(Title);
 
@@ -158,6 +161,7 @@ public partial class ComicItemViewModel : ObservableValidator
         FileName = Path.GetFileName(filePath);
         _model = model;
         _hasEmbeddedXml = hasEmbeddedXml;
+        _hasLegacyMetadata = model.HasLegacyMetadata;
 
         LoadFromModel();
     }
@@ -216,7 +220,8 @@ public partial class ComicItemViewModel : ObservableValidator
             AgeRating = _model.AgeRating;
 
             ValidateAllProperties();
-            IsDirty = false;
+            HasLegacyMetadata = _model.HasLegacyMetadata;
+            IsDirty = _model.HasLegacyMetadata && !HasEmbeddedXml;
         }
         finally
         {

@@ -162,11 +162,42 @@ public class MetadataEditor
                     ms.Position = 0;
                     var info = DeserializeComicInfo(ms);
                     hasEmbeddedXml = true;
+
+                    // Backfill any missing fields from legacy zip comment if present
+                    if (!string.IsNullOrWhiteSpace(zipArchive.Comment))
+                    {
+                        InkTag.Core.Parsing.ComicBookInfoParser.TryMergeFromLegacyJson(info, zipArchive.Comment);
+                    }
+
                     AppLogger.LogDebug($"[MetadataEditor] Read metadata via fast-path seek for '{fileName}' in {sw.ElapsedMilliseconds}ms (Title: '{info.Title}', Series: '{info.Series}', Issue: '{info.Number}').");
                     return info;
                 }
 
-                AppLogger.LogDebug($"[MetadataEditor] No ComicInfo.xml found via fast-path seek in '{fileName}' ({sw.ElapsedMilliseconds}ms).");
+                // Check for legacy ComicBookInfo in zip comment
+                if (!string.IsNullOrWhiteSpace(zipArchive.Comment) &&
+                    InkTag.Core.Parsing.ComicBookInfoParser.TryParse(zipArchive.Comment, out var cbiFromComment) && cbiFromComment != null)
+                {
+                    AppLogger.LogDebug($"[MetadataEditor] Read legacy ComicBookInfo from zip comment for '{fileName}' in {sw.ElapsedMilliseconds}ms.");
+                    return cbiFromComment;
+                }
+
+                // Check for internal ComicBookInfo.json entry
+                var cbiEntry = zipArchive.Entries.FirstOrDefault(e =>
+                    Path.GetFileName(e.FullName).Equals("ComicBookInfo.json", StringComparison.OrdinalIgnoreCase) ||
+                    Path.GetFileName(e.FullName).Equals("ComicBookInfo", StringComparison.OrdinalIgnoreCase));
+                if (cbiEntry != null)
+                {
+                    using var entryStream = cbiEntry.Open();
+                    using var reader = new StreamReader(entryStream);
+                    string json = reader.ReadToEnd();
+                    if (InkTag.Core.Parsing.ComicBookInfoParser.TryParse(json, out var cbiFromFile) && cbiFromFile != null)
+                    {
+                        AppLogger.LogDebug($"[MetadataEditor] Read legacy ComicBookInfo.json for '{fileName}' in {sw.ElapsedMilliseconds}ms.");
+                        return cbiFromFile;
+                    }
+                }
+
+                AppLogger.LogDebug($"[MetadataEditor] No ComicInfo.xml or legacy metadata found via fast-path seek in '{fileName}' ({sw.ElapsedMilliseconds}ms).");
                 return new ComicInfo();
             }
             catch (OperationCanceledException)
@@ -198,12 +229,26 @@ public class MetadataEditor
                         ms.Position = 0;
                         var info = DeserializeComicInfo(ms);
                         hasEmbeddedXml = true;
+
+                        if (!string.IsNullOrWhiteSpace(zipArchive.Comment))
+                        {
+                            InkTag.Core.Parsing.ComicBookInfoParser.TryMergeFromLegacyJson(info, zipArchive.Comment);
+                        }
+
                         AppLogger.LogDebug($"[MetadataEditor] Read metadata via sequential NonSeekableStream for '{fileName}' in {seqSw.ElapsedMilliseconds}ms (Total: {sw.ElapsedMilliseconds}ms).");
                         return info;
                     }
                 }
 
-                AppLogger.LogDebug($"[MetadataEditor] No ComicInfo.xml found via sequential stream in '{fileName}' ({seqSw.ElapsedMilliseconds}ms).");
+                // Check zip comment in sequential stream fallback
+                if (!string.IsNullOrWhiteSpace(zipArchive.Comment) &&
+                    InkTag.Core.Parsing.ComicBookInfoParser.TryParse(zipArchive.Comment, out var seqCbi) && seqCbi != null)
+                {
+                    AppLogger.LogDebug($"[MetadataEditor] Read legacy ComicBookInfo from zip comment in sequential mode for '{fileName}' in {seqSw.ElapsedMilliseconds}ms.");
+                    return seqCbi;
+                }
+
+                AppLogger.LogDebug($"[MetadataEditor] No ComicInfo.xml or legacy metadata found via sequential stream in '{fileName}' ({seqSw.ElapsedMilliseconds}ms).");
                 return new ComicInfo();
             }
             catch (OperationCanceledException)
@@ -242,7 +287,27 @@ public class MetadataEditor
                 }
             }
 
-            AppLogger.LogDebug($"[MetadataEditor] No ComicInfo.xml found via SharpCompress in '{fileName}' ({scSw.ElapsedMilliseconds}ms).");
+            // Check for ComicBookInfo.json entry in SharpCompress archive
+            foreach (var entry in archive.Entries)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!entry.IsDirectory &&
+                    entry.Key != null &&
+                    (Path.GetFileName(entry.Key).Equals("ComicBookInfo.json", StringComparison.OrdinalIgnoreCase) ||
+                     Path.GetFileName(entry.Key).Equals("ComicBookInfo", StringComparison.OrdinalIgnoreCase)))
+                {
+                    using var entryStream = entry.OpenEntryStream();
+                    using var reader = new StreamReader(entryStream);
+                    string json = reader.ReadToEnd();
+                    if (InkTag.Core.Parsing.ComicBookInfoParser.TryParse(json, out var scCbi) && scCbi != null)
+                    {
+                        AppLogger.LogDebug($"[MetadataEditor] Read legacy ComicBookInfo.json via SharpCompress for '{fileName}' in {scSw.ElapsedMilliseconds}ms.");
+                        return scCbi;
+                    }
+                }
+            }
+
+            AppLogger.LogDebug($"[MetadataEditor] No ComicInfo.xml or legacy metadata found via SharpCompress in '{fileName}' ({scSw.ElapsedMilliseconds}ms).");
             return new ComicInfo();
         }
         catch (OperationCanceledException)
@@ -615,7 +680,23 @@ public class MetadataEditor
             }
             else
             {
-                comicInfo = new ComicInfo();
+                // If no ComicInfo.xml existed in archive, read existing legacy metadata (e.g. from zip comment)
+                comicInfo = ReadMetadata(filePath);
+            }
+
+            // Clean up any legacy ComicBookInfo.json files so the repacked archive contains only the modern ComicInfo.xml
+            foreach (var legacyCbiFile in Directory.GetFiles(tempDir, "*", SearchOption.AllDirectories)
+                .Where(f => Path.GetFileName(f).Equals("ComicBookInfo.json", StringComparison.OrdinalIgnoreCase) ||
+                            Path.GetFileName(f).Equals("ComicBookInfo", StringComparison.OrdinalIgnoreCase)))
+            {
+                try
+                {
+                    File.Delete(legacyCbiFile);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.LogDebug($"Failed to delete legacy CBI file '{legacyCbiFile}': {ex.Message}");
+                }
             }
 
             // Apply edits

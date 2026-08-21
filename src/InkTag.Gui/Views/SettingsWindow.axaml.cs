@@ -27,6 +27,7 @@ public partial class SettingsWindow : Window
         VisualMatchCheckBox.IsChecked = settings.AutoApplyOnVisualMatch;
         VisualThresholdTextBox.Text = ((int)(settings.VisualMatchConfidenceThreshold * 100)).ToString();
         DebugLoggingCheckBox.IsChecked = settings.EnableDebugLogging;
+        ClearLegacyZipCommentsCheckBox.IsChecked = settings.ClearLegacyZipCommentsOnUpgrade;
     }
 
     private async void TestApiKey_Click(object? sender, RoutedEventArgs e)
@@ -75,6 +76,7 @@ public partial class SettingsWindow : Window
             : ScrapeMergeMode.FillMissingOnly;
         settings.AutoApplyOnVisualMatch = VisualMatchCheckBox.IsChecked == true;
         settings.EnableDebugLogging = DebugLoggingCheckBox.IsChecked == true;
+        settings.ClearLegacyZipCommentsOnUpgrade = ClearLegacyZipCommentsCheckBox.IsChecked == true;
         if (double.TryParse(VisualThresholdTextBox.Text, out double thresh))
         {
             settings.VisualMatchConfidenceThreshold = Math.Clamp(thresh > 1 ? thresh / 100.0 : thresh, 0.50, 1.0);

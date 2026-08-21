@@ -17,6 +17,7 @@ public class AppSettings
     public bool BulkScrapeAutoRenameFiles { get; set; } = false;
     public string BulkScrapeRenameTemplate { get; set; } = "{Series} #{Number:3} ({Year})";
     public List<string> AllowedRootPaths { get; set; } = new();
+    public bool ClearLegacyZipCommentsOnUpgrade { get; set; } = true;
 }
 
 public class AppSettingsService
