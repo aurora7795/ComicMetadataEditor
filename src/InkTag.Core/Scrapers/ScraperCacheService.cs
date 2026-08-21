@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 
 namespace InkTag.Core.Scrapers;
 
@@ -12,11 +13,14 @@ public class CacheEntry
     public DateTimeOffset CachedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
-public class ScraperCacheService
+public class ScraperCacheService : IDisposable
 {
     private readonly string _cacheFilePath;
     private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
     private readonly object _diskLock = new();
+    private readonly Timer _debounceTimer;
+    private volatile bool _isDirty = false;
+    private bool _disposed = false;
 
     public ScraperCacheService(string? customCachePath = null)
     {
@@ -33,6 +37,8 @@ public class ScraperCacheService
             _cacheFilePath = Path.Combine(cacheDir, "scraper_cache.json");
         }
 
+        _debounceTimer = new Timer(OnDebounceTimerFired, null, Timeout.Infinite, Timeout.Infinite);
+
         LoadCache();
     }
 
@@ -45,6 +51,8 @@ public class ScraperCacheService
                 return entry.JsonData;
             }
             _cache.TryRemove(key, out _);
+            _isDirty = true;
+            ScheduleDebouncedSave();
         }
         return null;
     }
@@ -59,13 +67,56 @@ public class ScraperCacheService
         };
 
         _cache[key] = entry;
-        SaveCache();
+        _isDirty = true;
+        ScheduleDebouncedSave();
     }
 
     public void Clear()
     {
         _cache.Clear();
-        SaveCache();
+        _isDirty = true;
+        Flush();
+    }
+
+    private void ScheduleDebouncedSave()
+    {
+        if (!_disposed)
+        {
+            // Debounce disk write by 2 seconds
+            _debounceTimer.Change(2000, Timeout.Infinite);
+        }
+    }
+
+    private void OnDebounceTimerFired(object? state)
+    {
+        Flush();
+    }
+
+    public void Flush()
+    {
+        if (!_isDirty) return;
+
+        lock (_diskLock)
+        {
+            if (!_isDirty) return;
+
+            try
+            {
+                string? dir = Path.GetDirectoryName(_cacheFilePath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                string json = JsonSerializer.Serialize(_cache.Values);
+                File.WriteAllText(_cacheFilePath, json);
+                _isDirty = false;
+            }
+            catch
+            {
+                // Ignore cache write errors
+            }
+        }
     }
 
     private void LoadCache()
@@ -94,25 +145,13 @@ public class ScraperCacheService
         }
     }
 
-    private void SaveCache()
+    public void Dispose()
     {
-        lock (_diskLock)
+        if (!_disposed)
         {
-            try
-            {
-                string? dir = Path.GetDirectoryName(_cacheFilePath);
-                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                {
-                    Directory.CreateDirectory(dir);
-                }
-
-                string json = JsonSerializer.Serialize(_cache.Values);
-                File.WriteAllText(_cacheFilePath, json);
-            }
-            catch
-            {
-                // Ignore cache write errors
-            }
+            _disposed = true;
+            _debounceTimer.Dispose();
+            Flush();
         }
     }
 }

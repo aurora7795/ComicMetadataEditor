@@ -24,6 +24,8 @@ public class ComicVineProvider : IMetadataScraperProvider
         _cache = cache;
     }
 
+    public void FlushCache() => _cache?.Flush();
+
     public async Task<IEnumerable<ComicSearchResult>> SearchAsync(ComicSearchQuery query, string apiKey, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(apiKey))

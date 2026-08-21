@@ -89,4 +89,38 @@ public class McpToolsTests
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
         }
     }
+
+    [Fact]
+    public void ValidatePathAccess_AllowsPathsInsideDefaultRoots()
+    {
+        string tempFile = Path.Combine(Path.GetTempPath(), "allowed_test.cbz");
+        // Should not throw
+        ComicTools.ValidatePathAccess(tempFile);
+    }
+
+    [Fact]
+    public void ValidatePathAccess_ThrowsUnauthorizedAccessException_ForPathsOutsideAllowedRoots()
+    {
+        string? originalEnv = Environment.GetEnvironmentVariable("INKTAG_ALLOWED_ROOT_PATHS");
+        string tempAllowedDir = Path.Combine(Path.GetTempPath(), "mcp_allowed_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempAllowedDir);
+
+        try
+        {
+            Environment.SetEnvironmentVariable("INKTAG_ALLOWED_ROOT_PATHS", tempAllowedDir);
+
+            // Access inside allowed root succeeds
+            string allowedFile = Path.Combine(tempAllowedDir, "allowed.cbz");
+            ComicTools.ValidatePathAccess(allowedFile);
+
+            // Access outside allowed root throws UnauthorizedAccessException
+            string forbiddenFile = "/etc/shadow";
+            Assert.Throws<UnauthorizedAccessException>(() => ComicTools.ValidatePathAccess(forbiddenFile));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("INKTAG_ALLOWED_ROOT_PATHS", originalEnv);
+            if (Directory.Exists(tempAllowedDir)) Directory.Delete(tempAllowedDir, true);
+        }
+    }
 }

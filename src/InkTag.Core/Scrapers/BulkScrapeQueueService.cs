@@ -349,6 +349,9 @@ public class BulkScrapeQueueService
 
         await Task.WhenAll(producerTask, consumerTask);
 
+        // Flush scraper cache to disk
+        _scraperService.FlushCache();
+
         // Populate summary metrics
         report.Matched = queue.Count(x => x.Status == BulkScrapeItemStatus.Matched);
         report.LowConfidence = queue.Count(x => x.Status == BulkScrapeItemStatus.LowConfidence);

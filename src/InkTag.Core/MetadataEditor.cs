@@ -535,6 +535,9 @@ public class MetadataEditor
                 {
                     if (!entry.IsDirectory)
                     {
+                        // Note: ExtractFullPath = false normalizes comic archive structures into a flat image sequence
+                        // at the archive root, which is standard for CBZ/CBR comic book readers and eliminates nested folders
+                        // created by legacy packaging tools.
                         entry.WriteToDirectory(tempDir, new ExtractionOptions { Overwrite = true, ExtractFullPath = false });
                     }
                 }
@@ -574,7 +577,14 @@ public class MetadataEditor
                 // If existing XML was in a subfolder or different case, remove it so clean root ComicInfo.xml is written
                 if (!existingXmlFile.Equals(Path.Combine(tempDir, "ComicInfo.xml"), StringComparison.Ordinal))
                 {
-                    try { File.Delete(existingXmlFile); } catch { }
+                    try
+                    {
+                        File.Delete(existingXmlFile);
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.LogDebug($"Failed to clean up legacy ComicInfo.xml at '{existingXmlFile}': {ex.Message}");
+                    }
                 }
             }
             else
@@ -684,9 +694,9 @@ public class MetadataEditor
                 {
                     Directory.Delete(tempDir, true);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Ignore directory cleanup exceptions to not mask real error
+                    AppLogger.LogDebug($"Temp directory cleanup notice for '{tempDir}': {ex.Message}");
                 }
             }
 
@@ -697,9 +707,9 @@ public class MetadataEditor
                 {
                     File.Delete(tempCbzPath);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Ignore temp file cleanup exceptions
+                    AppLogger.LogDebug($"Temporary zip cleanup notice for '{tempCbzPath}': {ex.Message}");
                 }
             }
         }

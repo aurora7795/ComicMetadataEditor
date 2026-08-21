@@ -29,6 +29,8 @@ public class MetadataScraperService
         _provider = provider ?? new ComicVineProvider(null, new ScraperCacheService());
     }
 
+    public void FlushCache() => (_provider as ComicVineProvider)?.FlushCache();
+
     public async Task<IEnumerable<ComicSearchResult>> SearchCandidatesAsync(ComicSearchQuery query, CancellationToken ct = default)
     {
         string apiKey = _settingsService.GetEffectiveComicVineApiKey();

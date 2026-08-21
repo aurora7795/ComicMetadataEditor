@@ -715,6 +715,39 @@ public class MetadataEditorTests
         }
     }
 
+    [Fact]
+    public void ComicInfo_Clone_PerformsDeepCopyWithPages()
+    {
+        var original = new ComicInfo
+        {
+            Title = "Issue 1",
+            Series = "Saga",
+            Number = "1",
+            Pages = new PageCollection
+            {
+                Page = new[]
+                {
+                    new Page { Image = 0, Type = "FrontCover", ImageWidth = 1000, ImageHeight = 1500 },
+                    new Page { Image = 1, Type = "Story", DoublePage = true }
+                }
+            }
+        };
+
+        var clone = original.Clone();
+
+        Assert.NotNull(clone.Pages?.Page);
+        Assert.Equal(2, clone.Pages!.Page!.Length);
+        Assert.NotSame(original.Pages, clone.Pages);
+        Assert.NotSame(original.Pages.Page, clone.Pages.Page);
+
+        // Mutating clone does not affect original
+        clone.Pages.Page[0].Type = "BackCover";
+        clone.Pages.Page[0].ImageWidth = 2000;
+
+        Assert.Equal("FrontCover", original.Pages.Page[0].Type);
+        Assert.Equal(1000, original.Pages.Page[0].ImageWidth);
+    }
+
     private class DirectProgress<T> : IProgress<T>
     {
         private readonly Action<T> _handler;

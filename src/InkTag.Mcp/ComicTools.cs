@@ -13,11 +13,61 @@ namespace InkTag.Mcp;
 public static class ComicTools
 {
     private static readonly MetadataEditor _editor = new();
+    private static readonly InkTag.Core.Configuration.AppSettingsService _settingsService = new();
+
+    /// <summary>
+    /// Validates that a file or directory path is contained within the configured or default allowed roots.
+    /// </summary>
+    public static void ValidatePathAccess(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+
+        string fullPath = Path.GetFullPath(path);
+        
+        var allowedRoots = new List<string>(_settingsService.Settings.AllowedRootPaths ?? new List<string>());
+        string? envRoots = Environment.GetEnvironmentVariable("INKTAG_ALLOWED_ROOT_PATHS");
+        if (!string.IsNullOrWhiteSpace(envRoots))
+        {
+            var parsedEnvRoots = envRoots.Split(new[] { ';', ':', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            allowedRoots.AddRange(parsedEnvRoots);
+        }
+
+        // If no explicit allowed roots configured, default to user profile, current directory, and temp directory
+        if (allowedRoots.Count == 0)
+        {
+            string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string currentDir = Environment.CurrentDirectory;
+            string tempDir = Path.GetTempPath();
+
+            if (!string.IsNullOrEmpty(userProfile)) allowedRoots.Add(userProfile);
+            if (!string.IsNullOrEmpty(currentDir)) allowedRoots.Add(currentDir);
+            if (!string.IsNullOrEmpty(tempDir)) allowedRoots.Add(tempDir);
+        }
+
+        bool isAllowed = false;
+        foreach (var root in allowedRoots)
+        {
+            string fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (fullPath.Equals(fullRoot, StringComparison.OrdinalIgnoreCase) ||
+                fullPath.StartsWith(fullRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+                fullPath.StartsWith(fullRoot + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            {
+                isAllowed = true;
+                break;
+            }
+        }
+
+        if (!isAllowed)
+        {
+            throw new UnauthorizedAccessException($"Access denied: The path '{path}' is outside the allowed directories ({string.Join(", ", allowedRoots)}).");
+        }
+    }
 
     [McpServerTool, Description("Reads XML metadata embedded in a CBZ or CBR archive and returns it as JSON.")]
     public static string ReadComicMetadata(
         [Description("Path to comic archive (.cbz / .cbr)")] string path)
     {
+        ValidatePathAccess(path);
         var metadata = _editor.ReadMetadata(path);
         string json = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
         return $"Metadata for {Path.GetFileName(path)}:\n{json}";
@@ -30,6 +80,7 @@ public static class ComicTools
         [Description("If true, previews diffs without modifying files on disk.")] bool dryRun = false,
         [Description("If true, updates files in subdirectories recursively.")] bool recursive = false)
     {
+        ValidatePathAccess(path);
         string patchJson = patch.GetRawText();
         var result = AgentOperations.UpdatePath(_editor, path, patchJson, dryRun, recursive);
 
@@ -63,6 +114,12 @@ public static class ComicTools
         [Description("Optional destination file path for image")] string? outputPath = null,
         [Description("If true, returns base64 encoded image bytes")] bool returnBase64 = false)
     {
+        ValidatePathAccess(path);
+        if (!string.IsNullOrEmpty(outputPath))
+        {
+            ValidatePathAccess(outputPath);
+        }
+
         if (string.IsNullOrEmpty(outputPath))
         {
             outputPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}_cover.jpg");
@@ -105,6 +162,7 @@ public static class ComicTools
         [Description("If true, scans subdirectories recursively.")] bool recursive = false,
         [Description("If true, filters and returns only untagged comics (missing ComicInfo.xml or empty Series/Title).")] bool onlyUntagged = false)
     {
+        ValidatePathAccess(directory);
         var fieldsList = missingFields?.ToList() ?? new List<string>();
         var scanResult = AgentOperations.ScanDirectory(_editor, directory, fieldsList, recursive, onlyUntagged);
 
@@ -168,6 +226,7 @@ public static class ComicTools
         [Description("If true, previews updates without writing to disk")] bool dryRun = false,
         [Description("Optional ComicVine API key")] string? apiKey = null)
     {
+        ValidatePathAccess(path);
         var settingsService = new InkTag.Core.Configuration.AppSettingsService();
         if (!string.IsNullOrEmpty(apiKey))
         {
@@ -211,6 +270,7 @@ public static class ComicTools
         [Description("If true, scans subdirectories recursively")] bool recursive = false,
         [Description("Optional ComicVine API key")] string? apiKey = null)
     {
+        ValidatePathAccess(directory);
         if (!Directory.Exists(directory))
         {
             throw new DirectoryNotFoundException($"Directory not found: {directory}");
@@ -280,6 +340,7 @@ public static class ComicTools
         [Description("If true, previews rename operations without modifying files on disk")] bool dryRun = false,
         [Description("If true, processes subdirectories recursively")] bool recursive = false)
     {
+        ValidatePathAccess(path);
         var filesToProcess = new List<string>();
         if (File.Exists(path))
         {

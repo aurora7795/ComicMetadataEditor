@@ -16,6 +16,7 @@ public class AppSettings
     public bool EnableDebugLogging { get; set; } = false;
     public bool BulkScrapeAutoRenameFiles { get; set; } = false;
     public string BulkScrapeRenameTemplate { get; set; } = "{Series} #{Number:3} ({Year})";
+    public List<string> AllowedRootPaths { get; set; } = new();
 }
 
 public class AppSettingsService
