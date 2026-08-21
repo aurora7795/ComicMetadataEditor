@@ -58,7 +58,7 @@ public static class UpdateService
             return parsedVer;
         }
 
-        return new Version(0, 9, 1);
+        return new Version(0, 10, 0);
     }
 
     /// <summary>

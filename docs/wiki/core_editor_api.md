@@ -117,13 +117,20 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 * **Method**: `public static ParsedComicFilename ParseFilename(string fileName)`
 * **Description**: Extracts `Series`, `Number` (including alphanumeric/decimal/annual issues like `#005`, `1.5`, `Annual #1`), `Volume`, and `Year` from raw filenames (e.g. `"100 Bullets The Deluxe Edition #004 (2013).cbz"` -> Series: `"100 Bullets The Deluxe Edition"`, Issue: `"4"`, Year: `2013`).
 
-### `MetadataScraperService.cs` & `ComicVineProvider.cs` (Scraping)
+### `ComicFileRenamer.cs` (Bulk File Renaming Engine)
+* **Namespace**: `InkTag.Core.Renaming`
+* **Methods**:
+  * `GenerateFilename(ComicInfo comic, string originalFilePath, string templatePattern, bool preserveScanInfo = false)`: Generates a sanitized, filesystem-safe filename using token replacement (`{Series}`, `#{Number:3}`, `{Year}`, `{Title}`, `{Publisher}`, `{Volume}`, `{ScanInfo}`). Automatically clears scanner/release tags by default unless `{ScanInfo}` is explicitly requested.
+  * `PreviewBatchRename(IEnumerable<(string FilePath, ComicInfo Comic)> items, string templatePattern, bool preserveScanInfo = false)`: Generates batch rename previews with collision detection across the batch and against existing disk files.
+  * `RenameFile(string originalFilePath, string newFilename, bool overwrite = false)`: Atomically moves the file to its new name.
+  * `ExecuteBatchRename(IEnumerable<RenameItemPreview> items, bool overwrite = false)`: Executes a validated rename batch and returns a `RenameBatchResult`.
+
+### `BulkScrapeQueueService.cs` (Parallel Auto-Tag Queue Pipeline)
 * **Namespace**: `InkTag.Core.Scrapers`
 * **Methods**:
-  * `SearchSeriesAsync(string query, CancellationToken ct)`: Queries series/volumes by name.
-  * `MatchIssueAsync(string series, string issueNumber, int? year, CancellationToken ct)`: Queries issues and calculates candidate confidence scores.
-  * `FetchIssueMetadataAsync(string issueId, CancellationToken ct)`: Retrieves complete issue metadata, creators, characters, locations, and cover art.
-* **Features**: HTML stripping & entity decoding for volume/issue descriptions, publication edition aliases, and rate-limited HTTP dispatch.
+  * `CreateQueue(IEnumerable<string> filePaths)`: Parses filenames and initializes staged queue items with local cover extractions.
+  * `ProcessQueueAsync(IEnumerable<BulkScrapeQueueItem> queue, BulkScrapeOptions options, ...)`: Executes streaming parallel cover hashing, smart series volume clustering, chronological ComicVine matching, and perceptual visual similarity calculation.
+  * `ApplyMatchedMetadataAsync(IEnumerable<BulkScrapeQueueItem> items, ScrapeMergeMode mergeMode, bool renameFiles, string renameTemplate, bool preserveScanInfo, ...)`: Writes matched ComicVine metadata back to comic archives on disk, with optional safe auto-renaming.
 
 ---
 
@@ -133,13 +140,19 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 * **`read_comic_metadata`**: Reads metadata XML as JSON object (`path`).
 * **`update_comic_metadata`**: Applies JSON patch to archive or folder (`path`, `patch`, `dryRun`).
 * **`extract_cover_image`**: Unpacks front cover art (`path`, `outputPath`, `returnBase64`).
+* **`bulk_scrape_directory`**: Parallel auto-tag queue on directory with volume clustering and visual matching.
+* **`rename_comic_files`**: Renames comic archives on disk using configurable metadata templates.
 * **`scan_comics`**: Scans directory for archives missing specified metadata tags (`directory`, `missingFields`).
 * **`get_comic_schema`**: Returns JSON Schema for `ComicInfo`.
+* **`search_external_metadata`**: Searches ComicVine issues matching series, issue, and year.
+* **`scrape_comic_metadata`**: Scrapes and applies metadata from ComicVine to a local comic archive.
 
 ### Agentic CLI (`InkTag.Cli`) Subcommands
 * **`read <file-path> [--json]`**: Read metadata from an archive.
 * **`update <path> --patch '<json>' [--dry-run] [--json]`**: Update file or directory metadata.
+* **`rename <path> [--template '<pattern>'] [--preserve-scans] [--dry-run] [--json]`**: Rename comic archives based on metadata.
 * **`scan <directory-path> [--missing Writer,Series] [--json]`**: Scan directory for incomplete tags.
 * **`cover <file-path> [--output <path>] [--json]`**: Extract cover art.
+* **`scrape <path> [--api-key KEY] [--mode fill-missing|overwrite] [--dry-run] [--json]`**: Auto-tag metadata from ComicVine.
 * **`schema [--json]`**: Export `ComicInfo` JSON schema.
 

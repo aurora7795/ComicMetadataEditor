@@ -8,7 +8,18 @@ This page details the testing strategy and validation checklists for verifying t
 
 ### 1. Unit & Integration Test Suite (`InkTag.Tests`)
 * **Target Project**: `tests/InkTag.Tests/InkTag.Tests.csproj`
-* **Test Classes & Coverage (70 Tests)**:
+* **Test Classes & Coverage (94 Tests)**:
+  * **`BulkScrapeTests`**:
+    * Queue initialization, filename parsing, and local cover extraction.
+    * Smart series volume grouping, volume StartYear matching, and candidate cover hashing.
+    * Candidate confidence ranking, issue number matching, and penalty calculations.
+    * Metadata writing back to CBZ archives and auto-renaming archives on disk (`renameFiles: true`).
+  * **`RenamingTests`**:
+    * Standard template formatting, story title inclusion, numberless formatting, and decimal/fraction issue padding.
+    * Illegal filesystem character sanitization and graceful empty token/parenthesis collapsing.
+    * Scanner tag handling: clearing scanner/release tags by default, and preserving tags when `{ScanInfo}` is requested.
+    * Collision detection across batch files and against existing disk paths.
+    * Atomic file renaming and batch execution.
   * **`MetadataEditorTests`**:
     * Deserialization of valid and invalid `ComicInfo.xml` schemas.
     * Validation of schemas against official XSD (`ComicInfo.xsd`), skipping missing files, and throwing on malformed XML.

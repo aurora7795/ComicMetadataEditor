@@ -10,7 +10,8 @@ The desktop client follows the standard MVVM design pattern:
 
 * **Views**:
   * `MainWindow.axaml`: Main workspace layout, top toolbar, spreadsheet DataGrid, resizable details/bulk sidebar, and status bar.
-  * `BulkScrapeQueueWindow.axaml`: Staged batch review queue displaying side-by-side local vs matched cover thumbnails, visual similarity % badges, live progress metrics, inline candidate tweaking, and bulk CBZ write-back.
+  * `BulkScrapeQueueWindow.axaml`: Staged batch review queue displaying side-by-side local vs matched cover thumbnails, visual similarity % badges, live progress metrics, inline candidate tweaking, auto-rename toggle, completion banner, and duplicate-save protection.
+  * `RenamePreviewWindow.axaml`: Live batch file renaming preview dialog with token template selection, collision warning badges, and single-click disk execution.
   * `SeriesSearchWizardWindow.axaml`: Search and interactive volume picker with publisher badges, aliases, descriptions, and dynamic visual match sorting (placing highest visual cover matches at the top).
   * `ScraperMatchWindow.axaml`: Candidate matcher with cover image previews, confidence scores, visual similarity ordering (highest visual match at the top), and conflict resolution.
   * `ApiKeyRequiredWindow.axaml`: Modal prompt guiding users to configure their ComicVine API key.
@@ -18,7 +19,8 @@ The desktop client follows the standard MVVM design pattern:
   * `AboutWindow.axaml`, `ThirdPartyLicensesWindow.axaml`, `ErrorSummaryWindow.axaml`, `PromptWindow.axaml`: Utility and diagnostic dialogs.
 * **ViewModels**:
   * `MainWindowViewModel`: Main controller managing collection state, scanning, saving, bulk tools, and updates.
-  * `BulkScrapeQueueViewModel` & `BulkScrapeItemViewModel`: Bulk scrape queue orchestrator, managing background item progression, visual thumbnail loading, status badges, and batch archive updates.
+  * `BulkScrapeQueueViewModel` & `BulkScrapeItemViewModel`: Bulk auto-tag queue orchestrator, managing background item progression, visual thumbnail loading, status badges, and batch archive updates.
+  * `RenamePreviewViewModel` & `RenameItemPreviewViewModel`: File rename preview manager with template presets, custom pattern testing, collision resolution, and batch disk execution.
   * `ComicItemViewModel`: File-level model wrapping `ComicInfo` with property validation and dirty tracking.
   * `SeriesSearchWizardViewModel` & `SeriesItemViewModel`: Series search query orchestrator and item representations.
   * `ScraperMatchViewModel` & `CandidateMatchViewModel` / `CandidateItemViewModel`: Issue matching, live perceptual dHash cover similarity calculation, and dynamic top-match re-ranking.

@@ -9,11 +9,13 @@ The solution comprises a domain library (`InkTag.Core`), an AI-agent-friendly CL
 ## 🚀 Key Features
 
 * **Dual-Format Processing:** Supports reading and writing both `.cbz` (ZIP-based) and `.cbr` (RAR/RAR-like) archives using random-access entry streams via `ArchiveFactory.OpenArchive()`.
-* **🧙 Interactive Series Search Wizard:** 2-step wizard workflow to search series volumes by title, publisher, and year, browse issues in natural numerical order (`#1, #2... #10, #11`), and 1-click apply metadata.
+* **📚 Bulk Auto-Tagging Pipeline:** High-throughput parallel queue with automatic series volume clustering, chronological ComicVine matching, and perceptual cover art verification (`dHash`).
+* **✏️ Bulk Comic File Renaming Engine:** Pattern-based renaming from embedded metadata (`{Series}`, `#{Number:3}`, `{Year}`, `{Title}`, `{Publisher}`, `{Volume}`, `{ScanInfo}`) with collision protection, atomic renaming, and clean scanner/release tag stripping by default.
 * **👁️ Perceptual Cover Hashing (`dHash`):** 64-bit gradient fingerprinting with SIMD-accelerated (`BitOperations.PopCount`) Hamming distance comparison to automatically identify issues by cover art similarity across thousands of candidates in <1ms.
 * **🌐 ComicVine Metadata Scraper & Live Matching:** Query ComicVine for issue and volume metadata, perform side-by-side field-by-field diff comparison, and apply updates using customizable merge policies (*Fill Missing Only* vs. *Overwrite All*).
+* **🧙 Interactive Series Search Wizard:** 2-step wizard workflow to search series volumes by title, publisher, and year, browse issues in natural numerical order (`#1, #2... #10, #11`), and 1-click apply metadata.
 * **🎯 Year-Weighted Matching & Volume-First Resolution:** Publication year alignment heavily influences candidate ranking with severe cross-decade penalties (`-40%`) to eliminate false volume matches.
-* **🤖 AI Agent Native & Official MCP SDK:** Built-in Model Context Protocol server (`InkTag.Mcp`) using the official **`ModelContextProtocol` C# SDK** (`v2.1.0`) over `stdio`, exposing automated scraping, visual similarity metrics, schema validation, and dynamic JSON patching to AI assistants (Claude Desktop, Cursor, Antigravity).
+* **🤖 AI Agent Native & Official MCP SDK:** Built-in Model Context Protocol server (`InkTag.Mcp`) using the official **`ModelContextProtocol` C# SDK** (`v2.1.0`) over `stdio`, exposing automated scraping, visual similarity metrics, schema validation, dynamic JSON patching, and bulk renaming to AI assistants (Claude Desktop, Cursor, Antigravity).
 * **🖥️ Cross-Platform MenuBar & NativeMenu:** Full `File`, `Edit`, `View`, `Tools`, and `Help` navigation with hotkeys (`Ctrl+O`, `Ctrl+S`, `Ctrl+M`, `F5`, `Ctrl+Q`) and native macOS screen top MenuBar integration.
 * **⚡ Velopack Auto-Updater & Fallback:** Seamless auto-updates via Velopack with GitHub Releases API polling fallback for portable builds (Linux AppImages / macOS DMGs).
 * **🛡️ Archive Security & Atomic Swapping:** Strict ZipSlip defense, path containment validation, and atomic archive repacking with automatic `.bak` safety rollbacks.
@@ -28,23 +30,24 @@ InkTag/
 │   ├── InkTag.Core/          # Domain models, ComicInfo.xml parsing, scrapers, image hashing
 │   │   ├── Configuration/    # AppSettings & config management
 │   │   ├── Images/           # PerceptualHashService (64-bit dHash & Hamming distance)
+│   │   ├── Renaming/         # ComicFileRenamer (template formatting, collision checking, atomic rename)
 │   │   ├── Schema/           # ComicInfo.xsd XML schema definition
-│   │   ├── Scrapers/         # ComicVineProvider, MetadataScraperService, ScraperCacheService
+│   │   ├── Scrapers/         # ComicVineProvider, MetadataScraperService, BulkScrapeQueueService
 │   │   └── MetadataEditor.cs # Bulk editing, cover extraction, & archive repacking
 │   │
 │   ├── InkTag.Cli/           # Command-line interface
-│   │   └── Program.cs        # Subcommands (read, update, scan, cover, scrape, schema)
+│   │   └── Program.cs        # Subcommands (read, update, scan, cover, scrape, rename, schema)
 │   │
 │   ├── InkTag.Mcp/           # Model Context Protocol (MCP) Server
 │   │   └── ComicTools.cs     # Stdio JSON-RPC tools for Claude, Cursor, Antigravity
 │   │
 │   └── InkTag.Gui/           # Avalonia UI desktop application
-│       ├── ViewModels/       # MVVM ViewModels with live cover hash & match confidence
-│       ├── Views/            # MainWindow, ScraperMatchWindow, SeriesSearchWizardWindow, SettingsWindow
+│       ├── ViewModels/       # MVVM ViewModels (BulkScrape, RenamePreview, SeriesSearch, CandidateItem)
+│       ├── Views/            # MainWindow, BulkScrapeQueueWindow, RenamePreviewWindow, SettingsWindow
 │       └── Services/         # ArchiveCoverService, UpdateService
 │
 ├── tests/
-│   └── InkTag.Tests/         # Automated xUnit test suite (49 unit tests)
+│   └── InkTag.Tests/         # Automated xUnit test suite (94 unit tests)
 │
 ├── .agents/skills/           # Agent Skill package definitions
 │   └── comic-metadata-curator/
@@ -91,6 +94,8 @@ dotnet run --project src/InkTag.Mcp/InkTag.Mcp.csproj
 
 **Exposed MCP Tools:**
 * `scrape_comic_metadata`: Scrape and apply ComicVine metadata with visual cover match verification and confidence metrics.
+* `bulk_scrape_directory`: Automated parallel queue to scrape and cover-match whole directories of comics.
+* `rename_comic_files`: Batch rename comic files based on metadata using configurable naming templates with collision protection.
 * `search_comic_vine`: Search ComicVine candidate issues with confidence scores and thumbnail URLs.
 * `read_comic_metadata`: Read XML metadata from archive as structured JSON.
 * `update_comic_metadata`: Apply JSON property edits (with optional `dryRun`).
@@ -102,8 +107,11 @@ dotnet run --project src/InkTag.Mcp/InkTag.Mcp.csproj
 Run subcommands with `--json` for machine-parseable execution:
 
 ```bash
-# Scrape online metadata for an archive
+# Auto-tag online metadata for an archive
 dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- scrape comic.cbz --json
+
+# Bulk rename comic files based on metadata
+dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- rename /path/to/comics --template "{Series} #{Number:3} ({Year})" --json
 
 # Read metadata as JSON
 dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- read comic.cbz --json
@@ -128,11 +136,12 @@ dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- schema --json
 
 ## 💻 Library Usage Example
 
-Reference `InkTag.Core.csproj` to integrate metadata editing and perceptual cover hashing into your application:
+Reference `InkTag.Core.csproj` to integrate metadata editing, perceptual cover hashing, and file renaming into your application:
 
 ```csharp
 using InkTag.Core;
 using InkTag.Core.Images;
+using InkTag.Core.Renaming;
 using InkTag.Core.Scrapers;
 
 var editor = new MetadataEditor();
@@ -146,10 +155,14 @@ BulkEditReport report = editor.BulkEditMetadata("/path/to/comics", comic =>
     comic.Year = 2006;
 });
 
-// 2. Compute perceptual dHash for cover matching
+// 2. Standardized File Renaming from Metadata
+string newName = ComicFileRenamer.GenerateFilename(comic, "/comics/old_scan.cbz", "{Series} #{Number:3} ({Year})");
+// Output: "Eden: It's an Endless World! #001 (2006).cbz"
+
+// 3. Compute perceptual dHash for cover matching
 ulong coverHash = editor.GetCoverHash("/path/to/comic.cbz");
 
-// 3. Compare visual similarity between two cover hashes (0.0 to 1.0)
+// 4. Compare visual similarity between two cover hashes (0.0 to 1.0)
 ulong onlineCoverHash = 0b1100110011001100UL;
 double similarity = PerceptualHashService.CalculateSimilarity(coverHash, onlineCoverHash);
 bool isMatch = PerceptualHashService.IsVisualMatch(coverHash, onlineCoverHash, threshold: 0.90);
@@ -160,6 +173,7 @@ bool isMatch = PerceptualHashService.IsVisualMatch(coverHash, onlineCoverHash, t
 ## 🗺️ Roadmap & Milestones
 
 ### Completed Milestones
+* **[x] Bulk Auto-Tag Pipeline & File Renamer Engine (`v0.10.0`):** Streaming parallel identification queue with cover visual hashing (`dHash`), chronological volume clustering, duplicate-save protection, and template-based file renaming engine (`ComicFileRenamer`) across Core, GUI, CLI, and MCP.
 * **[x] Metadata Deserialization & Archive Recovery (`v0.9.1`):** Resilient handling of malformed or out-of-order `ComicInfo.xml` files during metadata edit operations, preventing save failures and guaranteeing XML schema compliance upon repack.
 * **[x] Network Mount Resilience & Diagnostics (`v0.9.0`):** Slow virtual remote share detection (GVFS FTP / FUSE), sequential forward-only streaming fallback, real-time file download diagnostics, in-overlay advisory guidance, and sub-10ms instantaneous stream cancellation.
 * **[x] Perceptual Cover Hashing & Visual Matching (`v0.8.0`):** 64-bit `dHash` image fingerprinting, live cover match badging (`👁 XX% Cover Match`), and Visual Override matching for unorganized files.

@@ -19,9 +19,10 @@ dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- <command> [options]
 |---|---|---|
 | `read` | `read <file>` | Reads and displays `ComicInfo.xml` metadata as JSON or text. |
 | `update` | `update <file\|dir> --patch '<json>' [--dry-run] [--recursive]` | Applies JSON property edits to a single archive or all archives in a directory. |
+| `rename` | `rename <file\|dir> [--template '<pattern>'] [--preserve-scans] [--dry-run] [--recursive]` | Renames comic archives on disk based on their embedded metadata. |
 | `scan` | `scan <directory> [--missing Field1,Field2] [--recursive]` | Scans a directory for comic files and flags missing metadata fields. |
 | `cover` | `cover <file> [--output <image-path>]` | Extracts front cover image from comic archive. |
-| `scrape` | `scrape <file\|dir> [--api-key KEY] [--mode fill-missing\|overwrite] [--dry-run] [--recursive]` | Scrapes metadata from ComicVine using cover perceptual dHash visual matching and smart series grouping. |
+| `scrape` | `scrape <file\|dir> [--api-key KEY] [--mode fill-missing\|overwrite] [--dry-run] [--recursive]` | Auto-tags metadata from ComicVine using cover perceptual dHash visual matching and smart series grouping. |
 | `schema` | `schema` | Prints the JSON Schema specification for `ComicInfo` metadata objects. |
 | `help` | `help` / `--help` / `-h` | Displays usage instructions and subcommand options. |
 
@@ -60,7 +61,7 @@ Extracts front cover art from a comic archive for multimodal vision inspection.
   - `returnBase64` (boolean, optional): Returns base64 encoded image data.
 
 #### 4. `bulk_scrape_directory`
-Queues and executes a bulk scrape on a directory of comic files using smart series volume clustering and perceptual cover visual matching (dHash).
+Queues and executes a bulk auto-tag on a directory of comic files using smart series volume clustering and perceptual cover visual matching (dHash).
 - **Parameters**:
   - `directory` (string, required): Directory path containing comic archives (.cbz / .cbr).
   - `mode` (string, optional): `"fill-missing"` (default) or `"overwrite"`.
@@ -68,18 +69,27 @@ Queues and executes a bulk scrape on a directory of comic files using smart seri
   - `recursive` (boolean, optional): Scans nested subdirectories.
   - `apiKey` (string, optional): Optional ComicVine API key.
 
-#### 5. `scan_comics`
+#### 5. `rename_comic_files`
+Renames comic files based on their embedded metadata using standardized naming templates with collision detection.
+- **Parameters**:
+  - `path` (string, required): Path to a comic file or directory containing comic archives.
+  - `template` (string, optional): Naming template (default: `"{Series} #{Number:3} ({Year})"`).
+  - `preserveScanInfo` (boolean, optional): Whether to preserve scan/edition tags (default: `false`).
+  - `dryRun` (boolean, optional): Previews proposed filename changes without writing to disk.
+  - `recursive` (boolean, optional): Scans subdirectories recursively.
+
+#### 6. `scan_comics`
 Scans a directory for comic archives and checks for missing metadata fields.
 - **Parameters**:
   - `directory` (string, required): Path to scan.
   - `missingFields` (array of strings, optional): List of required fields (e.g. `["Writer", "Series"]`).
   - `recursive` (boolean, optional): If `true`, scans subdirectories recursively.
 
-#### 6. `get_comic_schema`
+#### 7. `get_comic_schema`
 Returns the JSON Schema specification for valid `ComicInfo` metadata properties.
 - **Parameters**: None
 
-#### 7. `search_external_metadata`
+#### 8. `search_external_metadata`
 Searches ComicVine for candidate issues matching series name, issue number, and publication year.
 - **Parameters**:
   - `series` (string, required): Series title.
@@ -87,8 +97,8 @@ Searches ComicVine for candidate issues matching series name, issue number, and 
   - `year` (integer, optional): Publication year.
   - `apiKey` (string, optional): Optional ComicVine API key override.
 
-#### 8. `scrape_comic_metadata`
-Scrapes and applies metadata from ComicVine to a local comic archive with visual cover match verification.
+#### 9. `scrape_comic_metadata`
+Auto-tags and applies metadata from ComicVine to a local comic archive with visual cover match verification.
 - **Parameters**:
   - `path` (string, required): Path to comic archive (.cbz / .cbr).
   - `mode` (string, optional): `"fill-missing"` (default) or `"overwrite"`.
