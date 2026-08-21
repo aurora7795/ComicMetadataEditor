@@ -7,7 +7,7 @@
   </ItemGroup>
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>0.10.1</Version>
+    <Version>0.10.2</Version>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>$(NoWarn);NU1902</NoWarn>
