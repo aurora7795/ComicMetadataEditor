@@ -748,6 +748,27 @@ public class MetadataEditorTests
         Assert.Equal(1000, original.Pages.Page[0].ImageWidth);
     }
 
+    [Theory]
+    [InlineData("Spider-Man #001 (2020).cbz", true)]
+    [InlineData("Batman 05.cbr", true)]
+    [InlineData("/path/to/Iron Man #10.CBZ", true)]
+    [InlineData("/path/to/Thor #1.CBR", true)]
+    [InlineData("._Spider-Man #001.cbz", false)]
+    [InlineData(".DS_Store", false)]
+    [InlineData("/folder/.AppleDouble/comic.cbz", false)]
+    [InlineData("/folder/__MACOSX/comic.cbz", false)]
+    [InlineData("/folder/.git/object.cbz", false)]
+    [InlineData("/folder/.Trash/comic.cbz", false)]
+    [InlineData("comic.zip", false)]
+    [InlineData("comic.pdf", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void IsSupportedComicFile_FiltersValidAndInvalidFilesCorrectly(string? path, bool expected)
+    {
+        bool result = MetadataEditor.IsSupportedComicFile(path);
+        Assert.Equal(expected, result);
+    }
+
     private class DirectProgress<T> : IProgress<T>
     {
         private readonly Action<T> _handler;

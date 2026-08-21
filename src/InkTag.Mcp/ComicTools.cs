@@ -284,7 +284,7 @@ public static class ComicTools
 
         var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
         var files = Directory.GetFiles(directory, "*.*", searchOption)
-            .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
+            .Where(MetadataEditor.IsSupportedComicFile)
             .ToList();
 
         var scraperService = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);

@@ -53,8 +53,7 @@ public class ComicScannerService
 
                 var enumSw = System.Diagnostics.Stopwatch.StartNew();
                 var files = Directory.GetFiles(directoryPath, "*.*", searchOption)
-                    .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || 
-                                f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
+                    .Where(MetadataEditor.IsSupportedComicFile)
                     .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
                     .ToList();
                 enumSw.Stop();

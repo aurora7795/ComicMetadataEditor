@@ -103,6 +103,10 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 * **Signature**: `public byte[]? ExtractCoverImageBytes(string filePath)`
 * **Description**: Extracts front cover art or first page image from a `.cbz` or `.cbr` archive in-memory via stream decoding.
 
+#### `IsSupportedComicFile`
+* **Signature**: `public static bool IsSupportedComicFile(string? filePath)`
+* **Description**: Checks whether a given path is a valid comic archive (`.cbz` or `.cbr`), filtering out macOS resource forks (`._*`), AppleDouble folders (`.AppleDouble`), `__MACOSX`, `.git`, `.Trash`, and hidden system files.
+
 #### `ExportJsonSchema`
 * **Signature**: `public static string ExportJsonSchema()`
 * **Description**: Returns the JSON Schema specification for `ComicInfo` objects.

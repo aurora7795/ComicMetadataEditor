@@ -24,8 +24,9 @@ public class FieldDiffItem
 public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyPropertyChanged
 {
     private readonly ComicInfo _targetComic;
-    private readonly MetadataScraperService _scraperService;
     private readonly ulong? _localCoverHash;
+    private readonly string? _filePath;
+    private readonly MetadataScraperService _scraperService;
     private ComicInfo? _fetchedComic;
 
     private Avalonia.Media.Imaging.Bitmap? _localCoverImage;
@@ -69,6 +70,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
         DataContext = this;
         _targetComic = targetComic;
         _localCoverHash = localCoverHash;
+        _filePath = filePath;
         LocalCoverImage = localCover;
         _scraperService = new MetadataScraperService(new AppSettingsService());
 
@@ -91,7 +93,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
             {
                 Series = series,
                 IssueNumber = issue,
-                Year = parsedYear != 0 ? parsedYear : null
+                Year = parsedYear > 0 ? parsedYear : null
             };
             SetCandidates(initialCandidates, initialQuery);
         }
@@ -103,67 +105,80 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
 
     private void SetCandidates(IEnumerable<ComicSearchResult> candidates, ComicSearchQuery? query = null)
     {
-        var viewModels = candidates.Select(c =>
+        var candidateList = candidates.ToList();
+        var viewModels = candidateList.Select(c =>
         {
             var vm = new CandidateItemViewModel(c, _localCoverHash, query);
             vm.OnCoverHashComputed += OnCandidateCoverHashComputed;
             return vm;
         }).ToList();
 
-        var sorted = viewModels
-            .OrderByDescending(c => c.MatchConfidence)
-            .ThenByDescending(c => c.VisualSimilarity ?? 0.0)
-            .ToList();
+        CandidatesListBox.ItemsSource = viewModels;
 
-        UpdateTopVisualMatchFlag(sorted);
-        CandidatesListBox.ItemsSource = sorted;
-
-        if (sorted.Any())
+        if (viewModels.Any())
         {
             CandidatesListBox.SelectedIndex = 0;
+        }
+        else
+        {
+            SelectedCandidateThumbnail = null;
+            VisualSimilarityText = string.Empty;
         }
     }
 
     private void OnCandidateCoverHashComputed(CandidateItemViewModel vm)
     {
-        if (!_localCoverHash.HasValue || _localCoverHash.Value == 0) return;
-
-        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        if (CandidatesListBox.ItemsSource is IEnumerable<CandidateItemViewModel> currentItems)
         {
-            if (CandidatesListBox.ItemsSource is IEnumerable<CandidateItemViewModel> currentItems)
-            {
-                var currentList = currentItems.ToList();
-                var selected = CandidatesListBox.SelectedItem as CandidateItemViewModel;
-
-                var sorted = currentList
-                    .OrderByDescending(c => c.MatchConfidence)
-                    .ThenByDescending(c => c.VisualSimilarity ?? 0.0)
-                    .ToList();
-
-                UpdateTopVisualMatchFlag(sorted);
-
-                if (!currentList.SequenceEqual(sorted))
-                {
-                    CandidatesListBox.ItemsSource = sorted;
-                    if (selected != null && sorted.Contains(selected))
-                    {
-                        CandidatesListBox.SelectedItem = selected;
-                    }
-                    else if (sorted.Any())
-                    {
-                        CandidatesListBox.SelectedIndex = 0;
-                    }
-                }
-            }
-        });
+            var list = currentItems.ToList();
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => EvaluateTopVisualMatch(list));
+        }
     }
 
-    private void UpdateTopVisualMatchFlag(List<CandidateItemViewModel> items)
+    private void EvaluateTopVisualMatch(List<CandidateItemViewModel> list)
     {
-        var top = items.FirstOrDefault(c => c.VisualSimilarity.HasValue && c.VisualSimilarity.Value >= 0.70);
-        foreach (var item in items)
+        if (!_localCoverHash.HasValue || _localCoverHash.Value == 0 || list.Count == 0) return;
+
+        CandidateItemViewModel? topMatch = null;
+        double bestSim = 0.0;
+
+        foreach (var item in list)
         {
-            item.IsTopVisualMatch = top != null && item == top;
+            if (item.VisualSimilarity.HasValue && item.VisualSimilarity.Value > bestSim)
+            {
+                bestSim = item.VisualSimilarity.Value;
+                topMatch = item;
+            }
+        }
+
+        foreach (var item in list)
+        {
+            item.IsTopVisualMatch = topMatch != null && item == topMatch && bestSim >= 0.70;
+        }
+
+        // Reorder candidates to place top visual matches at the top of the list
+        var sorted = list
+            .OrderByDescending(c => c.VisualSimilarity ?? 0.0)
+            .ThenByDescending(c => c.MatchConfidence)
+            .ToList();
+
+        if (!list.SequenceEqual(sorted))
+        {
+            var selected = CandidatesListBox.SelectedItem as CandidateItemViewModel;
+            CandidatesListBox.ItemsSource = sorted;
+
+            if (topMatch != null && bestSim >= 0.70)
+            {
+                CandidatesListBox.SelectedItem = topMatch;
+            }
+            else if (selected != null && sorted.Contains(selected))
+            {
+                CandidatesListBox.SelectedItem = selected;
+            }
+        }
+        else if (topMatch != null && bestSim >= 0.85 && CandidatesListBox.SelectedItem != topMatch)
+        {
+            CandidatesListBox.SelectedItem = topMatch;
         }
     }
 
@@ -180,7 +195,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
         }
 
         string initialQuery = SeriesTextBox.Text?.Trim() ?? _targetComic.Series ?? "";
-        var wizard = new SeriesSearchWizardWindow(initialQuery, _localCoverHash);
+        var wizard = new SeriesSearchWizardWindow(initialQuery, _localCoverHash, _filePath);
         await wizard.ShowDialog(this);
 
         if (wizard.WasApplied && wizard.SelectedResult != null)
@@ -198,8 +213,20 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
 
             if (!wizard.RequestCompareDiff)
             {
-                // Quick Apply All
-                OverwriteAll_Click(sender, e);
+                // Quick Apply All: fetch full issue metadata and apply directly to target comic
+                try
+                {
+                    var fetchedComic = await _scraperService.FetchMetadataAsync(wizard.SelectedResult.IssueId);
+                    _scraperService.ApplyMetadata(_targetComic, fetchedComic, ScrapeMergeMode.OverwriteAll);
+                    SelectedCandidate = wizard.SelectedResult;
+                    _fetchedComic = fetchedComic;
+                    WasApplied = true;
+                    Close();
+                }
+                catch (Exception ex)
+                {
+                    Core.Logging.AppLogger.LogError($"Failed to quick apply metadata for issue {wizard.SelectedResult.IssueId}", ex);
+                }
             }
         }
     }

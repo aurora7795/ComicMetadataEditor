@@ -46,6 +46,13 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _selectedDirectory = string.Empty;
 
+    public bool HasSelectedDirectory => !string.IsNullOrWhiteSpace(SelectedDirectory);
+
+    partial void OnSelectedDirectoryChanged(string value)
+    {
+        OnPropertyChanged(nameof(HasSelectedDirectory));
+    }
+
     [ObservableProperty]
     private bool _isRecursive = true;
 
