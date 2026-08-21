@@ -462,10 +462,10 @@ public class BulkScrapeQueueService
             cand.MatchConfidence = ComicVineProvider.CalculateConfidence(cand, item.ParsedQuery, item.LocalCoverHash != 0 ? item.LocalCoverHash : null);
         }
 
-        // Rank primarily by visual similarity if strong match, otherwise by match confidence
+        // Rank primarily by combined MatchConfidence, then by visual similarity
         return list
-            .OrderByDescending(c => c.VisualSimilarity ?? 0.0)
-            .ThenByDescending(c => c.MatchConfidence)
+            .OrderByDescending(c => c.MatchConfidence)
+            .ThenByDescending(c => c.VisualSimilarity ?? 0.0)
             .ToList();
     }
 

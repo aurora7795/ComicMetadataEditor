@@ -369,7 +369,11 @@ public class ComicVineProvider : IMetadataScraperProvider
         {
             if (NormalizeIssueNumber(query.IssueNumber) == NormalizeIssueNumber(result.IssueNumber))
             {
-                textScore += 0.35;
+                textScore += 0.40; // Exact issue match
+            }
+            else
+            {
+                textScore -= 0.35; // Distinct issue mismatch penalty
             }
         }
 
@@ -415,16 +419,18 @@ public class ComicVineProvider : IMetadataScraperProvider
             }
 
             // Visual Override Strategy:
-            // If visual match is extremely high (>= 90%) and year is not contradictory, treat cover as primary confirmation (95%+ confidence)
-            if (visualSimilarity >= 0.90)
+            // If visual match is very high (>= 88%) and year is not contradictory, treat cover as confirmation (95%+ confidence)
+            if (visualSimilarity >= 0.88)
             {
                 return Math.Max(0.95, (textScore * 0.2) + (visualSimilarity * 0.8));
             }
             if (visualSimilarity >= 0.75)
             {
-                return (textScore * 0.5) + (visualSimilarity * 0.5);
+                return (textScore * 0.6) + (visualSimilarity * 0.4);
             }
-            return (textScore * 0.7) + (visualSimilarity * 0.3);
+            
+            // For visual similarity below 75% (in the noise/ambiguous range), let text/issue/year heavily dominate
+            return textScore;
         }
 
         return textScore;
