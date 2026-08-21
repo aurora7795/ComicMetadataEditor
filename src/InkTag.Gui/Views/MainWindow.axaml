@@ -280,8 +280,8 @@
           </DataGrid.Columns>
         </DataGrid>
 
-        <!-- Loading & Progress Overlay -->
-        <Border IsVisible="{Binding IsLoading}" Background="#90000000" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <!-- Loading & Progress Overlay (Centered specifically over the DataGrid panel) -->
+        <Border Grid.Row="1" IsVisible="{Binding IsLoading}" Background="#90000000" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
           <Border Background="#252526" BorderBrush="#007ACC" BorderThickness="1" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" BoxShadow="0 4 16 #80000000">
             <StackPanel Spacing="14" HorizontalAlignment="Center">
               <ProgressBar Value="{Binding ProgressValue}" Minimum="0" Maximum="100" Height="6" Width="300" Foreground="#007ACC"/>
