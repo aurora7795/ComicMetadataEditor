@@ -29,10 +29,11 @@
     <PropertyGroup>
       <AppBundleDir>$(TargetDir)InkTag.app</AppBundleDir>
     </PropertyGroup>
+    <ItemGroup>
+      <TargetOutputFiles Include="$(TargetDir)**/*" Exclude="$(TargetDir)*.app/**;$(TargetDir)*.app" />
+    </ItemGroup>
     <MakeDir Directories="$(AppBundleDir)/Contents/MacOS;$(AppBundleDir)/Contents/Resources" />
-    <Copy SourceFiles="$(TargetDir)$(TargetName)" DestinationFolder="$(AppBundleDir)/Contents/MacOS" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="$(TargetDir)$(TargetName).dll" DestinationFolder="$(AppBundleDir)/Contents/MacOS" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="$(TargetDir)$(TargetName).runtimeconfig.json" DestinationFolder="$(AppBundleDir)/Contents/MacOS" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(TargetOutputFiles)" DestinationFiles="@(TargetOutputFiles->'$(AppBundleDir)/Contents/MacOS/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)../../packaging/Info.plist" DestinationFolder="$(AppBundleDir)/Contents" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)../../packaging/InkTag.icns" DestinationFolder="$(AppBundleDir)/Contents/Resources" SkipUnchangedFiles="true" />
     <Exec Command="chmod +x &quot;$(AppBundleDir)/Contents/MacOS/$(TargetName)&quot;" />
