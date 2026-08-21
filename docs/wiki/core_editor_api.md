@@ -118,9 +118,9 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 * **Description**: Computes a 64-bit difference hash (dHash) by downscaling image bytes to 9×8 grayscale and comparing horizontal gradient intensities. Used for cover deduplication and visual matching against scraper candidates.
 
 ### `ComicFilenameParser.cs` (Smart Filename Parsing)
-* **Namespace**: `InkTag.Core`
-* **Method**: `public static ParsedComicFilename ParseFilename(string fileName)`
-* **Description**: Extracts `Series`, `Number` (including alphanumeric/decimal/annual issues like `#005`, `1.5`, `Annual #1`), `Volume`, and `Year` from raw filenames (e.g. `"100 Bullets The Deluxe Edition #004 (2013).cbz"` -> Series: `"100 Bullets The Deluxe Edition"`, Issue: `"4"`, Year: `2013`).
+* **Namespace**: `InkTag.Core.Parsing`
+* **Method**: `public static ParsedComicFilename Parse(string filenameOrPath, bool inspectParentHierarchy = true)`
+* **Description**: Extracts `Series`, `Number` (including attached acronym numbers like `IM015` -> issue `15`, alphanumeric/decimal/annual issues like `#005`, `1.5`, `Annual #1`), `Volume`, and `Year` from raw filenames. Interrogates parent and grandparent directory hierarchies to resolve series names from abbreviations/initials (e.g. `/iron man/IM015.cbz` -> Series: `"Iron Man"`, Issue: `"15"`).
 
 ### `ComicFileRenamer.cs` (Bulk File Renaming Engine)
 * **Namespace**: `InkTag.Core.Renaming`

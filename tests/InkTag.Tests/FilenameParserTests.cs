@@ -19,6 +19,8 @@ public class FilenameParserTests
     [InlineData("Saga 054 (2018) (Digital) (Empire).cbz", "Saga", "54", 2018, null, "Digital")]
     [InlineData("The Walking Dead 01 (2003) (c2c).cbz", "The Walking Dead", "1", 2003, null, "c2c")]
     [InlineData("/mnt/comics/Eden - It's an Endless World! 02 (2006).cbz", "Eden - It's an Endless World!", "2", 2006, null, "")]
+    [InlineData("IM015.cbz", "IM", "15", null, null, "")]
+    [InlineData("ASM300 (1988).cbz", "ASM", "300", 1988, null, "")]
     public void ComicFilenameParser_ParsesStandardConventions(
         string filename, string expectedSeries, string expectedIssue, int? expectedYear, int? expectedVolume, string expectedScanInfo)
     {
@@ -55,6 +57,11 @@ public class FilenameParserTests
     [InlineData("/Comics/Batman (2016)/Book 3/025.cbz", "Batman", "25", 2016, 3)]
     [InlineData("/Comics/The Avengers (1963)/The Avengers #048.cbz", "The Avengers", "48", 1963, null)]
     [InlineData("/Comics/The Avengers (1963)/The Avengers 048 (1968) (digital).cbz", "The Avengers", "48", 1968, null)]
+    [InlineData("/comics/iron man/IM015.cbz", "Iron Man", "15", null, null)]
+    [InlineData("/comics/Iron Man/IM_015.cbz", "Iron Man", "15", null, null)]
+    [InlineData("/comics/Iron Man/IM-015.cbz", "Iron Man", "15", null, null)]
+    [InlineData("/comics/The Amazing Spider-Man/ASM300.cbz", "The Amazing Spider-Man", "300", null, null)]
+    [InlineData("/comics/Uncanny X-Men/UXM_001.cbz", "Uncanny X-Men", "1", null, null)]
     public void ComicFilenameParser_InfersMetadataFromParentDirectoryHierarchy(
         string fullPath, string expectedSeries, string expectedIssue, int? expectedYear, int? expectedVolume)
     {

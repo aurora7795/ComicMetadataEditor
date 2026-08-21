@@ -132,8 +132,8 @@ public static class ComicFilenameParser
             }
             else
             {
-                // Check trailing number (e.g. "Blankets 03", "The Amazing Spider-Man 300")
-                var trailingNumMatch = Regex.Match(workingName, @"(?:\s+|^)0*(\d+(?:\.\d+)?)\s*$", RegexOptions.Compiled);
+                // Check trailing number (e.g. "Blankets 03", "The Amazing Spider-Man 300", "IM015", "IM_015", "IM-015", "ASM300", "015")
+                var trailingNumMatch = Regex.Match(workingName, @"(?:[\s\-_#.]+|(?<=[A-Za-z])|^)0*(\d+(?:\.\d+)?)\s*$", RegexOptions.Compiled);
                 if (trailingNumMatch.Success)
                 {
                     issueNumber = NormalizeIssue(trailingNumMatch.Groups[1].Value);
@@ -165,7 +165,7 @@ public static class ComicFilenameParser
         series = Regex.Replace(series, @"^[\s\-_:]+", "").Trim();
 
         // 9. Hierarchical Parent Directory Traversal
-        // If series is missing/trivial, or year/volume is missing, interrogate parent and grandparent folders
+        // If series is missing/trivial/abbreviated, or year/volume is missing, interrogate parent and grandparent folders
         if (inspectParentHierarchy)
         {
             string? dirPath = Path.GetDirectoryName(filenameOrPath);
@@ -173,9 +173,12 @@ public static class ComicFilenameParser
             {
                 var (inferredSeries, inferredYear, inferredVolume) = InferFromDirectoryHierarchy(dirPath);
 
-                if ((string.IsNullOrWhiteSpace(series) || IsTrivialSeriesName(series)) && !string.IsNullOrWhiteSpace(inferredSeries))
+                if (!string.IsNullOrWhiteSpace(inferredSeries))
                 {
-                    series = inferredSeries;
+                    if (string.IsNullOrWhiteSpace(series) || IsTrivialOrAbbreviatedSeriesName(series, inferredSeries))
+                    {
+                        series = inferredSeries;
+                    }
                 }
 
                 if (!year.HasValue && inferredYear.HasValue)
@@ -296,6 +299,15 @@ public static class ComicFilenameParser
         string series = Regex.Replace(workingName, @"[\s\-_:]+$", "").Trim();
         series = Regex.Replace(series, @"^[\s\-_:]+", "").Trim();
 
+        if (!string.IsNullOrWhiteSpace(series))
+        {
+            // If the directory name was entirely lowercase (e.g. "iron man"), capitalize words ("Iron Man")
+            if (series.Equals(series.ToLowerInvariant(), StringComparison.Ordinal))
+            {
+                series = System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(series);
+            }
+        }
+
         // Check if this was purely a volume directory (e.g. "Vol 1", "v02", "Volume 1", "Book 1")
         bool isPureVolume = volMatch.Success && (string.IsNullOrWhiteSpace(series) || series.Length <= 1);
 
@@ -324,21 +336,67 @@ public static class ComicFilenameParser
     }
 
     /// <summary>
-    /// Checks if a series name parsed from a filename is uninformative or just an issue prefix (e.g. "#01", "048", "Issue 1").
+    /// Checks if a series name parsed from a filename is uninformative, an issue prefix, or a short acronym/abbreviation
+    /// of the parent directory series title.
     /// </summary>
-    private static bool IsTrivialSeriesName(string series)
+    public static bool IsTrivialOrAbbreviatedSeriesName(string series, string? inferredSeries = null)
     {
         if (string.IsNullOrWhiteSpace(series)) return true;
         string trimmed = series.Trim();
 
-        // If purely digits (e.g. "048", "1")
+        // 1. Purely digits (e.g. "048", "1")
         if (Regex.IsMatch(trimmed, @"^\d+$")) return true;
 
-        // If issue prefix (e.g. "#01", "Issue 1", "No. 2", "c01", "Book 1", "Part 1")
+        // 2. Issue prefixes (e.g. "#01", "Issue 1", "No. 2", "c01", "Book 1", "Part 1")
         if (Regex.IsMatch(trimmed, @"^(#\s*\d+|issue\s*\d*|no\.?\s*\d*|c\d+|book\s*\d*|part\s*\d*)$", RegexOptions.IgnoreCase)) return true;
+
+        // 3. If an inferred parent directory series is available:
+        if (!string.IsNullOrWhiteSpace(inferredSeries))
+        {
+            // Short abbreviations / acronyms (<= 4 chars without spaces, e.g. "IM", "ASM", "UXM", "FF", "DD", "GL", "BM", "Cap")
+            if (trimmed.Length <= 4 && !trimmed.Contains(' '))
+            {
+                return true;
+            }
+
+            // Check if series matches the initials of inferredSeries (e.g. "IM" for "Iron Man", "ASM" for "The Amazing Spider-Man")
+            if (MatchesInitials(trimmed, inferredSeries))
+            {
+                return true;
+            }
+        }
 
         return false;
     }
+
+    public static bool MatchesInitials(string acronym, string fullTitle)
+    {
+        if (string.IsNullOrWhiteSpace(acronym) || string.IsNullOrWhiteSpace(fullTitle)) return false;
+
+        // Extract alphanumeric words from fullTitle
+        var words = Regex.Matches(fullTitle, @"[A-Za-z0-9]+");
+        if (words.Count == 0) return false;
+
+        // 1. Full initials, e.g. "Iron Man" -> "IM", "The Amazing Spider-Man" -> "TASM"
+        string fullInitials = string.Concat(System.Linq.Enumerable.Select(words.Cast<Match>(), w => w.Value[0]));
+        if (acronym.Equals(fullInitials, StringComparison.OrdinalIgnoreCase)) return true;
+
+        // 2. Initials ignoring leading articles ("The", "A", "An") -> "ASM"
+        if (words.Count > 1 && (words[0].Value.Equals("The", StringComparison.OrdinalIgnoreCase) ||
+                                words[0].Value.Equals("A", StringComparison.OrdinalIgnoreCase) ||
+                                words[0].Value.Equals("An", StringComparison.OrdinalIgnoreCase)))
+        {
+            string noArticleInitials = string.Concat(System.Linq.Enumerable.Select(words.Cast<Match>().Skip(1), w => w.Value[0]));
+            if (acronym.Equals(noArticleInitials, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a series name parsed from a filename is uninformative or just an issue prefix (e.g. "#01", "048", "Issue 1").
+    /// </summary>
+    public static bool IsTrivialSeriesName(string series) => IsTrivialOrAbbreviatedSeriesName(series, null);
 
     private static string NormalizeIssue(string issueStr)
     {
