@@ -234,7 +234,7 @@
           
           <CheckBox Grid.Column="0" Content="Select / Deselect All" IsChecked="{Binding SelectAll}" VerticalAlignment="Center"/>
 
-          <CheckBox Grid.Column="1" Content="✏️ Also Rename Files from Metadata" IsChecked="{Binding AlsoRenameFiles}"
+          <CheckBox Grid.Column="1" Content="✏️ Rename Files from Metadata" IsChecked="{Binding AlsoRenameFiles}"
                     VerticalAlignment="Center" Margin="24,0,10,0"/>
 
           <ComboBox Grid.Column="2" ItemsSource="{Binding RenameTemplates}" SelectedIndex="{Binding SelectedRenameTemplateIndex}"
