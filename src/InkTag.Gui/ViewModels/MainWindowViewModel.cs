@@ -47,7 +47,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _selectedDirectory = string.Empty;
 
     [ObservableProperty]
-    private bool _isRecursive;
+    private bool _isRecursive = true;
 
     [ObservableProperty]
     private bool _isInspectorVisible = true;
