@@ -79,10 +79,13 @@ public class CandidateItemViewModel : ObservableObject
 
     public event Action<CandidateItemViewModel>? OnCoverHashComputed;
 
-    public CandidateItemViewModel(ComicSearchResult result, ulong? targetCoverHash = null)
+    private readonly ComicSearchQuery? _currentQuery;
+
+    public CandidateItemViewModel(ComicSearchResult result, ulong? targetCoverHash = null, ComicSearchQuery? currentQuery = null)
     {
         Result = result;
         _targetCoverHash = targetCoverHash;
+        _currentQuery = currentQuery;
 
         if (result.CoverHash.HasValue && result.CoverHash.Value != 0)
         {
@@ -161,7 +164,7 @@ public class CandidateItemViewModel : ObservableObject
             VisualSimilarity = PerceptualHashService.CalculateSimilarity(_targetCoverHash.Value, hash);
             Result.VisualSimilarity = VisualSimilarity;
 
-            var query = new ComicSearchQuery
+            var query = _currentQuery ?? new ComicSearchQuery
             {
                 Series = Result.SeriesTitle,
                 IssueNumber = Result.IssueNumber

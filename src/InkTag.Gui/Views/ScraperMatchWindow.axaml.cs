@@ -102,7 +102,14 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
 
         if (initialCandidates != null && initialCandidates.Any())
         {
-            SetCandidates(initialCandidates);
+            int.TryParse(year, out int parsedYear);
+            var initialQuery = new ComicSearchQuery
+            {
+                Series = series,
+                IssueNumber = issue,
+                Year = parsedYear != 0 ? parsedYear : null
+            };
+            SetCandidates(initialCandidates, initialQuery);
         }
         else if (!string.IsNullOrWhiteSpace(series))
         {
@@ -110,18 +117,18 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
         }
     }
 
-    private void SetCandidates(IEnumerable<ComicSearchResult> candidates)
+    private void SetCandidates(IEnumerable<ComicSearchResult> candidates, ComicSearchQuery? query = null)
     {
         var viewModels = candidates.Select(c =>
         {
-            var vm = new CandidateItemViewModel(c, _localCoverHash);
+            var vm = new CandidateItemViewModel(c, _localCoverHash, query);
             vm.OnCoverHashComputed += OnCandidateCoverHashComputed;
             return vm;
         }).ToList();
 
         var sorted = viewModels
-            .OrderByDescending(c => c.VisualSimilarity ?? 0.0)
-            .ThenByDescending(c => c.MatchConfidence)
+            .OrderByDescending(c => c.MatchConfidence)
+            .ThenByDescending(c => c.VisualSimilarity ?? 0.0)
             .ToList();
 
         UpdateTopVisualMatchFlag(sorted);
@@ -145,8 +152,8 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
                 var selected = CandidatesListBox.SelectedItem as CandidateItemViewModel;
 
                 var sorted = currentList
-                    .OrderByDescending(c => c.VisualSimilarity ?? 0.0)
-                    .ThenByDescending(c => c.MatchConfidence)
+                    .OrderByDescending(c => c.MatchConfidence)
+                    .ThenByDescending(c => c.VisualSimilarity ?? 0.0)
                     .ToList();
 
                 UpdateTopVisualMatchFlag(sorted);
@@ -232,7 +239,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
             };
 
             var candidates = (await _scraperService.SearchCandidatesAsync(query)).ToList();
-            SetCandidates(candidates);
+            SetCandidates(candidates, query);
         }
         catch
         {
