@@ -230,14 +230,21 @@
 
       <!-- Bottom Confirmation Actions Bar -->
       <Border Grid.Row="2" Background="#252526" CornerRadius="6" Padding="12,10" Margin="0,12,0,0" BorderBrush="#333338" BorderThickness="1">
-        <Grid ColumnDefinitions="Auto, *, Auto, Auto">
+        <Grid ColumnDefinitions="Auto, Auto, Auto, *, Auto, Auto">
           
           <CheckBox Grid.Column="0" Content="Select / Deselect All" IsChecked="{Binding SelectAll}" VerticalAlignment="Center"/>
 
-          <Button Name="ApplyButton" Grid.Column="2" Content="💾 Apply Matched to Comic Archives" Click="ApplyMatched_Click"
+          <CheckBox Grid.Column="1" Content="✏️ Also Rename Files from Metadata" IsChecked="{Binding AlsoRenameFiles}"
+                    VerticalAlignment="Center" Margin="24,0,10,0"/>
+
+          <ComboBox Grid.Column="2" ItemsSource="{Binding RenameTemplates}" SelectedIndex="{Binding SelectedRenameTemplateIndex}"
+                    IsVisible="{Binding AlsoRenameFiles}" VerticalAlignment="Center" MaxWidth="280"
+                    Background="#1E1E1E" Foreground="White" BorderBrush="#3F3F46" Margin="0,0,10,0"/>
+
+          <Button Name="ApplyButton" Grid.Column="4" Content="💾 Apply Matched to Comic Archives" Click="ApplyMatched_Click"
                   IsEnabled="{Binding CanApply}" Background="#107C41" Foreground="White" FontWeight="Bold" Padding="16,9" CornerRadius="4" Margin="0,0,10,0"/>
 
-          <Button Grid.Column="3" Content="Close" Click="Close_Click" Padding="14,9" CornerRadius="4" Background="#3A3A3C" Foreground="White"/>
+          <Button Grid.Column="5" Content="Close" Click="Close_Click" Padding="14,9" CornerRadius="4" Background="#3A3A3C" Foreground="White"/>
         </Grid>
       </Border>
 

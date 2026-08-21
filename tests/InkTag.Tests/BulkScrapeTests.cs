@@ -291,4 +291,55 @@ public class BulkScrapeTests
             if (File.Exists(cbz)) File.Delete(cbz);
         }
     }
+
+    [Fact]
+    public async Task ApplyMatchedMetadataAsync_WithRenameFiles_RenamesArchiveOnDisk()
+    {
+        string cbz = CreateTestCbzWithCover("old_ugly_saga_scan.cbz", title: "Chapter One");
+        string? renamedPath = null;
+
+        try
+        {
+            var mockProvider = new MockScraperProvider
+            {
+                FetchedMetadata = new ComicInfo
+                {
+                    Title = "Chapter One",
+                    Series = "Saga",
+                    Number = "1",
+                    Writer = "Brian K. Vaughan",
+                    Year = 2012
+                }
+            };
+
+            var settingsService = new AppSettingsService();
+            settingsService.Settings.ComicVineApiKey = "mock_key";
+            var scraperService = new MetadataScraperService(settingsService, mockProvider);
+            var editor = new MetadataEditor();
+            var queueService = new BulkScrapeQueueService(scraperService, editor, settingsService);
+
+            var queue = queueService.CreateQueue(new[] { cbz });
+            queue[0].MatchedCandidate = new ComicSearchResult { IssueId = "4000-101", SeriesTitle = "Saga", IssueNumber = "1" };
+            queue[0].IsSelected = true;
+
+            int saved = await queueService.ApplyMatchedMetadataAsync(
+                queue,
+                ScrapeMergeMode.OverwriteAll,
+                renameFiles: true,
+                renameTemplate: "{Series} #{Number:3} ({Year})");
+
+            Assert.Equal(1, saved);
+            Assert.Equal(BulkScrapeItemStatus.Saved, queue[0].Status);
+
+            renamedPath = queue[0].FilePath;
+            Assert.False(File.Exists(cbz));
+            Assert.True(File.Exists(renamedPath));
+            Assert.Equal("Saga #001 (2012).cbz", Path.GetFileName(renamedPath));
+        }
+        finally
+        {
+            if (File.Exists(cbz)) File.Delete(cbz);
+            if (renamedPath != null && File.Exists(renamedPath)) File.Delete(renamedPath);
+        }
+    }
 }

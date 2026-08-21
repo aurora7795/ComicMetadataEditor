@@ -14,6 +14,8 @@ public class AppSettings
     public double VisualMatchConfidenceThreshold { get; set; } = 0.90;
     public int CacheDurationHours { get; set; } = 168; // 7 days
     public bool EnableDebugLogging { get; set; } = false;
+    public bool BulkScrapeAutoRenameFiles { get; set; } = false;
+    public string BulkScrapeRenameTemplate { get; set; } = "{Series} #{Number:3} ({Year})";
 }
 
 public class AppSettingsService
@@ -73,6 +75,11 @@ public class AppSettingsService
         }
 
         return new AppSettings();
+    }
+
+    public void SaveSettings()
+    {
+        SaveSettings(Settings);
     }
 
     public void SaveSettings(AppSettings settings)

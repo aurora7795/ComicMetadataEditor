@@ -97,6 +97,45 @@ public class BulkScrapeQueueViewModel : ObservableObject
         set => SetProperty(ref _unmatchedCount, value);
     }
 
+    public string[] RenameTemplates { get; } = new[]
+    {
+        "{Series} #{Number:3} ({Year})",
+        "{Series} #{Number:3} - {Title} ({Year})",
+        "{Series} {Number:3} ({Year})",
+        "{Publisher} - {Series} v{Volume} #{Number:3} ({Year})"
+    };
+
+    private int _selectedRenameTemplateIndex;
+    public int SelectedRenameTemplateIndex
+    {
+        get => _selectedRenameTemplateIndex;
+        set
+        {
+            if (SetProperty(ref _selectedRenameTemplateIndex, value))
+            {
+                if (value >= 0 && value < RenameTemplates.Length)
+                {
+                    _settingsService.Settings.BulkScrapeRenameTemplate = RenameTemplates[value];
+                    _settingsService.SaveSettings();
+                }
+            }
+        }
+    }
+
+    private bool _alsoRenameFiles;
+    public bool AlsoRenameFiles
+    {
+        get => _alsoRenameFiles;
+        set
+        {
+            if (SetProperty(ref _alsoRenameFiles, value))
+            {
+                _settingsService.Settings.BulkScrapeAutoRenameFiles = value;
+                _settingsService.SaveSettings();
+            }
+        }
+    }
+
     private bool _selectAll = true;
     public bool SelectAll
     {
@@ -124,6 +163,11 @@ public class BulkScrapeQueueViewModel : ObservableObject
         _queueService = queueService ?? new BulkScrapeQueueService(null, null, _settingsService);
 
         _selectedMergeModeIndex = _settingsService.Settings.DefaultMergeMode == ScrapeMergeMode.OverwriteAll ? 1 : 0;
+        _alsoRenameFiles = _settingsService.Settings.BulkScrapeAutoRenameFiles;
+
+        string currentTpl = _settingsService.Settings.BulkScrapeRenameTemplate;
+        int tplIndex = Array.IndexOf(RenameTemplates, currentTpl);
+        _selectedRenameTemplateIndex = tplIndex >= 0 ? tplIndex : 0;
 
         var queuedItems = _queueService.CreateQueue(filePaths);
         foreach (var item in queuedItems)
@@ -254,11 +298,21 @@ public class BulkScrapeQueueViewModel : ObservableObject
             }
         });
 
+        string chosenTemplate = (_selectedRenameTemplateIndex >= 0 && _selectedRenameTemplateIndex < RenameTemplates.Length)
+            ? RenameTemplates[_selectedRenameTemplateIndex]
+            : "{Series} #{Number:3} ({Year})";
+
         try
         {
             int count = await Task.Run(async () =>
             {
-                return await _queueService.ApplyMatchedMetadataAsync(rawQueue, EffectiveMergeMode, progress, _cts.Token);
+                return await _queueService.ApplyMatchedMetadataAsync(
+                    rawQueue,
+                    EffectiveMergeMode,
+                    _alsoRenameFiles,
+                    chosenTemplate,
+                    progress,
+                    _cts.Token);
             }, _cts.Token);
 
             ProgressStatus = $"Successfully saved metadata to {count} files.";

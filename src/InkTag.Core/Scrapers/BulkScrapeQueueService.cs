@@ -10,6 +10,7 @@ using InkTag.Core.Configuration;
 using InkTag.Core.Images;
 using InkTag.Core.Logging;
 using InkTag.Core.Parsing;
+using InkTag.Core.Renaming;
 
 namespace InkTag.Core.Scrapers;
 
@@ -395,11 +396,13 @@ public class BulkScrapeQueueService
     }
 
     /// <summary>
-    /// Applies matched metadata to selected comic files and saves back to archives.
+    /// Applies matched metadata to selected comic files and saves back to archives, optionally auto-renaming files.
     /// </summary>
     public async Task<int> ApplyMatchedMetadataAsync(
         IEnumerable<BulkScrapeQueueItem> items,
         ScrapeMergeMode mergeMode,
+        bool renameFiles = false,
+        string renameTemplate = ComicFileRenamer.DefaultTemplate,
         IProgress<BulkScrapeProgressReport>? progress = null,
         CancellationToken ct = default)
     {
@@ -421,6 +424,24 @@ public class BulkScrapeQueueService
                 {
                     _scraperService.ApplyMetadata(comic, fetched, mergeMode);
                 });
+
+                if (renameFiles)
+                {
+                    try
+                    {
+                        var updatedComic = _metadataEditor.ReadMetadata(item.FilePath);
+                        string newFilename = ComicFileRenamer.GenerateFilename(updatedComic, item.FilePath, renameTemplate, preserveScanInfo: true);
+                        if (!string.Equals(item.Filename, newFilename, StringComparison.Ordinal))
+                        {
+                            string newPath = ComicFileRenamer.RenameFile(item.FilePath, newFilename, overwrite: false);
+                            item.FilePath = newPath;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.LogWarning($"Auto-rename skipped for '{item.FilePath}': {ex.Message}");
+                    }
+                }
 
                 item.Status = BulkScrapeItemStatus.Saved;
                 item.StatusMessage = "Saved successfully";
