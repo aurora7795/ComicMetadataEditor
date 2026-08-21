@@ -231,7 +231,7 @@ public partial class MainWindow : Window
             var targetComics = ComicsGrid.SelectedItems?.Cast<ComicItemViewModel>().ToList();
             if (targetComics == null || targetComics.Count == 0)
             {
-                targetComics = vm.Comics.ToList();
+                targetComics = vm.DisplayedComics.ToList();
             }
 
             var filePaths = targetComics
@@ -287,7 +287,7 @@ public partial class MainWindow : Window
             var targetComics = ComicsGrid.SelectedItems?.Cast<ComicItemViewModel>().ToList();
             if (targetComics == null || targetComics.Count == 0)
             {
-                targetComics = vm.Comics.ToList();
+                targetComics = vm.DisplayedComics.ToList();
             }
 
             foreach (var item in targetComics)
@@ -336,7 +336,7 @@ public partial class MainWindow : Window
             var targetComics = ComicsGrid.SelectedItems?.Cast<ComicItemViewModel>().ToList();
             if (targetComics == null || targetComics.Count == 0)
             {
-                targetComics = vm.Comics.ToList();
+                targetComics = vm.DisplayedComics.ToList();
             }
 
             if (targetComics.Count == 0)

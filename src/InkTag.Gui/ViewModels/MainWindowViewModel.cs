@@ -431,7 +431,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void BulkApply()
     {
-        var targets = (_selectedComics.Any() ? _selectedComics : Comics.ToList())
+        var targets = (_selectedComics.Any() ? _selectedComics : DisplayedComics.ToList())
             .Where(c => !c.HasReadError).ToList();
         if (!targets.Any()) return;
 
@@ -451,7 +451,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void FindReplace()
     {
         if (string.IsNullOrEmpty(FindText)) return;
-        var targets = (_selectedComics.Any() ? _selectedComics : Comics.ToList())
+        var targets = (_selectedComics.Any() ? _selectedComics : DisplayedComics.ToList())
             .Where(c => !c.HasReadError).ToList();
         if (!targets.Any()) return;
 
