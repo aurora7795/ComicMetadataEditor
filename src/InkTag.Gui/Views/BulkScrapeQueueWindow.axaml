@@ -3,7 +3,7 @@
         xmlns:vm="using:InkTag.Gui.ViewModels"
         x:Class="InkTag.Gui.Views.BulkScrapeQueueWindow"
         x:DataType="vm:BulkScrapeQueueViewModel"
-        Title="Bulk Scrape &amp; Cover Identification Queue"
+        Title="Bulk Auto-Tag &amp; Cover Identification Queue - InkTag"
         Width="1100" Height="680"
         WindowStartupLocation="CenterOwner"
         Background="#1E1E1E" Foreground="White">
@@ -59,7 +59,7 @@
             </StackPanel>
 
             <!-- Start / Cancel Buttons -->
-            <Button Name="StartQueueButton" Grid.Column="3" Content="▶ Start Bulk Scrape" Click="StartQueue_Click"
+            <Button Name="StartQueueButton" Grid.Column="3" Content="▶ Start Bulk Auto-Tag" Click="StartQueue_Click"
                     IsEnabled="{Binding CanStart}" Background="#007ACC" Foreground="White" FontWeight="Bold" Padding="14,8" CornerRadius="4" Margin="0,0,8,0"/>
             <Button Name="CancelQueueButton" Grid.Column="4" Content="⏹ Cancel" Click="CancelQueue_Click"
                     IsEnabled="{Binding IsRunning}" Background="#A80000" Foreground="White" Padding="12,8" CornerRadius="4"/>

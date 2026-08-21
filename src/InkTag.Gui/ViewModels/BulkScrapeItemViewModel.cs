@@ -68,7 +68,7 @@ public class BulkScrapeItemViewModel : ObservableObject
                 if (!value && (Status == BulkScrapeItemStatus.Ready || Status == BulkScrapeItemStatus.Queued))
                 {
                     Status = BulkScrapeItemStatus.Excluded;
-                    StatusMessage = "Excluded from scrape";
+                    StatusMessage = "Excluded from auto-tag";
                 }
                 else if (value && Status == BulkScrapeItemStatus.Excluded)
                 {

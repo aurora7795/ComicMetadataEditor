@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="InkTag.Gui.Views.ScraperMatchWindow"
-        Title="ComicVine Scraper Match &amp; Diff Viewer"
+        Title="ComicVine Auto-Tag Match &amp; Diff Viewer - InkTag"
         Width="950" Height="620"
         WindowStartupLocation="CenterOwner"
         Background="#1E1E1E" Foreground="White">

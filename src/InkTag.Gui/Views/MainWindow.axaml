@@ -106,9 +106,9 @@
 
       <!-- Tools Menu -->
       <MenuItem Header="_Tools">
-        <MenuItem Header="🔍 _Scrape Metadata (ComicVine)..." Click="ScrapeMetadata_Click"/>
+        <MenuItem Header="🔍 _Auto-Tag Metadata (ComicVine)..." Click="ScrapeMetadata_Click"/>
         <MenuItem Header="🧙 Series _Search Wizard..." Click="SeriesSearchWizard_Click"/>
-        <MenuItem Header="📚 _Bulk Scrape Queue..." Click="BulkScrapeQueue_Click"/>
+        <MenuItem Header="📚 _Bulk Auto-Tag Queue..." Click="BulkScrapeQueue_Click"/>
         <MenuItem Header="🏷️ _Infer Metadata from Filename(s)" Click="InferMetadataFromFilenames_Click"/>
         <MenuItem Header="✏️ _Rename File(s) from Metadata..." Click="RenameFiles_Click"/>
         <Separator/>
@@ -155,17 +155,17 @@
 
         <!-- Right Side Controls: Scrape, Refresh & Inspector Toggle -->
         <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8">
-          <Button Click="ScrapeMetadata_Click" Padding="8,5" Background="#007ACC" Foreground="White" CornerRadius="4" ToolTip.Tip="Scrape metadata from ComicVine" IsEnabled="{Binding !IsLoading}">
+          <Button Click="ScrapeMetadata_Click" Padding="8,5" Background="#007ACC" Foreground="White" CornerRadius="4" ToolTip.Tip="Auto-Tag metadata from ComicVine" IsEnabled="{Binding !IsLoading}">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Text="🌐" VerticalAlignment="Center"/>
-              <TextBlock Text="Scrape" VerticalAlignment="Center"/>
+              <TextBlock Text="Auto-Tag" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
 
-          <Button Click="BulkScrapeQueue_Click" Padding="8,5" Background="#107C41" Foreground="White" CornerRadius="4" ToolTip.Tip="Bulk Scrape Queue" IsEnabled="{Binding !IsLoading}">
+          <Button Click="BulkScrapeQueue_Click" Padding="8,5" Background="#107C41" Foreground="White" CornerRadius="4" ToolTip.Tip="Bulk Auto-Tag Queue" IsEnabled="{Binding !IsLoading}">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Text="📚" VerticalAlignment="Center"/>
-              <TextBlock Text="Bulk Scrape" VerticalAlignment="Center"/>
+              <TextBlock Text="Bulk Auto-Tag" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
 
@@ -177,22 +177,14 @@
           </Button>
 
           <ToggleButton IsChecked="{Binding IsInspectorVisible}" Padding="8,5" Background="#3E3E42" Foreground="White" CornerRadius="4" ToolTip.Tip="Toggle Inspector Panel">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <TextBlock Text="👁️" VerticalAlignment="Center"/>
-              <TextBlock Text="Inspector" VerticalAlignment="Center"/>
-            </StackPanel>
+            <TextBlock Text="Inspector" VerticalAlignment="Center"/>
           </ToggleButton>
         </StackPanel>
       </Grid>
     </Border>
 
     <!-- Main Workspace Split Area -->
-    <Grid Grid.Row="2" x:Name="MainWorkspaceGrid">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*" MinWidth="300"/>
-        <ColumnDefinition Width="Auto"/>
-        <ColumnDefinition Width="350" MinWidth="250" MaxWidth="800"/>
-      </Grid.ColumnDefinitions>
+    <Grid Grid.Row="2" x:Name="MainWorkspaceGrid" ColumnDefinitions="*, Auto, 350">
       
       <!-- Left Column: Spreadsheet DataGrid -->
       <Grid Grid.Column="0" Margin="10">
@@ -202,9 +194,9 @@
                   BorderBrush="#3F3F46" BorderThickness="1">
           <DataGrid.ContextMenu>
             <ContextMenu>
-              <MenuItem Header="🔍 Scrape Metadata (ComicVine)..." Click="ScrapeMetadata_Click"/>
+              <MenuItem Header="🔍 Auto-Tag Metadata (ComicVine)..." Click="ScrapeMetadata_Click"/>
               <MenuItem Header="🧙 Series Search Wizard..." Click="SeriesSearchWizard_Click"/>
-              <MenuItem Header="📚 Bulk Scrape Selected..." Click="BulkScrapeQueue_Click"/>
+              <MenuItem Header="📚 Bulk Auto-Tag Selected..." Click="BulkScrapeQueue_Click"/>
               <Separator/>
               <MenuItem Header="🏷️ Infer Metadata from Filename(s)" Click="InferMetadataFromFilenames_Click"/>
               <MenuItem Header="✏️ Rename File(s) from Metadata..." Click="RenameFiles_Click"/>

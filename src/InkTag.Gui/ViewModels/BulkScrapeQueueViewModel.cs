@@ -195,14 +195,14 @@ public class BulkScrapeQueueViewModel : ObservableObject
         var selectedItems = Items.Where(i => i.IsSelected).ToList();
         if (selectedItems.Count == 0)
         {
-            ProgressStatus = "No items selected to scrape. Please check the items you want to scrape.";
+            ProgressStatus = "No items selected to auto-tag. Please check the items you want to auto-tag.";
             return;
         }
 
         IsRunning = true;
         _cts = new CancellationTokenSource();
         ProgressPercentage = 0;
-        ProgressStatus = $"Starting bulk scrape for {selectedItems.Count} selected items...";
+        ProgressStatus = $"Starting bulk auto-tag for {selectedItems.Count} selected items...";
 
         foreach (var itemVm in selectedItems)
         {
@@ -214,7 +214,7 @@ public class BulkScrapeQueueViewModel : ObservableObject
             if (itemVm.Status == BulkScrapeItemStatus.Ready || itemVm.Status == BulkScrapeItemStatus.Queued)
             {
                 itemVm.Status = BulkScrapeItemStatus.Excluded;
-                itemVm.StatusMessage = "Excluded from scrape";
+                itemVm.StatusMessage = "Excluded from auto-tag";
             }
         }
 
