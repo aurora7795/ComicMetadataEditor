@@ -282,7 +282,14 @@ public class BulkScrapeQueueService
                                 {
                                     item.Status = BulkScrapeItemStatus.Matched;
                                     item.StatusMessage = $"Matched: {top.SeriesTitle} #{top.IssueNumber} (Visual: {top.VisualSimilarity:P0})";
+                                    item.IsSelected = true;
                                     matchedViaVolume = true;
+                                }
+                                else
+                                {
+                                    item.Status = BulkScrapeItemStatus.LowConfidence;
+                                    item.StatusMessage = $"Review needed (Confidence: {top.MatchConfidence:P0}, Visual: {top.VisualSimilarity:P0})";
+                                    item.IsSelected = false; // Auto-uncheck review needed items
                                 }
                             }
                         }
@@ -296,6 +303,7 @@ public class BulkScrapeQueueService
                         {
                             item.Status = BulkScrapeItemStatus.Unmatched;
                             item.StatusMessage = "No results found";
+                            item.IsSelected = false;
                         }
                         else
                         {
@@ -313,11 +321,13 @@ public class BulkScrapeQueueService
                             {
                                 item.Status = BulkScrapeItemStatus.Matched;
                                 item.StatusMessage = $"Matched: {top.SeriesTitle} #{top.IssueNumber} (Visual: {top.VisualSimilarity:P0})";
+                                item.IsSelected = true;
                             }
                             else
                             {
                                 item.Status = BulkScrapeItemStatus.LowConfidence;
                                 item.StatusMessage = $"Review needed (Confidence: {top.MatchConfidence:P0}, Visual: {top.VisualSimilarity:P0})";
+                                item.IsSelected = false; // Auto-uncheck review needed items
                             }
                         }
                     }
@@ -327,6 +337,7 @@ public class BulkScrapeQueueService
                     item.Status = BulkScrapeItemStatus.Error;
                     item.StatusMessage = $"Error: {ex.Message}";
                     item.ErrorMessage = ex.ToString();
+                    item.IsSelected = false;
                     AppLogger.LogWarning($"Bulk scrape item error for '{item.FilePath}': {ex.Message}");
                 }
 

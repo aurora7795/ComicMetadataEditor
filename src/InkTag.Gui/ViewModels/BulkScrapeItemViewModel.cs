@@ -223,6 +223,7 @@ public class BulkScrapeItemViewModel : ObservableObject
         Status = Item.Status;
         StatusMessage = Item.StatusMessage;
         MatchedCandidate = Item.MatchedCandidate;
+        IsSelected = Item.IsSelected;
 
         if (LocalThumbnail == null && Item.LocalCoverBytes != null && Item.LocalCoverBytes.Length > 0)
         {
