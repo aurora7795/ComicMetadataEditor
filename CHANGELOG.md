@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **MacOS Development Dock Icon**: Dynamically apply high-res application icon to the macOS Dock via Cocoa `NSApplication` runtime when launched via `dotnet run` (unbundled CLI processes).
+
 ---
 
 ## [0.11.0] - 2026-08-21

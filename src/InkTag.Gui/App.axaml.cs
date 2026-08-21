@@ -16,6 +16,7 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new Views.MainWindow();
+            Services.MacDockHelper.TrySetDockIcon();
         }
 
         base.OnFrameworkInitializationCompleted();
