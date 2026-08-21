@@ -2,22 +2,25 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using Avalonia.Platform;
+using InkTag.Core.Logging;
 
 namespace InkTag.Gui.Services;
 
 public static class MacDockHelper
 {
-    [DllImport("/System/Library/Frameworks/AppKit.framework/AppKit")]
+    private const string LibObjC = "/usr/lib/libobjc.A.dylib";
+
+    [DllImport(LibObjC, EntryPoint = "objc_getClass")]
     private static extern IntPtr objc_getClass(string className);
 
-    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
-    private static extern IntPtr IntPtr_objc_msgSend(IntPtr receiver, IntPtr selector);
-
-    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
-    private static extern IntPtr IntPtr_objc_msgSend_IntPtr(IntPtr receiver, IntPtr selector, IntPtr arg);
-
-    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "sel_registerName")]
+    [DllImport(LibObjC, EntryPoint = "sel_registerName")]
     private static extern IntPtr sel_registerName(string selectorName);
+
+    [DllImport(LibObjC, EntryPoint = "objc_msgSend")]
+    private static extern IntPtr objc_msgSend(IntPtr receiver, IntPtr selector);
+
+    [DllImport(LibObjC, EntryPoint = "objc_msgSend")]
+    private static extern IntPtr objc_msgSend_IntPtr(IntPtr receiver, IntPtr selector, IntPtr arg);
 
     public static void TrySetDockIcon()
     {
@@ -25,8 +28,18 @@ public static class MacDockHelper
 
         try
         {
+            // Ensure AppKit framework is loaded into process space
+            try
+            {
+                NativeLibrary.Load("/System/Library/Frameworks/AppKit.framework/AppKit");
+            }
+            catch
+            {
+                // AppKit may already be dynamically linked by Avalonia
+            }
+
             string tempIconPath = Path.Combine(Path.GetTempPath(), "InkTag_DockIcon.png");
-            if (!File.Exists(tempIconPath))
+            if (!File.Exists(tempIconPath) || new FileInfo(tempIconPath).Length == 0)
             {
                 using var stream = AssetLoader.Open(new Uri("avares://InkTag.Gui/Assets/inktag.png"));
                 using var fs = File.Create(tempIconPath);
@@ -34,34 +47,50 @@ public static class MacDockHelper
             }
 
             var nsApplicationClass = objc_getClass("NSApplication");
+            if (nsApplicationClass == IntPtr.Zero)
+            {
+                AppLogger.LogWarning("[MacDockHelper] Failed to get NSApplication class.");
+                return;
+            }
+
             var sharedAppSel = sel_registerName("sharedApplication");
-            var nsApp = IntPtr_objc_msgSend(nsApplicationClass, sharedAppSel);
+            var nsApp = objc_msgSend(nsApplicationClass, sharedAppSel);
+            if (nsApp == IntPtr.Zero)
+            {
+                AppLogger.LogWarning("[MacDockHelper] Failed to get NSApplication.sharedApplication.");
+                return;
+            }
 
             var nsStringClass = objc_getClass("NSString");
             var stringWithUtf8Sel = sel_registerName("stringWithUTF8String:");
             IntPtr utf8Ptr = Marshal.StringToHGlobalAnsi(tempIconPath);
-            var nsPath = IntPtr_objc_msgSend_IntPtr(nsStringClass, stringWithUtf8Sel, utf8Ptr);
+            var nsPath = objc_msgSend_IntPtr(nsStringClass, stringWithUtf8Sel, utf8Ptr);
 
             var nsImageClass = objc_getClass("NSImage");
             var allocSel = sel_registerName("alloc");
-            var nsImageAlloc = IntPtr_objc_msgSend(nsImageClass, allocSel);
+            var nsImageAlloc = objc_msgSend(nsImageClass, allocSel);
             var initWithContentsOfFileSel = sel_registerName("initWithContentsOfFile:");
-            var nsImage = IntPtr_objc_msgSend_IntPtr(nsImageAlloc, initWithContentsOfFileSel, nsPath);
-
-            if (nsApp != IntPtr.Zero && nsImage != IntPtr.Zero)
-            {
-                var setIconSel = sel_registerName("setApplicationIconImage:");
-                IntPtr_objc_msgSend_IntPtr(nsApp, setIconSel, nsImage);
-            }
+            var nsImage = objc_msgSend_IntPtr(nsImageAlloc, initWithContentsOfFileSel, nsPath);
 
             if (utf8Ptr != IntPtr.Zero)
             {
                 Marshal.FreeHGlobal(utf8Ptr);
             }
+
+            if (nsImage != IntPtr.Zero)
+            {
+                var setIconSel = sel_registerName("setApplicationIconImage:");
+                objc_msgSend_IntPtr(nsApp, setIconSel, nsImage);
+                AppLogger.LogInfo("[MacDockHelper] Successfully set macOS application Dock icon.");
+            }
+            else
+            {
+                AppLogger.LogWarning($"[MacDockHelper] Failed to initialize NSImage from '{tempIconPath}'.");
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            // Best effort; silently ignore on unsupported environments
+            AppLogger.LogWarning($"[MacDockHelper] Could not set macOS Dock icon: {ex.Message}");
         }
     }
 }

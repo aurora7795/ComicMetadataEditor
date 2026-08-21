@@ -30,6 +30,8 @@ public partial class MainWindow : Window
 
         UpdateInspectorColumnWidth(vm.IsInspectorVisible);
 
+        Opened += (s, e) => Services.MacDockHelper.TrySetDockIcon();
+
         if (DebugLoggingMenuCheckBox != null)
         {
             DebugLoggingMenuCheckBox.IsChecked = InkTag.Core.Logging.AppLogger.IsDebugEnabled;
