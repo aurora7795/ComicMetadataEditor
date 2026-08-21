@@ -45,4 +45,41 @@ public class FilenameParserTests
         var nullResult = ComicFilenameParser.Parse(null!);
         Assert.Empty(nullResult.Series);
     }
+
+    [Theory]
+    [InlineData("/Volumes/Comics/Western/The Avengers (1963)/048.cbz", "The Avengers", "48", 1963, null)]
+    [InlineData("/mnt/storage/Invincible (2003)/#01.cbz", "Invincible", "1", 2003, null)]
+    [InlineData("/media/comics/Saga (2012)/Issue 03 (digital).cbz", "Saga", "3", 2012, null)]
+    [InlineData("/Comics/Batman (2016)/Vol 1/001.cbz", "Batman", "1", 2016, 1)]
+    [InlineData("/Comics/Batman (2016)/v02/012.cbr", "Batman", "12", 2016, 2)]
+    [InlineData("/Comics/Batman (2016)/Book 3/025.cbz", "Batman", "25", 2016, 3)]
+    [InlineData("/Comics/The Avengers (1963)/The Avengers #048.cbz", "The Avengers", "48", 1963, null)]
+    [InlineData("/Comics/The Avengers (1963)/The Avengers 048 (1968) (digital).cbz", "The Avengers", "48", 1968, null)]
+    public void ComicFilenameParser_InfersMetadataFromParentDirectoryHierarchy(
+        string fullPath, string expectedSeries, string expectedIssue, int? expectedYear, int? expectedVolume)
+    {
+        var result = ComicFilenameParser.Parse(fullPath);
+
+        Assert.Equal(expectedSeries, result.Series);
+        Assert.Equal(expectedIssue, result.IssueNumber);
+        Assert.Equal(expectedYear, result.Year);
+        Assert.Equal(expectedVolume, result.Volume);
+    }
+
+    [Theory]
+    [InlineData("/Volumes/General/Comics/Western/01.cbz", "", "1")]
+    [InlineData("/home/user/Downloads/01.cbz", "", "1")]
+    [InlineData("/mnt/comics/Manga/001.cbz", "", "1")]
+    [InlineData("/mnt/comics/2024/01.cbz", "", "1")]
+    [InlineData("/mnt/comics/1990s/01.cbz", "", "1")]
+    [InlineData("/mnt/comics/Trades/01.cbz", "", "1")]
+    [InlineData("/mnt/comics/A/01.cbz", "", "1")]
+    public void ComicFilenameParser_IgnoresGenericDirectoryNames(
+        string fullPath, string expectedSeries, string expectedIssue)
+    {
+        var result = ComicFilenameParser.Parse(fullPath);
+
+        Assert.Equal(expectedSeries, result.Series);
+        Assert.Equal(expectedIssue, result.IssueNumber);
+    }
 }

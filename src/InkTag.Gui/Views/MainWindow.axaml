@@ -48,7 +48,7 @@
       </NativeMenuItem>
       <NativeMenuItem Header="Tools">
         <NativeMenu>
-          <NativeMenuItem Header="Infer Metadata from Filename(s)" Click="NativeInferMetadataFromFilenames_Click"/>
+          <NativeMenuItem Header="Infer Metadata from Path / Filename" Click="NativeInferMetadataFromFilenames_Click"/>
           <NativeMenuItem Header="Open Logs Directory" Click="NativeOpenLogs_Click"/>
         </NativeMenu>
       </NativeMenuItem>
@@ -109,7 +109,7 @@
         <MenuItem Header="🔍 _Auto-Tag Metadata (ComicVine)..." Click="ScrapeMetadata_Click"/>
         <MenuItem Header="🧙 Series _Search Wizard..." Click="SeriesSearchWizard_Click"/>
         <MenuItem Header="📚 _Bulk Auto-Tag Queue..." Click="BulkScrapeQueue_Click"/>
-        <MenuItem Header="🏷️ _Infer Metadata from Filename(s)" Click="InferMetadataFromFilenames_Click"/>
+        <MenuItem Header="🏷️ _Infer Metadata from Path / Filename" Click="InferMetadataFromFilenames_Click"/>
         <MenuItem Header="✏️ _Rename File(s) from Metadata..." Click="RenameFiles_Click"/>
         <Separator/>
         <MenuItem Header="Open _Logs Directory" Command="{Binding OpenLogsCommand}"/>
@@ -198,7 +198,7 @@
               <MenuItem Header="🧙 Series Search Wizard..." Click="SeriesSearchWizard_Click"/>
               <MenuItem Header="📚 Bulk Auto-Tag Selected..." Click="BulkScrapeQueue_Click"/>
               <Separator/>
-              <MenuItem Header="🏷️ Infer Metadata from Filename(s)" Click="InferMetadataFromFilenames_Click"/>
+              <MenuItem Header="🏷️ Infer Metadata from Path / Filename" Click="InferMetadataFromFilenames_Click"/>
               <MenuItem Header="✏️ Rename File(s) from Metadata..." Click="RenameFiles_Click"/>
             </ContextMenu>
           </DataGrid.ContextMenu>

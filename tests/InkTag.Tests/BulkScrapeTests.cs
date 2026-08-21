@@ -342,4 +342,38 @@ public class BulkScrapeTests
             if (renamedPath != null && File.Exists(renamedPath)) File.Delete(renamedPath);
         }
     }
+
+    [Fact]
+    public void CreateQueue_InfersSeriesAndYearFromParentFolder_ForSparseFilenames()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "InkTagTest_" + Guid.NewGuid().ToString("N"));
+        string seriesDir = Path.Combine(tempDir, "The Avengers (1963)");
+        Directory.CreateDirectory(seriesDir);
+        string cbz = Path.Combine(seriesDir, "048.cbz");
+
+        using (var zip = System.IO.Compression.ZipFile.Open(cbz, System.IO.Compression.ZipArchiveMode.Create))
+        {
+            var entry = zip.CreateEntry("page_001.jpg");
+            using var stream = entry.Open();
+            stream.Write(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46 });
+        }
+
+        try
+        {
+            var queueService = new BulkScrapeQueueService();
+            var queue = queueService.CreateQueue(new[] { cbz });
+
+            Assert.Single(queue);
+            Assert.Equal("The Avengers", queue[0].ParsedQuery.Series);
+            Assert.Equal("48", queue[0].ParsedQuery.IssueNumber);
+            Assert.Equal(1963, queue[0].ParsedQuery.Year);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
 }

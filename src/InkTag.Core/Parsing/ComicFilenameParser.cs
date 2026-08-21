@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -22,7 +23,7 @@ public static class ComicFilenameParser
     private static readonly Regex StandaloneYearRegex = new(@"\b(19\d\d|20\d\d)\b", RegexOptions.Compiled);
 
     // Regex to match volume indicators, e.g. "v01", "v2", "vol. 1", "vol 2", "volume 3", "book 1"
-    private static readonly Regex VolumeRegex = new(@"(?:^|[\s_\-\(\[])(?:v|vol\.?|volume|book)\s*0*(\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex VolumeRegex = new(@"(?:^|[\s_\-\(\[])(?:v|vol\.?|volume|book|season|part)\s*0*(\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     // Regex to match explicit issue prefix: "#01", "#1.5", "issue 02", "no. 3", "c01"
     private static readonly Regex ExplicitIssueRegex = new(@"(?:#|issue\s*|no\.?\s*|c)(\d+(?:\.\d+)?)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -33,10 +34,26 @@ public static class ComicFilenameParser
     // Regex to match scanner / release group / edition tags in parentheses or brackets, e.g. "(Miracle Man-LXC)", "(Digital)", "[c2c]"
     private static readonly Regex TagGroupRegex = new(@"[\(\[][^\)\]]*[\)\]]", RegexOptions.Compiled);
 
+    // Generic library, category, and system directory names to ignore during parent folder traversal
+    private static readonly HashSet<string> GenericDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // Categories & mediums
+        "Comics", "Comic", "Comic Books", "ComicBooks", "Western", "Manga", "Graphic Novels", "GraphicNovels",
+        "Bande Dessinée", "Bande Dessinee", "BD", "Manhwa", "Manhua", "Webcomics", "Webtoons", "Anime",
+        // Formats & packaging
+        "Trades", "Trade Paperbacks", "TPB", "TPBs", "Omnibus", "Omnibuses", "Single Issues", "Singles",
+        "Floppies", "One-Shots", "One Shots", "OneShot", "Digital", "Scans", "Complete", "Current", "Releases",
+        "Ongoing", "Mini-Series", "Miniseries", "Annuals", "Specials",
+        // Indexing & filesystem
+        "0-9", "#", "A-Z", "Downloads", "Incoming", "Temp", "Tmp", "Desktop", "Documents", "Volumes",
+        "Root", "Media", "Storage", "Share", "General", "Files", "Library", "Books", "eBooks"
+    };
+
     /// <summary>
     /// Parses series title, issue number, publication year, and volume from a comic filename or path.
+    /// If full path is provided and inspectParentHierarchy is true, interrogates parent folders to supplement missing information.
     /// </summary>
-    public static ParsedComicFilename Parse(string filenameOrPath)
+    public static ParsedComicFilename Parse(string filenameOrPath, bool inspectParentHierarchy = true)
     {
         if (string.IsNullOrWhiteSpace(filenameOrPath))
         {
@@ -147,6 +164,32 @@ public static class ComicFilenameParser
         string series = Regex.Replace(workingName, @"[\s\-_:]+$", "").Trim();
         series = Regex.Replace(series, @"^[\s\-_:]+", "").Trim();
 
+        // 9. Hierarchical Parent Directory Traversal
+        // If series is missing/trivial, or year/volume is missing, interrogate parent and grandparent folders
+        if (inspectParentHierarchy)
+        {
+            string? dirPath = Path.GetDirectoryName(filenameOrPath);
+            if (!string.IsNullOrWhiteSpace(dirPath))
+            {
+                var (inferredSeries, inferredYear, inferredVolume) = InferFromDirectoryHierarchy(dirPath);
+
+                if ((string.IsNullOrWhiteSpace(series) || IsTrivialSeriesName(series)) && !string.IsNullOrWhiteSpace(inferredSeries))
+                {
+                    series = inferredSeries;
+                }
+
+                if (!year.HasValue && inferredYear.HasValue)
+                {
+                    year = inferredYear;
+                }
+
+                if (!volume.HasValue && inferredVolume.HasValue)
+                {
+                    volume = inferredVolume;
+                }
+            }
+        }
+
         return new ParsedComicFilename
         {
             Series = series,
@@ -155,6 +198,146 @@ public static class ComicFilenameParser
             Volume = volume,
             ScanInformation = scanInfo
         };
+    }
+
+    /// <summary>
+    /// Interrogates parent and grandparent directory names to extract series title, publication year, and volume.
+    /// </summary>
+    public static (string? Series, int? Year, int? Volume) InferFromDirectoryHierarchy(string directoryPath)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath))
+        {
+            return (null, null, null);
+        }
+
+        string? currentPath = directoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string parentDirName = Path.GetFileName(currentPath);
+        if (string.IsNullOrWhiteSpace(parentDirName))
+        {
+            return (null, null, null);
+        }
+
+        int? inferredVolume = null;
+        int? inferredYear = null;
+        string? inferredSeries = null;
+
+        // Inspect immediate parent directory
+        if (!IsGenericDirectoryName(parentDirName))
+        {
+            var (pSeries, pYear, pVol, isPureVol) = ParseDirectoryComponents(parentDirName);
+
+            if (isPureVol)
+            {
+                inferredVolume = pVol;
+
+                // Step up to Grandparent directory to get Series and Year
+                string? grandparentPath = Path.GetDirectoryName(currentPath);
+                if (!string.IsNullOrWhiteSpace(grandparentPath))
+                {
+                    string grandDirName = Path.GetFileName(grandparentPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                    if (!string.IsNullOrWhiteSpace(grandDirName) && !IsGenericDirectoryName(grandDirName))
+                    {
+                        var (gSeries, gYear, gVol, _) = ParseDirectoryComponents(grandDirName);
+                        if (!string.IsNullOrWhiteSpace(gSeries)) inferredSeries = gSeries;
+                        if (gYear.HasValue) inferredYear = gYear;
+                        if (!inferredVolume.HasValue && gVol.HasValue) inferredVolume = gVol;
+                    }
+                }
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(pSeries)) inferredSeries = pSeries;
+                if (pYear.HasValue) inferredYear = pYear;
+                if (pVol.HasValue) inferredVolume = pVol;
+            }
+        }
+
+        return (inferredSeries, inferredYear, inferredVolume);
+    }
+
+    /// <summary>
+    /// Parses a single directory name for Series, Year, and Volume components.
+    /// </summary>
+    public static (string Series, int? Year, int? Volume, bool IsPureVolume) ParseDirectoryComponents(string dirName)
+    {
+        if (string.IsNullOrWhiteSpace(dirName))
+        {
+            return (string.Empty, null, null, false);
+        }
+
+        string cleanName = dirName.Trim();
+        int? year = null;
+        int? volume = null;
+
+        // 1. Check for Year in parens, e.g. "The Avengers (1963)"
+        var yearMatch = YearInParensRegex.Match(cleanName);
+        if (yearMatch.Success && int.TryParse(yearMatch.Groups[1].Value, out int pYear))
+        {
+            year = pYear;
+        }
+
+        // 2. Check for Volume, e.g. "Vol 1", "v02", "Volume 3", "Book 2"
+        var volMatch = VolumeRegex.Match(cleanName);
+        if (volMatch.Success && int.TryParse(volMatch.Groups[1].Value, out int pVol))
+        {
+            volume = pVol;
+        }
+
+        // 3. Remove tags & years to get clean series title
+        string workingName = TagGroupRegex.Replace(cleanName, " ").Trim();
+        workingName = Regex.Replace(workingName.Replace('_', ' '), @"\s+", " ").Trim();
+
+        if (volMatch.Success)
+        {
+            workingName = VolumeRegex.Replace(workingName, "").Trim();
+        }
+
+        // Clean up delimiters
+        string series = Regex.Replace(workingName, @"[\s\-_:]+$", "").Trim();
+        series = Regex.Replace(series, @"^[\s\-_:]+", "").Trim();
+
+        // Check if this was purely a volume directory (e.g. "Vol 1", "v02", "Volume 1", "Book 1")
+        bool isPureVolume = volMatch.Success && (string.IsNullOrWhiteSpace(series) || series.Length <= 1);
+
+        return (series, year, volume, isPureVolume);
+    }
+
+    /// <summary>
+    /// Determines whether a directory name is generic (categories, indexing, temp, decade, year-only) and should not be used as a Series title.
+    /// </summary>
+    public static bool IsGenericDirectoryName(string dirName)
+    {
+        if (string.IsNullOrWhiteSpace(dirName)) return true;
+
+        string trimmed = dirName.Trim();
+
+        // Single letter index folders (e.g. "A", "B", "C")
+        if (trimmed.Length == 1 && char.IsLetter(trimmed[0])) return true;
+
+        // Check generic directory set
+        if (GenericDirectoryNames.Contains(trimmed)) return true;
+
+        // Standalone 4-digit years or decade folders (e.g. "2024", "1990s", "2010s")
+        if (Regex.IsMatch(trimmed, @"^(19\d\d|20\d\d)(s)?$", RegexOptions.IgnoreCase)) return true;
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a series name parsed from a filename is uninformative or just an issue prefix (e.g. "#01", "048", "Issue 1").
+    /// </summary>
+    private static bool IsTrivialSeriesName(string series)
+    {
+        if (string.IsNullOrWhiteSpace(series)) return true;
+        string trimmed = series.Trim();
+
+        // If purely digits (e.g. "048", "1")
+        if (Regex.IsMatch(trimmed, @"^\d+$")) return true;
+
+        // If issue prefix (e.g. "#01", "Issue 1", "No. 2", "c01", "Book 1", "Part 1")
+        if (Regex.IsMatch(trimmed, @"^(#\s*\d+|issue\s*\d*|no\.?\s*\d*|c\d+|book\s*\d*|part\s*\d*)$", RegexOptions.IgnoreCase)) return true;
+
+        return false;
     }
 
     private static string NormalizeIssue(string issueStr)
@@ -173,3 +356,4 @@ public static class ComicFilenameParser
         return issueStr.TrimStart('0');
     }
 }
+
