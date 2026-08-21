@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -9,13 +8,26 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using InkTag.Core.Images;
 using InkTag.Core.Scrapers;
+using InkTag.Gui.Services;
 
 namespace InkTag.Gui.ViewModels;
 
 public class BulkScrapeItemViewModel : ObservableObject
 {
-    private static readonly ConcurrentDictionary<string, Bitmap> OnlineImageCache = new();
+    private static readonly LruImageCache OnlineImageCache = new(60);
     private static readonly HttpClient HttpThumbnailClient = new();
+
+    // Pre-allocated static brushes to avoid heap allocation on every getter invocation
+    private static readonly IBrush BrushDarkGray = new SolidColorBrush(Color.Parse("#333338"));
+    private static readonly IBrush BrushZinc = new SolidColorBrush(Color.Parse("#3F3F46"));
+    private static readonly IBrush BrushDimGray = new SolidColorBrush(Color.Parse("#2D2D30"));
+    private static readonly IBrush BrushMediumGray = new SolidColorBrush(Color.Parse("#555555"));
+    private static readonly IBrush BrushGreen = new SolidColorBrush(Color.Parse("#107C41"));
+    private static readonly IBrush BrushAmber = new SolidColorBrush(Color.Parse("#CA5010"));
+    private static readonly IBrush BrushRed = new SolidColorBrush(Color.Parse("#A80000"));
+    private static readonly IBrush BrushBlue = new SolidColorBrush(Color.Parse("#0078D4"));
+    private static readonly IBrush BrushNavy = new SolidColorBrush(Color.Parse("#0E639C"));
+    private static readonly IBrush BrushSkyBlue = new SolidColorBrush(Color.Parse("#2B88D8"));
 
     static BulkScrapeItemViewModel()
     {
@@ -197,13 +209,13 @@ public class BulkScrapeItemViewModel : ObservableObject
         {
             if (MatchedCandidate == null || !MatchedCandidate.VisualSimilarity.HasValue || MatchedCandidate.VisualSimilarity.Value <= 0.01)
             {
-                return new SolidColorBrush(Color.Parse("#333338"));
+                return BrushDarkGray;
             }
 
             double sim = MatchedCandidate.VisualSimilarity.Value;
-            if (sim >= 0.85) return new SolidColorBrush(Color.Parse("#107C41")); // Green
-            if (sim >= 0.65) return new SolidColorBrush(Color.Parse("#CA5010")); // Amber
-            return new SolidColorBrush(Color.Parse("#A80000")); // Red
+            if (sim >= 0.85) return BrushGreen;
+            if (sim >= 0.65) return BrushAmber;
+            return BrushRed;
         }
     }
 
@@ -213,15 +225,15 @@ public class BulkScrapeItemViewModel : ObservableObject
         {
             return Status switch
             {
-                BulkScrapeItemStatus.Ready => new SolidColorBrush(Color.Parse("#3F3F46")),
-                BulkScrapeItemStatus.Excluded => new SolidColorBrush(Color.Parse("#2D2D30")),
-                BulkScrapeItemStatus.Queued => new SolidColorBrush(Color.Parse("#0E639C")),
-                BulkScrapeItemStatus.Matched => new SolidColorBrush(Color.Parse("#107C41")),
-                BulkScrapeItemStatus.Saved => new SolidColorBrush(Color.Parse("#0078D4")),
-                BulkScrapeItemStatus.LowConfidence => new SolidColorBrush(Color.Parse("#CA5010")),
-                BulkScrapeItemStatus.Unmatched => new SolidColorBrush(Color.Parse("#555555")),
-                BulkScrapeItemStatus.Error => new SolidColorBrush(Color.Parse("#A80000")),
-                _ => new SolidColorBrush(Color.Parse("#2B88D8"))
+                BulkScrapeItemStatus.Ready => BrushZinc,
+                BulkScrapeItemStatus.Excluded => BrushDimGray,
+                BulkScrapeItemStatus.Queued => BrushNavy,
+                BulkScrapeItemStatus.Matched => BrushGreen,
+                BulkScrapeItemStatus.Saved => BrushBlue,
+                BulkScrapeItemStatus.LowConfidence => BrushAmber,
+                BulkScrapeItemStatus.Unmatched => BrushMediumGray,
+                BulkScrapeItemStatus.Error => BrushRed,
+                _ => BrushSkyBlue
             };
         }
     }
@@ -268,7 +280,7 @@ public class BulkScrapeItemViewModel : ObservableObject
         string? url = !string.IsNullOrEmpty(candidate.SmallCoverUrl) ? candidate.SmallCoverUrl : candidate.CoverUrl;
         if (string.IsNullOrEmpty(url)) return;
 
-        if (OnlineImageCache.TryGetValue(url, out var cached))
+        if (OnlineImageCache.TryGetValue(url, out var cached) && cached != null)
         {
             MatchedThumbnail = cached;
             return;
@@ -281,7 +293,7 @@ public class BulkScrapeItemViewModel : ObservableObject
                 byte[] bytes = await HttpThumbnailClient.GetByteArrayAsync(url);
                 using var ms = new MemoryStream(bytes);
                 var bitmap = new Bitmap(ms);
-                OnlineImageCache[url] = bitmap;
+                OnlineImageCache.Set(url, bitmap);
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {

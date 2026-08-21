@@ -7,6 +7,13 @@ namespace InkTag.Gui.ViewModels;
 
 public class RenameItemPreviewViewModel : ObservableObject
 {
+    private static readonly IBrush BrushRed = new SolidColorBrush(Color.Parse("#A80000"));
+    private static readonly IBrush BrushGray = new SolidColorBrush(Color.Parse("#3F3F46"));
+    private static readonly IBrush BrushGreen = new SolidColorBrush(Color.Parse("#107C41"));
+    private static readonly IBrush BrushLightRed = new SolidColorBrush(Color.Parse("#FF6B6B"));
+    private static readonly IBrush BrushDimGray = new SolidColorBrush(Color.Parse("#888888"));
+    private static readonly IBrush BrushTeal = new SolidColorBrush(Color.Parse("#4EC9B0"));
+
     public RenameItemPreview Preview { get; }
 
     public string OriginalFilename => Preview.OriginalFilename;
@@ -38,9 +45,9 @@ public class RenameItemPreviewViewModel : ObservableObject
     {
         get
         {
-            if (HasCollision) return new SolidColorBrush(Color.Parse("#A80000")); // Red
-            if (!HasChange) return new SolidColorBrush(Color.Parse("#3F3F46")); // Gray
-            return new SolidColorBrush(Color.Parse("#107C41")); // Green
+            if (HasCollision) return BrushRed;
+            if (!HasChange) return BrushGray;
+            return BrushGreen;
         }
     }
 
@@ -48,9 +55,9 @@ public class RenameItemPreviewViewModel : ObservableObject
     {
         get
         {
-            if (HasCollision) return new SolidColorBrush(Color.Parse("#FF6B6B"));
-            if (!HasChange) return new SolidColorBrush(Color.Parse("#888888"));
-            return new SolidColorBrush(Color.Parse("#4EC9B0")); // Teal
+            if (HasCollision) return BrushLightRed;
+            if (!HasChange) return BrushDimGray;
+            return BrushTeal;
         }
     }
 

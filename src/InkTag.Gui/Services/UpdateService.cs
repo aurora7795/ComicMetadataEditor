@@ -34,13 +34,24 @@ public static class UpdateService
 {
     private const string GithubRepoUrl = "https://github.com/aurora7795/InkTag";
     private const string GithubApiLatestReleaseUrl = "https://api.github.com/repos/aurora7795/InkTag/releases/latest";
+    private static readonly object SyncLock = new();
     private static UpdateInfo? _cachedUpdateInfo;
     private static UpdateCheckResult? _cachedPortableResult;
     private static DateTime _lastCheckTime = DateTime.MinValue;
     private static readonly TimeSpan MinCheckInterval = TimeSpan.FromMinutes(15);
     private static Version? _resolvedAppVersion;
 
-    public static Version CurrentAppVersion => _resolvedAppVersion ??= GetCurrentAppVersion();
+    public static Version CurrentAppVersion
+    {
+        get
+        {
+            if (_resolvedAppVersion != null) return _resolvedAppVersion;
+            lock (SyncLock)
+            {
+                return _resolvedAppVersion ??= GetCurrentAppVersion();
+            }
+        }
+    }
 
     private static Version GetCurrentAppVersion()
     {
@@ -101,15 +112,21 @@ public static class UpdateService
     /// </summary>
     public static async Task<UpdateCheckResult> CheckForUpdatesAsync(bool forceCheck = false)
     {
-        if (!forceCheck && (DateTime.UtcNow - _lastCheckTime) < MinCheckInterval)
+        if (!forceCheck)
         {
-            if (_cachedUpdateInfo != null)
+            lock (SyncLock)
             {
-                return new UpdateCheckResult(UpdateStatusKind.UpdateAvailable, _cachedUpdateInfo, $"New update available! ({_cachedUpdateInfo.TargetFullRelease.Version})");
-            }
-            if (_cachedPortableResult != null)
-            {
-                return _cachedPortableResult;
+                if ((DateTime.UtcNow - _lastCheckTime) < MinCheckInterval)
+                {
+                    if (_cachedUpdateInfo != null)
+                    {
+                        return new UpdateCheckResult(UpdateStatusKind.UpdateAvailable, _cachedUpdateInfo, $"New update available! ({_cachedUpdateInfo.TargetFullRelease.Version})");
+                    }
+                    if (_cachedPortableResult != null)
+                    {
+                        return _cachedPortableResult;
+                    }
+                }
             }
         }
 
@@ -133,14 +150,18 @@ public static class UpdateService
                 try
                 {
                     AppLogger.LogInfo("Application is running in installed / .app mode. Querying Velopack manager...");
-                    _cachedUpdateInfo = await manager.CheckForUpdatesAsync();
-                    _lastCheckTime = DateTime.UtcNow;
-
-                    if (_cachedUpdateInfo != null)
+                    var updateInfo = await manager.CheckForUpdatesAsync();
+                    lock (SyncLock)
                     {
-                        string targetVer = _cachedUpdateInfo.TargetFullRelease.Version.ToString();
+                        _cachedUpdateInfo = updateInfo;
+                        _lastCheckTime = DateTime.UtcNow;
+                    }
+
+                    if (updateInfo != null)
+                    {
+                        string targetVer = updateInfo.TargetFullRelease.Version.ToString();
                         AppLogger.LogInfo($"Velopack update check completed successfully: New version found ({targetVer}).");
-                        return new UpdateCheckResult(UpdateStatusKind.UpdateAvailable, _cachedUpdateInfo, $"New update available! ({targetVer})");
+                        return new UpdateCheckResult(UpdateStatusKind.UpdateAvailable, updateInfo, $"New update available! ({targetVer})");
                     }
                     else
                     {
@@ -187,18 +208,21 @@ public static class UpdateService
         string tagName = root.TryGetProperty("tag_name", out var tagProp) ? tagProp.GetString() ?? "" : "";
         string htmlUrl = root.TryGetProperty("html_url", out var urlProp) ? urlProp.GetString() ?? GithubRepoUrl : GithubRepoUrl;
 
-        _lastCheckTime = DateTime.UtcNow;
-
-        if (TryParseVersion(tagName, out var latestVersion) && latestVersion > CurrentAppVersion)
+        lock (SyncLock)
         {
-            AppLogger.LogInfo($"GitHub API fallback found newer release: {tagName} (Current: {CurrentAppVersion})");
-            _cachedPortableResult = new UpdateCheckResult(UpdateStatusKind.UpdateAvailable, null, $"New update available! ({tagName})", htmlUrl);
+            _lastCheckTime = DateTime.UtcNow;
+
+            if (TryParseVersion(tagName, out var latestVersion) && latestVersion > CurrentAppVersion)
+            {
+                AppLogger.LogInfo($"GitHub API fallback found newer release: {tagName} (Current: {CurrentAppVersion})");
+                _cachedPortableResult = new UpdateCheckResult(UpdateStatusKind.UpdateAvailable, null, $"New update available! ({tagName})", htmlUrl);
+                return _cachedPortableResult;
+            }
+
+            AppLogger.LogInfo($"GitHub API fallback check complete: InkTag Desktop is up to date. Latest release on GitHub: {tagName}");
+            _cachedPortableResult = new UpdateCheckResult(UpdateStatusKind.UpToDate, null, "InkTag Desktop is up to date.", htmlUrl);
             return _cachedPortableResult;
         }
-
-        AppLogger.LogInfo($"GitHub API fallback check complete: InkTag Desktop is up to date. Latest release on GitHub: {tagName}");
-        _cachedPortableResult = new UpdateCheckResult(UpdateStatusKind.UpToDate, null, "InkTag Desktop is up to date.", htmlUrl);
-        return _cachedPortableResult;
     }
 
     public static bool TryParseVersion(string versionTag, out Version version)

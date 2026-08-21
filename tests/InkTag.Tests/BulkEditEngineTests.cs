@@ -89,4 +89,32 @@ public class BulkEditEngineTests
 
         Assert.Equal("The Amazing Spider-Man (Vol 1)", item.Series);
     }
+
+    [Fact]
+    public void ApplyBulkRule_ClearAndPrependOperations()
+    {
+        var item = new ComicItemViewModel("test.cbz", new ComicInfo
+        {
+            Notes = "Existing note",
+            Summary = "Story details"
+        });
+
+        var prependRule = new BulkEditRuleViewModel(BulkEditCatalog.AllFields.First(f => f.PropertyName == "Notes"))
+        {
+            SelectedOperation = BulkEditOperation.Prepend,
+            StringValue = "Important:"
+        };
+
+        var clearRule = new BulkEditRuleViewModel(BulkEditCatalog.AllFields.First(f => f.PropertyName == "Summary"))
+        {
+            SelectedOperation = BulkEditOperation.Clear
+        };
+
+        item.ApplyBulkRule(prependRule);
+        item.ApplyBulkRule(clearRule);
+
+        Assert.Equal("Important: Existing note", item.Notes);
+        Assert.Null(item.Summary);
+        Assert.True(item.IsDirty);
+    }
 }
