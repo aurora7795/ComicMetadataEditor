@@ -63,7 +63,7 @@ public static class AgentOperations
 
         var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
         var files = Directory.GetFiles(directoryPath, "*.*", searchOption)
-            .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
+            .Where(MetadataEditor.IsSupportedComicFile)
             .ToList();
 
         var missingFieldList = missingFields?
@@ -162,7 +162,7 @@ public static class AgentOperations
             if (dryRun)
             {
                 var files = Directory.GetFiles(targetPath, "*.*", searchOption)
-                    .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
+                    .Where(MetadataEditor.IsSupportedComicFile)
                     .ToList();
 
                 var fileDiffs = files.Select(f => new FileUpdateDiffResult

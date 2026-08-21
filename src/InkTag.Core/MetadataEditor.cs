@@ -31,6 +31,33 @@ public record MetadataDiffItem(string PropertyName, object? OldValue, object? Ne
 public class MetadataEditor
 {
     /// <summary>
+    /// Checks whether a given path is a valid comic archive (.cbz / .cbr), excluding AppleDouble, macOS resource forks, and hidden system files.
+    /// </summary>
+    public static bool IsSupportedComicFile(string? filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath)) return false;
+
+        string fileName = Path.GetFileName(filePath);
+        if (string.IsNullOrWhiteSpace(fileName) || fileName.StartsWith('.') || fileName.StartsWith("._", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        string normalized = filePath.Replace('\\', '/');
+        if (normalized.Contains("/.AppleDouble/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains("/__MACOSX/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains("/.git/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains("/.Trash/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains("/.Trash-", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return fileName.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) ||
+               fileName.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// Bulk edits the metadata in all CBR and CBZ files within the specified directory.
     /// </summary>
     /// <param name="directoryPath">The path to the directory containing CBR or CBZ files.</param>
@@ -50,8 +77,7 @@ public class MetadataEditor
 
         // Support both .cbr and .cbz files
         var comicFiles = Directory.GetFiles(directoryPath, "*.*", searchOption)
-            .Where(f => f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase) || 
-                        f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase))
+            .Where(IsSupportedComicFile)
             .ToList();
 
         report.TotalFound = comicFiles.Count;

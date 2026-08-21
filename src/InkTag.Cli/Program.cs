@@ -361,7 +361,7 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
         bool recursive = args.Any(a => a.Equals("--recursive", StringComparison.OrdinalIgnoreCase) || a.Equals("-r", StringComparison.OrdinalIgnoreCase));
         var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
         var files = Directory.GetFiles(targetPath, "*.*", searchOption)
-                             .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
+                             .Where(MetadataEditor.IsSupportedComicFile)
                              .ToList();
 
         var queueService = new InkTag.Core.Scrapers.BulkScrapeQueueService(scraperService, editor, settingsService);

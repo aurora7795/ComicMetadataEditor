@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using InkTag.Core;
 using InkTag.Gui.ViewModels;
 
 namespace InkTag.Gui.Views;
@@ -255,7 +256,7 @@ public partial class MainWindow : Window
                     {
                         string folderPath = folders[0].Path.LocalPath;
                         filePaths = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories)
-                            .Where(f => f.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cbr", StringComparison.OrdinalIgnoreCase))
+                            .Where(MetadataEditor.IsSupportedComicFile)
                             .ToList();
                     }
                 }
