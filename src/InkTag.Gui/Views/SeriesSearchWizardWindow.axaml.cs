@@ -38,10 +38,10 @@ public partial class SeriesSearchWizardWindow : Window
         _scraperService = new MetadataScraperService(new AppSettingsService());
 
         string query = initialSeriesQuery;
-        if (string.IsNullOrWhiteSpace(query) && !string.IsNullOrWhiteSpace(filePath))
+        if (!string.IsNullOrWhiteSpace(filePath))
         {
-            var parsed = InkTag.Core.Parsing.ComicFilenameParser.Parse(filePath);
-            if (!string.IsNullOrWhiteSpace(parsed.Series))
+            var parsed = InkTag.Core.Parsing.ComicFilenameParser.Parse(filePath, inspectParentHierarchy: true);
+            if ((string.IsNullOrWhiteSpace(query) || InkTag.Core.Parsing.ComicFilenameParser.IsTrivialOrAbbreviatedSeriesName(query, parsed.Series)) && !string.IsNullOrWhiteSpace(parsed.Series))
             {
                 query = parsed.Series;
             }

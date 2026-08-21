@@ -252,6 +252,28 @@ public class ScraperTests
     }
 
     [Fact]
+    public void MetadataScraperService_ExtractQueryFromComicInfo_InfersFromParentDirectoryHierarchy()
+    {
+        // 1. Untagged comic with attached acronym inside series folder
+        var emptyComic = new ComicInfo();
+        var query1 = MetadataScraperService.ExtractQueryFromComicInfo(emptyComic, "/Volumes/Comics/Iron Man/IM015.cbz");
+        Assert.Equal("Iron Man", query1.Series);
+        Assert.Equal("15", query1.IssueNumber);
+
+        // 2. Comic with only issue number in filename inside series folder with year
+        var query2 = MetadataScraperService.ExtractQueryFromComicInfo(emptyComic, "/media/comics/Batman (2016)/001.cbz");
+        Assert.Equal("Batman", query2.Series);
+        Assert.Equal("1", query2.IssueNumber);
+        Assert.Equal(2016, query2.Year);
+
+        // 3. Comic with trivial acronym in metadata but full folder name available
+        var abbrevComic = new ComicInfo { Series = "IM", Number = "" };
+        var query3 = MetadataScraperService.ExtractQueryFromComicInfo(abbrevComic, "/Comics/Iron Man/015.cbz");
+        Assert.Equal("Iron Man", query3.Series);
+        Assert.Equal("15", query3.IssueNumber);
+    }
+
+    [Fact]
     public async Task ComicVineProvider_ParsesSeriesSearchResults()
     {
         string json = @"{

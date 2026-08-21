@@ -74,27 +74,11 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
 
         DiffDataGrid.ItemsSource = FieldDiffs;
 
-        // Populate search queries from target comic or fallback to filename parser
-        string series = targetComic.Series ?? "";
-        string issue = targetComic.Number ?? "";
-        string year = targetComic.Year?.ToString() ?? "";
-
-        if ((string.IsNullOrWhiteSpace(series) || string.IsNullOrWhiteSpace(issue) || string.IsNullOrWhiteSpace(year)) && !string.IsNullOrWhiteSpace(filePath))
-        {
-            var parsed = InkTag.Core.Parsing.ComicFilenameParser.Parse(filePath);
-            if (string.IsNullOrWhiteSpace(series) && !string.IsNullOrWhiteSpace(parsed.Series))
-            {
-                series = parsed.Series;
-            }
-            if (string.IsNullOrWhiteSpace(issue) && !string.IsNullOrWhiteSpace(parsed.IssueNumber))
-            {
-                issue = parsed.IssueNumber;
-            }
-            if (string.IsNullOrWhiteSpace(year) && parsed.Year.HasValue)
-            {
-                year = parsed.Year.Value.ToString();
-            }
-        }
+        // Populate search queries from target comic or fallback to filename parser & parent directory inference
+        var query = MetadataScraperService.ExtractQueryFromComicInfo(targetComic, filePath);
+        string series = query.Series;
+        string issue = query.IssueNumber;
+        string year = query.Year?.ToString() ?? "";
 
         SeriesTextBox.Text = series;
         IssueTextBox.Text = issue;

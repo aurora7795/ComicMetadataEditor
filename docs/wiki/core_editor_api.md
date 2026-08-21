@@ -133,7 +133,7 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 ### `BulkScrapeQueueService.cs` (Parallel Auto-Tag Queue Pipeline)
 * **Namespace**: `InkTag.Core.Scrapers`
 * **Methods**:
-  * `CreateQueue(IEnumerable<string> filePaths)`: Parses filenames and initializes staged queue items with local cover extractions.
+  * `CreateQueue(IEnumerable<string> filePaths)`: Parses filenames and parent directory hierarchies (handling untagged files or short acronyms like `/Iron Man/IM015.cbz` -> Series: `"Iron Man"`) and initializes staged queue items with local cover extractions.
   * `ProcessQueueAsync(IEnumerable<BulkScrapeQueueItem> queue, BulkScrapeOptions options, ...)`: Executes streaming parallel cover hashing, smart series volume clustering, chronological ComicVine matching, and perceptual visual similarity calculation.
   * `ApplyMatchedMetadataAsync(IEnumerable<BulkScrapeQueueItem> items, ScrapeMergeMode mergeMode, bool renameFiles, string renameTemplate, bool preserveScanInfo, ...)`: Writes matched ComicVine metadata back to comic archives on disk, with optional safe auto-renaming.
 

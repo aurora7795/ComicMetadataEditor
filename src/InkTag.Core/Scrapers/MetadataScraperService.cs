@@ -230,11 +230,11 @@ public class MetadataScraperService
         string issue = comic.Number ?? string.Empty;
         int? year = comic.Year;
 
-        // If Series, Issue, or Year is missing and filePath is provided, infer from filename
-        if ((string.IsNullOrWhiteSpace(series) || string.IsNullOrWhiteSpace(issue) || !year.HasValue) && !string.IsNullOrWhiteSpace(filePath))
+        // If Series, Issue, or Year is missing or trivial/abbreviation and filePath is provided, infer from filename and parent directory hierarchy
+        if (!string.IsNullOrWhiteSpace(filePath))
         {
-            var parsed = InkTag.Core.Parsing.ComicFilenameParser.Parse(filePath);
-            if (string.IsNullOrWhiteSpace(series) && !string.IsNullOrWhiteSpace(parsed.Series))
+            var parsed = InkTag.Core.Parsing.ComicFilenameParser.Parse(filePath, inspectParentHierarchy: true);
+            if ((string.IsNullOrWhiteSpace(series) || InkTag.Core.Parsing.ComicFilenameParser.IsTrivialOrAbbreviatedSeriesName(series, parsed.Series)) && !string.IsNullOrWhiteSpace(parsed.Series))
             {
                 series = parsed.Series;
             }
