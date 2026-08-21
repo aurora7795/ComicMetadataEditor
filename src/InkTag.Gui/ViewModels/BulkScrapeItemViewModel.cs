@@ -65,6 +65,16 @@ public class BulkScrapeItemViewModel : ObservableObject
             if (SetProperty(ref _isSelected, value))
             {
                 Item.IsSelected = value;
+                if (!value && (Status == BulkScrapeItemStatus.Ready || Status == BulkScrapeItemStatus.Queued))
+                {
+                    Status = BulkScrapeItemStatus.Excluded;
+                    StatusMessage = "Excluded from scrape";
+                }
+                else if (value && Status == BulkScrapeItemStatus.Excluded)
+                {
+                    Status = BulkScrapeItemStatus.Ready;
+                    StatusMessage = "Ready";
+                }
             }
         }
     }
@@ -163,7 +173,7 @@ public class BulkScrapeItemViewModel : ObservableObject
         {
             if (MatchedCandidate == null || !MatchedCandidate.VisualSimilarity.HasValue)
             {
-                return new SolidColorBrush(Color.Parse("#555555"));
+                return new SolidColorBrush(Color.Parse("#333333"));
             }
 
             double sim = MatchedCandidate.VisualSimilarity.Value;
@@ -179,6 +189,9 @@ public class BulkScrapeItemViewModel : ObservableObject
         {
             return Status switch
             {
+                BulkScrapeItemStatus.Ready => new SolidColorBrush(Color.Parse("#3F3F46")),
+                BulkScrapeItemStatus.Excluded => new SolidColorBrush(Color.Parse("#2D2D30")),
+                BulkScrapeItemStatus.Queued => new SolidColorBrush(Color.Parse("#0E639C")),
                 BulkScrapeItemStatus.Matched => new SolidColorBrush(Color.Parse("#107C41")),
                 BulkScrapeItemStatus.Saved => new SolidColorBrush(Color.Parse("#0078D4")),
                 BulkScrapeItemStatus.LowConfidence => new SolidColorBrush(Color.Parse("#CA5010")),
@@ -191,6 +204,8 @@ public class BulkScrapeItemViewModel : ObservableObject
 
     public string StatusText => Status switch
     {
+        BulkScrapeItemStatus.Ready => "Ready",
+        BulkScrapeItemStatus.Excluded => "Excluded",
         BulkScrapeItemStatus.Queued => "Queued",
         BulkScrapeItemStatus.ExtractingCover => "Extracting Cover",
         BulkScrapeItemStatus.SearchingComicVine => "Searching",

@@ -115,7 +115,7 @@ public class BulkScrapeTests
             Assert.Equal("Saga", queue[0].ParsedQuery.Series);
             Assert.Equal("1", queue[0].ParsedQuery.IssueNumber);
             Assert.Equal(2012, queue[0].ParsedQuery.Year);
-            Assert.Equal(BulkScrapeItemStatus.Queued, queue[0].Status);
+            Assert.Equal(BulkScrapeItemStatus.Ready, queue[0].Status);
 
             Assert.Equal("Paper Girls", queue[1].ParsedQuery.Series);
             Assert.Equal("2", queue[1].ParsedQuery.IssueNumber);

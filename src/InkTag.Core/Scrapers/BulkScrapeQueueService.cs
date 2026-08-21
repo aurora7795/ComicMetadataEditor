@@ -15,6 +15,8 @@ namespace InkTag.Core.Scrapers;
 
 public enum BulkScrapeItemStatus
 {
+    Ready,
+    Excluded,
     Queued,
     ExtractingCover,
     SearchingComicVine,
@@ -35,8 +37,8 @@ public class BulkScrapeQueueItem
     public byte[]? LocalCoverBytes { get; set; }
     public ulong LocalCoverHash { get; set; }
     
-    public BulkScrapeItemStatus Status { get; set; } = BulkScrapeItemStatus.Queued;
-    public string StatusMessage { get; set; } = "Queued";
+    public BulkScrapeItemStatus Status { get; set; } = BulkScrapeItemStatus.Ready;
+    public string StatusMessage { get; set; } = "Ready";
     public string? ErrorMessage { get; set; }
     
     public ComicSearchResult? MatchedCandidate { get; set; }
@@ -134,14 +136,13 @@ public class BulkScrapeQueueService
                 FilePath = path,
                 ExistingComic = existingInfo,
                 ParsedQuery = query,
-                Status = BulkScrapeItemStatus.Queued,
+                Status = BulkScrapeItemStatus.Ready,
                 StatusMessage = "Ready"
             });
         }
         return items;
     }
 
-    /// <summary>
     /// <summary>
     /// Processes all items in the queue using pipelined parallel cover extraction and real-time visual cover matching.
     /// Covers are extracted across parallel background workers, feeding matched candidates into the ComicVine resolution engine concurrently.

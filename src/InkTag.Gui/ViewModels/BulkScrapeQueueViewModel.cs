@@ -160,6 +160,20 @@ public class BulkScrapeQueueViewModel : ObservableObject
         ProgressPercentage = 0;
         ProgressStatus = $"Starting bulk scrape for {selectedItems.Count} selected items...";
 
+        foreach (var itemVm in selectedItems)
+        {
+            itemVm.Status = BulkScrapeItemStatus.Queued;
+            itemVm.StatusMessage = "Queued";
+        }
+        foreach (var itemVm in Items.Where(i => !i.IsSelected))
+        {
+            if (itemVm.Status == BulkScrapeItemStatus.Ready || itemVm.Status == BulkScrapeItemStatus.Queued)
+            {
+                itemVm.Status = BulkScrapeItemStatus.Excluded;
+                itemVm.StatusMessage = "Excluded from scrape";
+            }
+        }
+
         var rawQueue = selectedItems.Select(i => i.Item).ToList();
         var itemMap = selectedItems.ToDictionary(i => i.Item);
 
