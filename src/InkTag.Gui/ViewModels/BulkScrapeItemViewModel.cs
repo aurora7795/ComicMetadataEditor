@@ -159,9 +159,11 @@ public class BulkScrapeItemViewModel : ObservableObject
     public double VisualSimilarity => MatchedCandidate?.VisualSimilarity ?? 0.0;
     public double MatchConfidence => MatchedCandidate?.MatchConfidence ?? 0.0;
 
-    public string VisualSimilarityBadge => MatchedCandidate?.VisualSimilarity.HasValue == true
+    public string VisualSimilarityBadge => (MatchedCandidate?.VisualSimilarity.HasValue == true && MatchedCandidate.VisualSimilarity.Value > 0)
         ? $"{MatchedCandidate.VisualSimilarity.Value:P0} Visual"
         : "—";
+
+    public string VisualMatchText => VisualSimilarityBadge;
 
     public string ConfidenceBadge => MatchedCandidate != null
         ? $"{MatchedCandidate.MatchConfidence:P0} Conf."
@@ -171,9 +173,9 @@ public class BulkScrapeItemViewModel : ObservableObject
     {
         get
         {
-            if (MatchedCandidate == null || !MatchedCandidate.VisualSimilarity.HasValue)
+            if (MatchedCandidate == null || !MatchedCandidate.VisualSimilarity.HasValue || MatchedCandidate.VisualSimilarity.Value <= 0.01)
             {
-                return new SolidColorBrush(Color.Parse("#333333"));
+                return new SolidColorBrush(Color.Parse("#333338"));
             }
 
             double sim = MatchedCandidate.VisualSimilarity.Value;
