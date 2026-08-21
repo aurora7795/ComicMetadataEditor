@@ -38,12 +38,21 @@ public static class MacDockHelper
                 // AppKit may already be dynamically linked by Avalonia
             }
 
-            string tempIconPath = Path.Combine(Path.GetTempPath(), "InkTag_DockIcon.png");
+            string tempIconPath = Path.Combine(Path.GetTempPath(), "InkTag.icns");
             if (!File.Exists(tempIconPath) || new FileInfo(tempIconPath).Length == 0)
             {
-                using var stream = AssetLoader.Open(new Uri("avares://InkTag.Gui/Assets/inktag.png"));
-                using var fs = File.Create(tempIconPath);
-                stream.CopyTo(fs);
+                if (AssetLoader.Exists(new Uri("avares://InkTag.Gui/Assets/InkTag.icns")))
+                {
+                    using var stream = AssetLoader.Open(new Uri("avares://InkTag.Gui/Assets/InkTag.icns"));
+                    using var fs = File.Create(tempIconPath);
+                    stream.CopyTo(fs);
+                }
+                else
+                {
+                    using var stream = AssetLoader.Open(new Uri("avares://InkTag.Gui/Assets/inktag.png"));
+                    using var fs = File.Create(tempIconPath);
+                    stream.CopyTo(fs);
+                }
             }
 
             var nsApplicationClass = objc_getClass("NSApplication");
@@ -81,7 +90,33 @@ public static class MacDockHelper
             {
                 var setIconSel = sel_registerName("setApplicationIconImage:");
                 objc_msgSend_IntPtr(nsApp, setIconSel, nsImage);
-                AppLogger.LogInfo("[MacDockHelper] Successfully set macOS application Dock icon.");
+
+                // Explicitly update and refresh the NSDockTile
+                var dockTileSel = sel_registerName("dockTile");
+                var dockTile = objc_msgSend(nsApp, dockTileSel);
+                if (dockTile != IntPtr.Zero)
+                {
+                    var nsImageViewClass = objc_getClass("NSImageView");
+                    if (nsImageViewClass != IntPtr.Zero)
+                    {
+                        var initSel = sel_registerName("init");
+                        var imageViewAlloc = objc_msgSend(nsImageViewClass, allocSel);
+                        var imageView = objc_msgSend(imageViewAlloc, initSel);
+                        if (imageView != IntPtr.Zero)
+                        {
+                            var setImageSel = sel_registerName("setImage:");
+                            objc_msgSend_IntPtr(imageView, setImageSel, nsImage);
+
+                            var setContentViewSel = sel_registerName("setContentView:");
+                            objc_msgSend_IntPtr(dockTile, setContentViewSel, imageView);
+
+                            var displaySel = sel_registerName("display");
+                            objc_msgSend(dockTile, displaySel);
+                        }
+                    }
+                }
+
+                AppLogger.LogInfo("[MacDockHelper] Successfully set macOS application Dock icon and refreshed dockTile.");
             }
             else
             {

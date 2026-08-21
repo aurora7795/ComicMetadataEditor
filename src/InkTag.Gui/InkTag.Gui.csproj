@@ -23,4 +23,18 @@
   <ItemGroup>
     <ProjectReference Include="../InkTag.Core/InkTag.Core.csproj" />
   </ItemGroup>
+
+  <!-- Assemble macOS .app bundle for local development on macOS -->
+  <Target Name="AssembleMacAppBundle" AfterTargets="Build" Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <PropertyGroup>
+      <AppBundleDir>$(TargetDir)InkTag.app</AppBundleDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(AppBundleDir)/Contents/MacOS;$(AppBundleDir)/Contents/Resources" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName)" DestinationFolder="$(AppBundleDir)/Contents/MacOS" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).dll" DestinationFolder="$(AppBundleDir)/Contents/MacOS" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).runtimeconfig.json" DestinationFolder="$(AppBundleDir)/Contents/MacOS" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)../../packaging/Info.plist" DestinationFolder="$(AppBundleDir)/Contents" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)../../packaging/InkTag.icns" DestinationFolder="$(AppBundleDir)/Contents/Resources" SkipUnchangedFiles="true" />
+    <Exec Command="chmod +x &quot;$(AppBundleDir)/Contents/MacOS/$(TargetName)&quot;" />
+  </Target>
 </Project>
