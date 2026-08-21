@@ -173,6 +173,7 @@ bool isMatch = PerceptualHashService.IsVisualMatch(coverHash, onlineCoverHash, t
 ## 🗺️ Roadmap & Milestones
 
 ### Completed Milestones
+* **[x] Hierarchical Path Inference, MCP Sandboxing & Legacy CBI Ingestion (`v0.11.0`):** Smart 2-level ancestor directory metadata inference (resolving series, volume, and year from nested folder structures), strict MCP security root sandboxing (`AllowedRootPaths`), automatic ComicVine rate-limit backoff retry (HTTP 420/429), debounced scraper caching, and legacy ComicBookInfo (CBI) zip comment ingestion with automatic upgrade to ComicInfo.xml v2.1.
 * **[x] Bulk Auto-Tag Pipeline & File Renamer Engine (`v0.10.0`):** Streaming parallel identification queue with cover visual hashing (`dHash`), chronological volume clustering, duplicate-save protection, and template-based file renaming engine (`ComicFileRenamer`) across Core, GUI, CLI, and MCP.
 * **[x] Metadata Deserialization & Archive Recovery (`v0.9.1`):** Resilient handling of malformed or out-of-order `ComicInfo.xml` files during metadata edit operations, preventing save failures and guaranteeing XML schema compliance upon repack.
 * **[x] Network Mount Resilience & Diagnostics (`v0.9.0`):** Slow virtual remote share detection (GVFS FTP / FUSE), sequential forward-only streaming fallback, real-time file download diagnostics, in-overlay advisory guidance, and sub-10ms instantaneous stream cancellation.
