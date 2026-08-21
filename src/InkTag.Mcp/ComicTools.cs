@@ -28,7 +28,10 @@ public static class ComicTools
         string? envRoots = Environment.GetEnvironmentVariable("INKTAG_ALLOWED_ROOT_PATHS");
         if (!string.IsNullOrWhiteSpace(envRoots))
         {
-            var parsedEnvRoots = envRoots.Split(new[] { ';', ':', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            char[] separators = OperatingSystem.IsWindows()
+                ? new[] { ';', ',' }
+                : new[] { ';', ':', ',' };
+            var parsedEnvRoots = envRoots.Split(separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             allowedRoots.AddRange(parsedEnvRoots);
         }
 

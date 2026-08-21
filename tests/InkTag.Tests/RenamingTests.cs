@@ -146,7 +146,8 @@ public class RenamingTests
     [Fact]
     public void PreviewBatchRename_DetectsCollisionsCorrectly()
     {
-        string dir = Path.GetTempPath();
+        string dir = Path.Combine(Path.GetTempPath(), $"inktag_collision_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
         string file1 = Path.Combine(dir, "f1.cbz");
         string file2 = Path.Combine(dir, "f2.cbz");
 
@@ -170,8 +171,7 @@ public class RenamingTests
         }
         finally
         {
-            if (File.Exists(file1)) File.Delete(file1);
-            if (File.Exists(file2)) File.Delete(file2);
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
         }
     }
 
