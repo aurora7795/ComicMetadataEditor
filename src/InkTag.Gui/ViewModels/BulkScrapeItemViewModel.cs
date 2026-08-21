@@ -56,6 +56,18 @@ public class BulkScrapeItemViewModel : ObservableObject
     public string ParsedIssue => Item.ParsedQuery.IssueNumber;
     public int? ParsedYear => Item.ParsedQuery.Year;
 
+    public string ParsedQueryText
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(ParsedSeries)) return "—";
+            var parts = new List<string> { ParsedSeries };
+            if (!string.IsNullOrEmpty(ParsedIssue)) parts.Add($"#{ParsedIssue}");
+            if (ParsedYear.HasValue && ParsedYear.Value > 0) parts.Add($"({ParsedYear})");
+            return string.Join(" ", parts);
+        }
+    }
+
     private bool _isSelected;
     public bool IsSelected
     {
@@ -133,9 +145,11 @@ public class BulkScrapeItemViewModel : ObservableObject
             Item.MatchedCandidate = value;
             OnPropertyChanged(nameof(MatchedCandidate));
             OnPropertyChanged(nameof(MatchedSeriesAndIssue));
+            OnPropertyChanged(nameof(MatchedTitle));
             OnPropertyChanged(nameof(MatchedIssueTitle));
             OnPropertyChanged(nameof(VisualSimilarity));
             OnPropertyChanged(nameof(VisualSimilarityBadge));
+            OnPropertyChanged(nameof(VisualMatchText));
             OnPropertyChanged(nameof(VisualBadgeBackground));
             OnPropertyChanged(nameof(ConfidenceBadge));
             
@@ -150,10 +164,18 @@ public class BulkScrapeItemViewModel : ObservableObject
         }
     }
 
-    public string MatchedSeriesAndIssue => MatchedCandidate != null 
-        ? $"{MatchedCandidate.SeriesTitle} #{MatchedCandidate.IssueNumber}" 
-        : "—";
+    public string MatchedSeriesAndIssue
+    {
+        get
+        {
+            if (MatchedCandidate == null) return "—";
+            string series = !string.IsNullOrEmpty(MatchedCandidate.SeriesTitle) ? MatchedCandidate.SeriesTitle : "Unknown Series";
+            string issue = !string.IsNullOrEmpty(MatchedCandidate.IssueNumber) ? $"#{MatchedCandidate.IssueNumber}" : string.Empty;
+            return $"{series} {issue}".Trim();
+        }
+    }
 
+    public string MatchedTitle => MatchedSeriesAndIssue;
     public string MatchedIssueTitle => MatchedCandidate?.IssueTitle ?? string.Empty;
 
     public double VisualSimilarity => MatchedCandidate?.VisualSimilarity ?? 0.0;
