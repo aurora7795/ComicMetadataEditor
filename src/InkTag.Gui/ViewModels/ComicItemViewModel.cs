@@ -146,11 +146,18 @@ public partial class ComicItemViewModel : ObservableValidator
     [ObservableProperty]
     private int? _pageCount;
 
-    public ComicItemViewModel(string filePath, ComicInfo model)
+    [ObservableProperty]
+    private bool _hasEmbeddedXml = true;
+
+    public bool IsUntagged => !HasEmbeddedXml || !HasEssentialMetadata;
+    public bool HasEssentialMetadata => !string.IsNullOrWhiteSpace(Series) || !string.IsNullOrWhiteSpace(Title);
+
+    public ComicItemViewModel(string filePath, ComicInfo model, bool hasEmbeddedXml = true)
     {
         FilePath = filePath;
         FileName = Path.GetFileName(filePath);
         _model = model;
+        _hasEmbeddedXml = hasEmbeddedXml;
 
         LoadFromModel();
     }
@@ -383,10 +390,18 @@ public partial class ComicItemViewModel : ObservableValidator
     {
         base.OnPropertyChanged(e);
 
+        if (e.PropertyName == nameof(Title) || e.PropertyName == nameof(Series) || e.PropertyName == nameof(HasEmbeddedXml))
+        {
+            OnPropertyChanged(nameof(HasEssentialMetadata));
+            OnPropertyChanged(nameof(IsUntagged));
+        }
+
         if (!_isInitializing && 
             e.PropertyName != nameof(IsDirty) && 
             e.PropertyName != nameof(CoverImage) && 
-            e.PropertyName != nameof(HasErrors))
+            e.PropertyName != nameof(HasErrors) &&
+            e.PropertyName != nameof(HasEssentialMetadata) &&
+            e.PropertyName != nameof(IsUntagged))
         {
             IsDirty = true;
         }

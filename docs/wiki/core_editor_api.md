@@ -66,9 +66,14 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 * **Signature**: `public static FileStream OpenReadOptimized(string filePath, int bufferSize = 65536)`
 * **Description**: Opens a `FileStream` configured with a 64KB buffer, `FileShare.ReadWrite` (eliminating sharing collisions with media servers like Komga/Kavita/Plex), and `FileOptions.None` (enabling bidirectional backward seeks over Linux FUSE / GVFS / FTP / SMB network mounts).
 
+#### `HasMetadata`
+* **Signature**: `public bool HasMetadata(string filePath, CancellationToken cancellationToken = default)`
+* **Description**: Fast check to verify whether an archive contains an embedded `ComicInfo.xml` entry without fully parsing and loading the document.
+
 #### `ReadMetadata` / `ReadMetadataAsJson`
 * **Signature**: `public ComicInfo ReadMetadata(string filePath, CancellationToken cancellationToken = default)`
-* **Signature**: `public ComicInfo ReadMetadata(string filePath, out bool usedSequentialFallback, CancellationToken cancellationToken = default)`
+* **Signature**: `public ComicInfo ReadMetadata(string filePath, out bool hasEmbeddedXml, CancellationToken cancellationToken = default)`
+* **Signature**: `public ComicInfo ReadMetadata(string filePath, out bool hasEmbeddedXml, out bool usedSequentialFallback, CancellationToken cancellationToken = default)`
 * **Signature**: `public string ReadMetadataAsJson(string filePath)`
 * **Description**: Parses `ComicInfo.xml` directly in-memory with zero temporary disk extraction.
   1. *Fast-Path (.cbz)*: Reads the Central Directory using .NET's built-in `System.IO.Compression.ZipArchive` for 1-seek metadata access.

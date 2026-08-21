@@ -17,6 +17,13 @@ using InkTag.Core.Logging;
 
 namespace InkTag.Gui.ViewModels;
 
+public enum ComicFilterMode
+{
+    All,
+    Untagged,
+    Modified
+}
+
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly ComicScannerService _scannerService = new();
@@ -47,6 +54,58 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private ObservableCollection<ComicItemViewModel> _comics = new();
+
+    public ObservableCollection<ComicItemViewModel> DisplayedComics { get; } = new();
+
+    [ObservableProperty]
+    private ComicFilterMode _filterMode = ComicFilterMode.All;
+
+    [ObservableProperty]
+    private string _filterSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _filterStatusText = "Ready";
+
+    [ObservableProperty]
+    private int _untaggedCount;
+
+    [ObservableProperty]
+    private int _modifiedCount;
+
+    public string AllFilterLabel => $"All ({Comics.Count})";
+    public string UntaggedFilterLabel => $"Untagged ({UntaggedCount})";
+    public string ModifiedFilterLabel => $"Modified ({ModifiedCount})";
+
+    public bool IsFilterAll
+    {
+        get => FilterMode == ComicFilterMode.All;
+        set { if (value) FilterMode = ComicFilterMode.All; }
+    }
+
+    public bool IsFilterUntagged
+    {
+        get => FilterMode == ComicFilterMode.Untagged;
+        set { if (value) FilterMode = ComicFilterMode.Untagged; }
+    }
+
+    public bool IsFilterModified
+    {
+        get => FilterMode == ComicFilterMode.Modified;
+        set { if (value) FilterMode = ComicFilterMode.Modified; }
+    }
+
+    partial void OnFilterModeChanged(ComicFilterMode value)
+    {
+        OnPropertyChanged(nameof(IsFilterAll));
+        OnPropertyChanged(nameof(IsFilterUntagged));
+        OnPropertyChanged(nameof(IsFilterModified));
+        ApplyFilter();
+    }
+
+    partial void OnFilterSearchTextChanged(string value)
+    {
+        ApplyFilter();
+    }
 
     private ComicItemViewModel? _activeComic;
     public ComicItemViewModel? ActiveComic
@@ -113,6 +172,81 @@ public partial class MainWindowViewModel : ViewModelBase
         BulkEditRules.Add(new BulkEditRuleViewModel());
     }
 
+    public void UpdateCounts()
+    {
+        UntaggedCount = Comics.Count(c => c.IsUntagged);
+        ModifiedCount = Comics.Count(c => c.IsDirty);
+        OnPropertyChanged(nameof(AllFilterLabel));
+        OnPropertyChanged(nameof(UntaggedFilterLabel));
+        OnPropertyChanged(nameof(ModifiedFilterLabel));
+        UpdateFilterStatus();
+    }
+
+    public void ApplyFilter()
+    {
+        var search = FilterSearchText?.Trim();
+        var filtered = Comics.Where(comic =>
+        {
+            if (FilterMode == ComicFilterMode.Untagged && !comic.IsUntagged && comic != ActiveComic)
+            {
+                return false;
+            }
+            if (FilterMode == ComicFilterMode.Modified && !comic.IsDirty && comic != ActiveComic)
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                bool matches =
+                    (!string.IsNullOrEmpty(comic.FileName) && comic.FileName.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(comic.Title) && comic.Title.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(comic.Series) && comic.Series.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(comic.Writer) && comic.Writer.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(comic.Publisher) && comic.Publisher.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+                if (!matches) return false;
+            }
+
+            return true;
+        }).ToList();
+
+        if (!DisplayedComics.SequenceEqual(filtered))
+        {
+            DisplayedComics.Clear();
+            foreach (var item in filtered)
+            {
+                DisplayedComics.Add(item);
+            }
+        }
+
+        UpdateFilterStatus();
+    }
+
+    private void UpdateFilterStatus()
+    {
+        if (Comics.Count == 0)
+        {
+            FilterStatusText = "No comics loaded";
+            return;
+        }
+
+        if (FilterMode == ComicFilterMode.Untagged)
+        {
+            FilterStatusText = $"Showing {DisplayedComics.Count} untagged of {Comics.Count} comics";
+        }
+        else if (FilterMode == ComicFilterMode.Modified)
+        {
+            FilterStatusText = $"Showing {DisplayedComics.Count} modified of {Comics.Count} comics";
+        }
+        else
+        {
+            FilterStatusText = UntaggedCount > 0
+                ? $"Showing {DisplayedComics.Count} of {Comics.Count} comics ({UntaggedCount} untagged)"
+                : $"Showing {DisplayedComics.Count} of {Comics.Count} comics";
+        }
+    }
+
     private void OnComicsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.NewItems != null)
@@ -129,15 +263,25 @@ public partial class MainWindowViewModel : ViewModelBase
                 item.PropertyChanged -= OnComicItemPropertyChanged;
             }
         }
+        UpdateCounts();
+        ApplyFilter();
         OnPropertyChanged(nameof(CanSave));
     }
 
     private void OnComicItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ComicItemViewModel.IsDirty) || 
-            e.PropertyName == nameof(ComicItemViewModel.HasErrors))
+            e.PropertyName == nameof(ComicItemViewModel.HasErrors) ||
+            e.PropertyName == nameof(ComicItemViewModel.IsUntagged) ||
+            e.PropertyName == nameof(ComicItemViewModel.Title) ||
+            e.PropertyName == nameof(ComicItemViewModel.Series))
         {
+            UpdateCounts();
             OnPropertyChanged(nameof(CanSave));
+            if (FilterMode != ComicFilterMode.All)
+            {
+                ApplyFilter();
+            }
         }
     }
 
@@ -411,6 +555,7 @@ public partial class MainWindowViewModel : ViewModelBase
                                 item.UpdateFilePath(targetPath);
                                 ProgressText = $"Converted {oldName} → {item.FileName}";
                             }
+                            item.HasEmbeddedXml = true;
                             item.IsDirty = false;
                         });
                     }

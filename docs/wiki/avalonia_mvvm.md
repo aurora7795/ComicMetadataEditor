@@ -46,6 +46,8 @@ The desktop client follows the standard MVVM design pattern:
 | :--- | :--- | :--- | :--- |
 | `FileName` | `string` (read-only) | *None* | Archive file name |
 | `IsDirty` | `bool` | *None* | Flags unsaved changes |
+| `HasEmbeddedXml` | `bool` | *None* | True if archive physically contains `ComicInfo.xml` |
+| `IsUntagged` | `bool` | *None* | True if archive lacks XML or has empty Series/Title |
 | `Year` | `int?` | `[Range(1000, 9999)]` | Must be a 4-digit number |
 | `Month` | `int?` | `[Range(1, 12)]` | Must be between 1 and 12 |
 | `Volume` | `int?` | `[Range(0, int.MaxValue)]` | Must be positive |
@@ -59,7 +61,12 @@ The desktop client follows the standard MVVM design pattern:
 ### 2. `MainWindowViewModel` (Main Controller)
 * **Inheritance**: `ViewModelBase` (inherits `ObservableObject`)
 * **Core Collections**:
-  * `Comics`: `ObservableCollection<ComicItemViewModel>` (populates the DataGrid).
+  * `Comics`: `ObservableCollection<ComicItemViewModel>` (source collection of all loaded comics).
+  * `DisplayedComics`: `ObservableCollection<ComicItemViewModel>` (filtered collection bound to the DataGrid).
+* **Filter & Search Controls**:
+  * `FilterMode` (`ComicFilterMode`): Switches between `All`, `Untagged` (missing metadata), and `Modified` (unsaved changes).
+  * `FilterSearchText`: Live quick-search filter across file name, series, title, writer, and publisher.
+  * `FilterStatusText` & live counter badges (`AllFilterLabel`, `UntaggedFilterLabel`, `ModifiedFilterLabel`).
 * **Key Observable Properties**:
   * `IsLoading` / `ProgressValue` / `ProgressText`: Real-time scan progress counter and dynamic streaming diagnostics.
   * `IsSlowShareWarningVisible` / `SlowShareWarningMessage`: Flags unseekable remote mounts (FTP/FUSE) and presents overlay advisory guidance.

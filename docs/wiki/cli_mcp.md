@@ -20,7 +20,7 @@ dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- <command> [options]
 | `read` | `read <file>` | Reads and displays `ComicInfo.xml` metadata as JSON or text. |
 | `update` | `update <file\|dir> --patch '<json>' [--dry-run] [--recursive]` | Applies JSON property edits to a single archive or all archives in a directory. |
 | `rename` | `rename <file\|dir> [--template '<pattern>'] [--preserve-scans] [--dry-run] [--recursive]` | Renames comic archives on disk based on their embedded metadata. |
-| `scan` | `scan <directory> [--missing Field1,Field2] [--recursive]` | Scans a directory for comic files and flags missing metadata fields. |
+| `scan` | `scan <directory> [--untagged] [--missing Field1,Field2] [--recursive]` | Scans a directory for comic files, untagged archives, and missing metadata fields. |
 | `cover` | `cover <file> [--output <image-path>]` | Extracts front cover image from comic archive. |
 | `scrape` | `scrape <file\|dir> [--api-key KEY] [--mode fill-missing\|overwrite] [--dry-run] [--recursive]` | Auto-tags metadata from ComicVine using cover perceptual dHash visual matching and smart series grouping. |
 | `schema` | `schema` | Prints the JSON Schema specification for `ComicInfo` metadata objects. |
@@ -79,11 +79,12 @@ Renames comic files based on their embedded metadata using standardized naming t
   - `recursive` (boolean, optional): Scans subdirectories recursively.
 
 #### 6. `scan_comics`
-Scans a directory for comic archives and checks for missing metadata fields.
+Scans a directory for comic archives, checks for missing metadata fields, and optionally filters down to untagged comics.
 - **Parameters**:
   - `directory` (string, required): Path to scan.
   - `missingFields` (array of strings, optional): List of required fields (e.g. `["Writer", "Series"]`).
   - `recursive` (boolean, optional): If `true`, scans subdirectories recursively.
+  - `onlyUntagged` (boolean, optional): If `true`, filters and returns only untagged comics.
 
 #### 7. `get_comic_schema`
 Returns the JSON Schema specification for valid `ComicInfo` metadata properties.

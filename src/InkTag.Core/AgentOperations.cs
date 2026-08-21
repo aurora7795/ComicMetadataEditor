@@ -13,6 +13,8 @@ public class AgentScanItem
     public string? Series { get; set; }
     public string? Number { get; set; }
     public int? Year { get; set; }
+    public bool HasEmbeddedXml { get; set; }
+    public bool IsUntagged { get; set; }
     public List<string> MissingFields { get; set; } = new();
 }
 
@@ -20,6 +22,8 @@ public class AgentScanResult
 {
     public required string Directory { get; set; }
     public int TotalFound { get; set; }
+    public int UntaggedCount { get; set; }
+    public bool OnlyUntagged { get; set; }
     public List<AgentScanItem> Items { get; set; } = new();
 }
 
@@ -43,9 +47,14 @@ public class AgentUpdateResult
 public static class AgentOperations
 {
     /// <summary>
-    /// Scans a directory for comic archives (.cbz, .cbr) and checks for missing metadata fields.
+    /// Scans a directory for comic archives (.cbz, .cbr) and checks for missing metadata fields or untagged comics.
     /// </summary>
-    public static AgentScanResult ScanDirectory(MetadataEditor editor, string directoryPath, IEnumerable<string>? missingFields = null, bool recursive = false)
+    public static AgentScanResult ScanDirectory(
+        MetadataEditor editor, 
+        string directoryPath, 
+        IEnumerable<string>? missingFields = null, 
+        bool recursive = false,
+        bool onlyUntagged = false)
     {
         if (!Directory.Exists(directoryPath))
         {
@@ -64,10 +73,22 @@ public static class AgentOperations
 
         var properties = typeof(ComicInfo).GetProperties(BindingFlags.Public | BindingFlags.Instance);
         var items = new List<AgentScanItem>();
+        int totalUntagged = 0;
 
         foreach (var file in files)
         {
-            var info = editor.ReadMetadata(file);
+            var info = editor.ReadMetadata(file, out bool hasEmbeddedXml);
+            bool isUntagged = !hasEmbeddedXml || !info.HasEssentialMetadata;
+            if (isUntagged)
+            {
+                totalUntagged++;
+            }
+
+            if (onlyUntagged && !isUntagged)
+            {
+                continue;
+            }
+
             var missing = new List<string>();
 
             if (missingFieldList.Count > 0)
@@ -93,6 +114,8 @@ public static class AgentOperations
                 Series = info.Series,
                 Number = info.Number,
                 Year = info.Year,
+                HasEmbeddedXml = hasEmbeddedXml,
+                IsUntagged = isUntagged,
                 MissingFields = missing
             });
         }
@@ -101,6 +124,8 @@ public static class AgentOperations
         {
             Directory = directoryPath,
             TotalFound = files.Count,
+            UntaggedCount = totalUntagged,
+            OnlyUntagged = onlyUntagged,
             Items = items
         };
     }

@@ -187,8 +187,44 @@
     <Grid Grid.Row="2" x:Name="MainWorkspaceGrid" ColumnDefinitions="*, Auto, 350">
       
       <!-- Left Column: Spreadsheet DataGrid -->
-      <Grid Grid.Column="0" Margin="10">
-        <DataGrid Name="ComicsGrid" ItemsSource="{Binding Comics}" SelectedItem="{Binding ActiveComic}" 
+      <Grid Grid.Column="0" Margin="10" RowDefinitions="Auto, *">
+        
+        <!-- Filter & Search Toolbar -->
+        <Border Grid.Row="0" Background="#252526" BorderBrush="#3F3F46" BorderThickness="1,1,1,0" CornerRadius="4,4,0,0" Padding="8,6">
+          <Grid ColumnDefinitions="Auto, *, Auto">
+            <!-- Filter Pills / Buttons -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <TextBlock Text="Filter:" Foreground="#888888" VerticalAlignment="Center" FontSize="12" Margin="0,0,4,0"/>
+              
+              <RadioButton GroupName="ComicFilters" Content="{Binding AllFilterLabel}" 
+                           IsChecked="{Binding IsFilterAll}"
+                           Padding="8,4" FontSize="11" CornerRadius="3"
+                           Background="#333337" Foreground="#CCCCCC"/>
+                           
+              <RadioButton GroupName="ComicFilters" Content="{Binding UntaggedFilterLabel}" 
+                           IsChecked="{Binding IsFilterUntagged}"
+                           Padding="8,4" FontSize="11" CornerRadius="3"
+                           Background="#333337" Foreground="#E5A00D"/>
+                           
+              <RadioButton GroupName="ComicFilters" Content="{Binding ModifiedFilterLabel}" 
+                           IsChecked="{Binding IsFilterModified}"
+                           Padding="8,4" FontSize="11" CornerRadius="3"
+                           Background="#333337" Foreground="#4EC9B0"/>
+            </StackPanel>
+
+            <!-- Quick Filter / Search Box -->
+            <TextBox Grid.Column="1" Text="{Binding FilterSearchText}" 
+                     Watermark="🔍 Filter list by file name, series, title, writer..." 
+                     Margin="16,0" Padding="6,4" FontSize="11" Height="26"
+                     Background="#1E1E1E" Foreground="#CCCCCC" BorderBrush="#3F3F46" CornerRadius="3"/>
+
+            <!-- Status Count Badge -->
+            <TextBlock Grid.Column="2" Text="{Binding FilterStatusText}" 
+                       Foreground="#9CDCFE" FontSize="11" VerticalAlignment="Center" Margin="4,0,2,0"/>
+          </Grid>
+        </Border>
+
+        <DataGrid Grid.Row="1" Name="ComicsGrid" ItemsSource="{Binding DisplayedComics}" SelectedItem="{Binding ActiveComic}" 
                   SelectionMode="Extended" AutoGenerateColumns="False" CanUserResizeColumns="True" 
                   SelectionChanged="DataGrid_SelectionChanged" GridLinesVisibility="All" Background="#1E1E1E"
                   BorderBrush="#3F3F46" BorderThickness="1">
@@ -208,6 +244,7 @@
             </Style>
           </DataGrid.Styles>
           <DataGrid.Columns>
+            <DataGridCheckBoxColumn Header="Untagged" Binding="{Binding IsUntagged}" IsReadOnly="True" Width="80"/>
             <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" IsReadOnly="True" Width="200"/>
             <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="180"/>
             <DataGridTextColumn Header="Series" Binding="{Binding Series}" Width="160"/>

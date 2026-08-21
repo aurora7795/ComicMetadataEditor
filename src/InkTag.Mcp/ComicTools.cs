@@ -98,14 +98,15 @@ public static class ComicTools
         return $"Cover image extracted to: {extracted}";
     }
 
-    [McpServerTool, Description("Scans a directory for comic archives and checks for missing metadata fields.")]
+    [McpServerTool, Description("Scans a directory for comic archives and checks for missing metadata fields or untagged comics.")]
     public static string ScanComics(
         [Description("Directory path to scan")] string directory,
         [Description("Fields to flag if null/empty (e.g. [\"Writer\", \"Series\"])")] string[]? missingFields = null,
-        [Description("If true, scans subdirectories recursively.")] bool recursive = false)
+        [Description("If true, scans subdirectories recursively.")] bool recursive = false,
+        [Description("If true, filters and returns only untagged comics (missing ComicInfo.xml or empty Series/Title).")] bool onlyUntagged = false)
     {
         var fieldsList = missingFields?.ToList() ?? new List<string>();
-        var scanResult = AgentOperations.ScanDirectory(_editor, directory, fieldsList, recursive);
+        var scanResult = AgentOperations.ScanDirectory(_editor, directory, fieldsList, recursive, onlyUntagged);
 
         var comicsForJson = scanResult.Items.Select(item => new
         {
@@ -113,6 +114,9 @@ public static class ComicTools
             title = item.Title,
             series = item.Series,
             number = item.Number,
+            year = item.Year,
+            hasEmbeddedXml = item.HasEmbeddedXml,
+            isUntagged = item.IsUntagged,
             missing = item.MissingFields
         }).ToList();
 
@@ -120,6 +124,8 @@ public static class ComicTools
         {
             directory = scanResult.Directory,
             totalFound = scanResult.TotalFound,
+            untaggedCount = scanResult.UntaggedCount,
+            onlyUntagged = scanResult.OnlyUntagged,
             comics = comicsForJson
         }, new JsonSerializerOptions { WriteIndented = true });
     }

@@ -147,6 +147,21 @@ public class ComicInfo
     [XmlElement("Pages")]
     public PageCollection? Pages { get; set; }
 
+    [XmlIgnore]
+    public bool HasEssentialMetadata => !string.IsNullOrWhiteSpace(Series) || !string.IsNullOrWhiteSpace(Title);
+
+    [XmlIgnore]
+    public bool HasAnyMetadata =>
+        !string.IsNullOrWhiteSpace(Title) ||
+        !string.IsNullOrWhiteSpace(Series) ||
+        !string.IsNullOrWhiteSpace(Number) ||
+        !string.IsNullOrWhiteSpace(Summary) ||
+        !string.IsNullOrWhiteSpace(Writer) ||
+        !string.IsNullOrWhiteSpace(Publisher) ||
+        !string.IsNullOrWhiteSpace(Genre) ||
+        !string.IsNullOrWhiteSpace(Tags) ||
+        Year.HasValue || Volume.HasValue || Count.HasValue;
+
     /// <summary>
     /// Creates a deep copy of this ComicInfo object.
     /// </summary>

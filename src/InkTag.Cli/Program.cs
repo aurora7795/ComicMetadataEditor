@@ -186,8 +186,9 @@ static void HandleScanCommand(string[] rawArgs, List<string> positionalArgs, boo
     string? missingFilterStr = GetOptionValue(rawArgs, "--missing");
     var missingFields = missingFilterStr?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
     bool isRecursive = rawArgs.Any(a => a.Equals("--recursive", StringComparison.OrdinalIgnoreCase) || a.Equals("-r", StringComparison.OrdinalIgnoreCase));
+    bool isUntaggedOnly = rawArgs.Any(a => a.Equals("--untagged", StringComparison.OrdinalIgnoreCase) || a.Equals("--no-metadata", StringComparison.OrdinalIgnoreCase));
 
-    var scanResult = AgentOperations.ScanDirectory(editor, targetDir, missingFields, isRecursive);
+    var scanResult = AgentOperations.ScanDirectory(editor, targetDir, missingFields, isRecursive, isUntaggedOnly);
 
     if (isJson)
     {
@@ -198,18 +199,37 @@ static void HandleScanCommand(string[] rawArgs, List<string> positionalArgs, boo
             series = item.Series,
             number = item.Number,
             year = item.Year,
+            hasEmbeddedXml = item.HasEmbeddedXml,
+            isUntagged = item.IsUntagged,
             missingFields = item.MissingFields
         }).ToList();
 
-        var payload = new { success = true, directory = scanResult.Directory, totalFound = scanResult.TotalFound, items = itemsForJson };
+        var payload = new 
+        { 
+            success = true, 
+            directory = scanResult.Directory, 
+            totalFound = scanResult.TotalFound, 
+            untaggedCount = scanResult.UntaggedCount,
+            onlyUntagged = scanResult.OnlyUntagged,
+            items = itemsForJson 
+        };
         Console.WriteLine(JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
     }
     else
     {
-        Console.WriteLine($"Found {scanResult.TotalFound} comic archives in {scanResult.Directory}:");
+        if (scanResult.OnlyUntagged)
+        {
+            Console.WriteLine($"Found {scanResult.Items.Count} untagged comic archive(s) in {scanResult.Directory} (out of {scanResult.TotalFound} total):");
+        }
+        else
+        {
+            Console.WriteLine($"Found {scanResult.TotalFound} comic archives in {scanResult.Directory} ({scanResult.UntaggedCount} untagged):");
+        }
+
         foreach (var item in scanResult.Items)
         {
-            Console.WriteLine($"  [{item.Number ?? "?"}] {item.Series ?? "Unknown"} - {item.Title ?? Path.GetFileName(item.Path)}");
+            string tagStatus = item.IsUntagged ? "[UNTAGGED]" : "[TAGGED]";
+            Console.WriteLine($"  {tagStatus} [{item.Number ?? "?"}] {item.Series ?? "Unknown"} - {item.Title ?? Path.GetFileName(item.Path)}");
         }
     }
 }
@@ -511,7 +531,7 @@ static void PrintHelp(bool isJson)
         {
             new { name = "read <file>", description = "Reads and displays ComicInfo metadata as JSON or text." },
             new { name = "update <file|dir> --patch '<json>' [--dry-run] [--recursive]", description = "Applies JSON property edits to one or all comic archives." },
-            new { name = "scan <directory> [--missing Field1,Field2] [--recursive]", description = "Scans a directory for comic files and missing metadata." },
+            new { name = "scan <directory> [--untagged] [--missing Field1,Field2] [--recursive]", description = "Scans a directory for comic files, untagged comics, and missing metadata." },
             new { name = "scrape <file|dir> [--api-key KEY] [--mode fill-missing|overwrite]", description = "Auto-scrapes metadata from ComicVine online database." },
             new { name = "rename <file|dir> [--template <pattern>] [--dry-run]", description = "Bulk renames files based on metadata template pattern." },
             new { name = "cover <file> [--output <image-path>]", description = "Extracts front cover image from archive." },

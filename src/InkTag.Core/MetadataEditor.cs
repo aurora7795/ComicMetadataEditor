@@ -87,11 +87,21 @@ public class MetadataEditor
             FileOptions.None);
     }
 
-    public ComicInfo ReadMetadata(string filePath, CancellationToken cancellationToken = default) => 
-        ReadMetadata(filePath, out _, cancellationToken);
-
-    public ComicInfo ReadMetadata(string filePath, out bool usedSequentialFallback, CancellationToken cancellationToken = default)
+    public bool HasMetadata(string filePath, CancellationToken cancellationToken = default)
     {
+        ReadMetadata(filePath, out bool hasEmbeddedXml, out _, cancellationToken);
+        return hasEmbeddedXml;
+    }
+
+    public ComicInfo ReadMetadata(string filePath, CancellationToken cancellationToken = default) => 
+        ReadMetadata(filePath, out _, out _, cancellationToken);
+
+    public ComicInfo ReadMetadata(string filePath, out bool hasEmbeddedXml, CancellationToken cancellationToken = default) =>
+        ReadMetadata(filePath, out hasEmbeddedXml, out _, cancellationToken);
+
+    public ComicInfo ReadMetadata(string filePath, out bool hasEmbeddedXml, out bool usedSequentialFallback, CancellationToken cancellationToken = default)
+    {
+        hasEmbeddedXml = false;
         usedSequentialFallback = false;
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -125,6 +135,7 @@ public class MetadataEditor
                     entryStream.CopyTo(ms);
                     ms.Position = 0;
                     var info = DeserializeComicInfo(ms);
+                    hasEmbeddedXml = true;
                     AppLogger.LogDebug($"[MetadataEditor] Read metadata via fast-path seek for '{fileName}' in {sw.ElapsedMilliseconds}ms (Title: '{info.Title}', Series: '{info.Series}', Issue: '{info.Number}').");
                     return info;
                 }
@@ -160,6 +171,7 @@ public class MetadataEditor
                         entryStream.CopyTo(ms);
                         ms.Position = 0;
                         var info = DeserializeComicInfo(ms);
+                        hasEmbeddedXml = true;
                         AppLogger.LogDebug($"[MetadataEditor] Read metadata via sequential NonSeekableStream for '{fileName}' in {seqSw.ElapsedMilliseconds}ms (Total: {sw.ElapsedMilliseconds}ms).");
                         return info;
                     }
@@ -198,6 +210,7 @@ public class MetadataEditor
                     entryStream.CopyTo(ms);
                     ms.Position = 0;
                     var info = DeserializeComicInfo(ms);
+                    hasEmbeddedXml = true;
                     AppLogger.LogDebug($"[MetadataEditor] Read metadata via SharpCompress fallback for '{fileName}' in {scSw.ElapsedMilliseconds}ms (Total: {sw.ElapsedMilliseconds}ms).");
                     return info;
                 }

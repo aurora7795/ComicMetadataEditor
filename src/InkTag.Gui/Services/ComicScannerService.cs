@@ -108,15 +108,15 @@ public class ComicScannerService
                             var fileSw = System.Diagnostics.Stopwatch.StartNew();
                             try
                             {
-                                var model = editor.ReadMetadata(file, out bool usedSequential, ct);
+                                var model = editor.ReadMetadata(file, out bool hasEmbeddedXml, out bool usedSequential, ct);
                                 if (usedSequential)
                                 {
                                     Interlocked.Exchange(ref unseekableDetected, 1);
                                 }
 
-                                var viewModel = new ComicItemViewModel(file, model);
+                                var viewModel = new ComicItemViewModel(file, model, hasEmbeddedXml);
                                 indexedResults[index] = viewModel;
-                                Core.Logging.AppLogger.LogDebug($"[Scanner] [{index + 1}/{files.Count}] Parsed '{fileName}' in {fileSw.ElapsedMilliseconds}ms (Sequential fallback: {usedSequential}).");
+                                Core.Logging.AppLogger.LogDebug($"[Scanner] [{index + 1}/{files.Count}] Parsed '{fileName}' in {fileSw.ElapsedMilliseconds}ms (Sequential fallback: {usedSequential}, HasXml: {hasEmbeddedXml}).");
                             }
                             catch (OperationCanceledException)
                             {
@@ -124,7 +124,7 @@ public class ComicScannerService
                             }
                             catch (Exception ex)
                             {
-                                var viewModel = new ComicItemViewModel(file, new ComicInfo())
+                                var viewModel = new ComicItemViewModel(file, new ComicInfo(), hasEmbeddedXml: false)
                                 {
                                     HasReadError = true,
                                     ReadErrorMessage = ex.Message

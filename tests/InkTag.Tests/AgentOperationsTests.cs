@@ -147,4 +147,82 @@ public class AgentOperationsTests
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
         }
     }
+
+    [Fact]
+    public void ScanDirectory_UntaggedFiltering_ReturnsOnlyComicsWithoutMetadata()
+    {
+        var editor = new MetadataEditor();
+        string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            // 1. Tagged comic with Title and Series
+            CreateSampleCbz(tempDir, "tagged.cbz", "Spider-Man #1", "Spider-Man");
+
+            // 2. Comic with ComicInfo.xml but blank essential fields
+            CreateSampleCbz(tempDir, "blank_xml.cbz", "", "");
+
+            // 3. Comic archive completely lacking ComicInfo.xml
+            string noXmlPath = Path.Combine(tempDir, "no_metadata.cbz");
+            string tempPage = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".txt");
+            File.WriteAllText(tempPage, "dummy page content");
+            using (var stream = File.OpenWrite(noXmlPath))
+            using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+            {
+                writer.Write("001.jpg", tempPage);
+            }
+            if (File.Exists(tempPage)) File.Delete(tempPage);
+
+            // Test Full Scan
+            var fullScan = AgentOperations.ScanDirectory(editor, tempDir, onlyUntagged: false);
+            Assert.Equal(3, fullScan.TotalFound);
+            Assert.Equal(2, fullScan.UntaggedCount);
+            Assert.Equal(3, fullScan.Items.Count);
+
+            var taggedItem = fullScan.Items.First(i => Path.GetFileName(i.Path) == "tagged.cbz");
+            Assert.True(taggedItem.HasEmbeddedXml);
+            Assert.False(taggedItem.IsUntagged);
+
+            var blankItem = fullScan.Items.First(i => Path.GetFileName(i.Path) == "blank_xml.cbz");
+            Assert.True(blankItem.HasEmbeddedXml);
+            Assert.True(blankItem.IsUntagged);
+
+            var noXmlItem = fullScan.Items.First(i => Path.GetFileName(i.Path) == "no_metadata.cbz");
+            Assert.False(noXmlItem.HasEmbeddedXml);
+            Assert.True(noXmlItem.IsUntagged);
+
+            // Test Filtered Scan
+            var untaggedScan = AgentOperations.ScanDirectory(editor, tempDir, onlyUntagged: true);
+            Assert.Equal(3, untaggedScan.TotalFound);
+            Assert.Equal(2, untaggedScan.UntaggedCount);
+            Assert.True(untaggedScan.OnlyUntagged);
+            Assert.Equal(2, untaggedScan.Items.Count);
+            Assert.All(untaggedScan.Items, item => Assert.True(item.IsUntagged));
+            Assert.DoesNotContain(untaggedScan.Items, i => Path.GetFileName(i.Path) == "tagged.cbz");
+
+            // Test MetadataEditor.HasMetadata
+            Assert.True(editor.HasMetadata(taggedItem.Path));
+            Assert.True(editor.HasMetadata(blankItem.Path));
+            Assert.False(editor.HasMetadata(noXmlItem.Path));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void ComicInfo_HasEssentialMetadata_EvaluatesCorrectly()
+    {
+        var info1 = new ComicInfo { Title = "Issue 1" };
+        var info2 = new ComicInfo { Series = "X-Men" };
+        var info3 = new ComicInfo { Title = "", Series = "   " };
+        var info4 = new ComicInfo();
+
+        Assert.True(info1.HasEssentialMetadata);
+        Assert.True(info2.HasEssentialMetadata);
+        Assert.False(info3.HasEssentialMetadata);
+        Assert.False(info4.HasEssentialMetadata);
+    }
 }
