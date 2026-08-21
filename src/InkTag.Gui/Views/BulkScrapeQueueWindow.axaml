@@ -81,6 +81,19 @@
                   SelectionMode="Extended" AutoGenerateColumns="False" CanUserResizeColumns="True" CanUserSortColumns="True"
                   GridLinesVisibility="Horizontal" HeadersVisibility="Column" Background="#1E1E1E"
                   BorderBrush="#3F3F46" BorderThickness="1" KeyDown="QueueDataGrid_KeyDown">
+
+          <DataGrid.ContextMenu>
+            <ContextMenu>
+              <MenuItem Header="Include Highlighted Items (Check)" Click="IncludeSelected_Click" InputGesture="Space"/>
+              <MenuItem Header="Exclude Highlighted Items (Uncheck)" Click="ExcludeSelected_Click"/>
+              <MenuItem Header="Toggle Checked State" Click="ToggleSelected_Click"/>
+              <Separator/>
+              <MenuItem Header="Select All" Click="SelectAll_Click"/>
+              <MenuItem Header="Deselect All" Click="DeselectAll_Click"/>
+              <Separator/>
+              <MenuItem Header="Tweak Match..." Click="ContextTweakMatch_Click"/>
+            </ContextMenu>
+          </DataGrid.ContextMenu>
           
           <DataGrid.Columns>
             

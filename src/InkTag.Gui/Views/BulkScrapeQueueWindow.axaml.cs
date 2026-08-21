@@ -137,6 +137,98 @@ public partial class BulkScrapeQueueWindow : Window
         }
     }
 
+    private void IncludeSelected_Click(object? sender, RoutedEventArgs e)
+    {
+        SetSelectedRowsCheckedState(true);
+    }
+
+    private void ExcludeSelected_Click(object? sender, RoutedEventArgs e)
+    {
+        SetSelectedRowsCheckedState(false);
+    }
+
+    private void ToggleSelected_Click(object? sender, RoutedEventArgs e)
+    {
+        var selectedRows = QueueDataGrid.SelectedItems?.OfType<BulkScrapeItemViewModel>().ToList();
+        if (selectedRows != null && selectedRows.Count > 0)
+        {
+            bool newState = !selectedRows[0].IsSelected;
+            foreach (var row in selectedRows)
+            {
+                row.IsSelected = newState;
+            }
+            if (DataContext is BulkScrapeQueueViewModel vm)
+            {
+                vm.UpdateCounts();
+            }
+        }
+    }
+
+    private void SelectAll_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is BulkScrapeQueueViewModel vm)
+        {
+            vm.SelectAll = true;
+        }
+    }
+
+    private void DeselectAll_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is BulkScrapeQueueViewModel vm)
+        {
+            vm.SelectAll = false;
+        }
+    }
+
+    private void SetSelectedRowsCheckedState(bool isChecked)
+    {
+        var selectedRows = QueueDataGrid.SelectedItems?.OfType<BulkScrapeItemViewModel>().ToList();
+        if (selectedRows != null && selectedRows.Count > 0)
+        {
+            foreach (var row in selectedRows)
+            {
+                row.IsSelected = isChecked;
+            }
+            if (DataContext is BulkScrapeQueueViewModel vm)
+            {
+                vm.UpdateCounts();
+            }
+        }
+    }
+
+    private async void ContextTweakMatch_Click(object? sender, RoutedEventArgs e)
+    {
+        if (QueueDataGrid.SelectedItem is BulkScrapeItemViewModel itemVm)
+        {
+            if (!await ApiKeyRequiredWindow.EnsureApiKeyConfiguredAsync(this))
+            {
+                return;
+            }
+
+            var dialog = new ScraperMatchWindow(
+                itemVm.Item.ExistingComic,
+                itemVm.Item.Candidates.Any() ? itemVm.Item.Candidates : null,
+                itemVm.LocalThumbnail,
+                itemVm.Item.LocalCoverHash != 0 ? itemVm.Item.LocalCoverHash : null,
+                itemVm.FilePath);
+
+            await dialog.ShowDialog(this);
+
+            if (dialog.WasApplied && dialog.SelectedCandidate != null)
+            {
+                itemVm.MatchedCandidate = dialog.SelectedCandidate;
+                itemVm.Status = BulkScrapeItemStatus.Matched;
+                itemVm.StatusMessage = $"Manually matched: {dialog.SelectedCandidate.SeriesTitle} #{dialog.SelectedCandidate.IssueNumber}";
+                itemVm.IsSelected = true;
+
+                if (DataContext is BulkScrapeQueueViewModel vm)
+                {
+                    vm.UpdateCounts();
+                }
+            }
+        }
+    }
+
     private void Close_Click(object? sender, RoutedEventArgs e)
     {
         Close();
