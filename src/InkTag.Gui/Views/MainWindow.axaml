@@ -169,13 +169,6 @@
             </StackPanel>
           </Button>
 
-          <Button Click="SeriesSearchWizard_Click" Padding="8,5" Background="#313244" Foreground="#CDD6F4" CornerRadius="4" ToolTip.Tip="Series Search Wizard" IsEnabled="{Binding !IsLoading}">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <TextBlock Text="🧙" VerticalAlignment="Center"/>
-              <TextBlock Text="Series Wizard" VerticalAlignment="Center"/>
-            </StackPanel>
-          </Button>
-
           <Button Command="{Binding RefreshGridCommand}" Padding="8,5" Background="#3E3E42" Foreground="White" CornerRadius="4" ToolTip.Tip="Refresh Grid (F5)" IsEnabled="{Binding !IsLoading}">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Text="🔄" VerticalAlignment="Center"/>
