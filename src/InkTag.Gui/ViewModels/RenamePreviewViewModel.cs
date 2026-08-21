@@ -19,6 +19,7 @@ public class RenamePreviewViewModel : ObservableObject
     {
         "{Series} #{Number:3} ({Year})",
         "{Series} #{Number:3} - {Title} ({Year})",
+        "{Series} #{Number:3} ({Year}) {ScanInfo}",
         "{Series} {Number:3} ({Year})",
         "{Publisher} - {Series} v{Volume} #{Number:3} ({Year})",
         "Custom Template..."
@@ -56,7 +57,7 @@ public class RenamePreviewViewModel : ObservableObject
         }
     }
 
-    private bool _preserveScanInfo = true;
+    private bool _preserveScanInfo = false;
     public bool PreserveScanInfo
     {
         get => _preserveScanInfo;

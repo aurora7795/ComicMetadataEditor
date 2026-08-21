@@ -31,6 +31,7 @@ public static class ComicFileRenamer
 {
     public const string DefaultTemplate = "{Series} #{Number:3} ({Year})";
     public const string TemplateWithTitle = "{Series} #{Number:3} - {Title} ({Year})";
+    public const string TemplateWithScanInfo = "{Series} #{Number:3} ({Year}) {ScanInfo}";
     public const string TemplateNumberless = "{Series} {Number:3} ({Year})";
     public const string TemplatePublisherVolume = "{Publisher} - {Series} v{Volume} #{Number:3} ({Year})";
 
@@ -49,7 +50,7 @@ public static class ComicFileRenamer
         ComicInfo comic,
         string originalFilePath,
         string templatePattern = DefaultTemplate,
-        bool preserveScanInfo = true)
+        bool preserveScanInfo = false)
     {
         if (string.IsNullOrWhiteSpace(templatePattern))
         {
@@ -143,7 +144,7 @@ public static class ComicFileRenamer
     public static List<RenameItemPreview> PreviewBatchRename(
         IEnumerable<(string FilePath, ComicInfo Comic)> items,
         string templatePattern = DefaultTemplate,
-        bool preserveScanInfo = true)
+        bool preserveScanInfo = false)
     {
         var previews = new List<RenameItemPreview>();
         var seenPaths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);

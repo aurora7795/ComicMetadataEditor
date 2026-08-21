@@ -430,7 +430,7 @@ public class BulkScrapeQueueService
                     try
                     {
                         var updatedComic = _metadataEditor.ReadMetadata(item.FilePath);
-                        string newFilename = ComicFileRenamer.GenerateFilename(updatedComic, item.FilePath, renameTemplate, preserveScanInfo: true);
+                        string newFilename = ComicFileRenamer.GenerateFilename(updatedComic, item.FilePath, renameTemplate, preserveScanInfo: false);
                         if (!string.Equals(item.Filename, newFilename, StringComparison.Ordinal))
                         {
                             string newPath = ComicFileRenamer.RenameFile(item.FilePath, newFilename, overwrite: false);

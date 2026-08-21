@@ -96,6 +96,22 @@ public class RenamingTests
     }
 
     [Fact]
+    public void GenerateFilename_ClearsScanInfo_ByDefault()
+    {
+        var comic = new ComicInfo
+        {
+            Series = "The Avengers",
+            Number = "34",
+            Year = 1966,
+            ScanInformation = "digital"
+        };
+
+        string filename = ComicFileRenamer.GenerateFilename(comic, "The Avengers 034 (1966) (digital).cbz");
+
+        Assert.Equal("The Avengers #034 (1966).cbz", filename);
+    }
+
+    [Fact]
     public void GenerateFilename_GracefulCollapse_RemovesEmptyParenthesesWhenYearMissing()
     {
         var comic = new ComicInfo
