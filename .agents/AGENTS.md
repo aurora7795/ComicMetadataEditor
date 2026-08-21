@@ -12,3 +12,8 @@
   1. Fetch the issue context: `gh issue view <issue-number>`
   2. Reference the issue in commit messages: `Fixes #<issue-number>: <description>`
 - Keep issues concise, actionable, and tagged appropriately.
+
+## Changelog Maintenance Rules
+- Maintaining [CHANGELOG.md](../CHANGELOG.md) is a **MANDATORY requirement**.
+- Every feature, bugfix, or release must update `CHANGELOG.md` following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) standards (`Added`, `Changed`, `Fixed`, `Security`).
+- When cutting a release, migrate `[Unreleased]` into the new version section and retain an empty `[Unreleased]` block.

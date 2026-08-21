@@ -66,3 +66,19 @@ As an AI Agent, you are responsible for maintaining the project's **Layer 2 Wiki
 2. **Concept Cross-Linking**: Always cross-reference wiki pages using relative markdown paths (e.g., `[Metadata Editor](core_editor_api.md)`).
 3. **Index Registry**: If you create a new wiki page, you MUST register it inside [docs/wiki/index.md](file:///home/aurora7795/AntiGravProjects/InkTag/docs/wiki/index.md).
 4. **No Placeholders**: Never write placeholders, dummy comments, or TODOs in the wiki. Maintain complete, actual API surfaces, architectures, and guidelines.
+
+---
+
+## 4. Changelog Maintenance Rules
+
+Maintaining [CHANGELOG.md](CHANGELOG.md) is a **MANDATORY requirement** for this repository:
+
+1. **Keep Up to Date**: Every feature, bugfix, architectural improvement, or release MUST update `CHANGELOG.md` under the `[Unreleased]` section (or the new version header when preparing a release).
+2. **Standard Format**: Follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categories:
+   - `### Added` for new features.
+   - `### Changed` for changes in existing functionality.
+   - `### Deprecated` for soon-to-be removed features.
+   - `### Removed` for now removed features.
+   - `### Fixed` for any bug fixes.
+   - `### Security` in case of vulnerabilities.
+3. **Release Protocol**: When bumping versions, convert the `[Unreleased]` section into the new release header (e.g. `## [0.12.0] - YYYY-MM-DD`) and ensure an empty `## [Unreleased]` section remains at the top.
