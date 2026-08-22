@@ -164,11 +164,11 @@
                   <Grid ColumnDefinitions="*, *" Margin="0,4,0,0">
                     <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,4,0">
                       <TextBlock Text="Local Client Root:" FontSize="11" Foreground="#AAAAAA"/>
-                      <TextBox Name="KomgaLocalPrefixTextBox" Watermark="/Volumes/General/Comics/Western"/>
+                      <TextBox Name="KomgaLocalPrefixTextBox" Watermark="/Volumes/General/Comics/"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="4" Margin="4,0,0,0">
                       <TextBlock Text="Komga Server Root:" FontSize="11" Foreground="#AAAAAA"/>
-                      <TextBox Name="KomgaServerPrefixTextBox" Watermark="/data/Western"/>
+                      <TextBox Name="KomgaServerPrefixTextBox" Watermark="/data/Comics/"/>
                     </StackPanel>
                   </Grid>
                 </StackPanel>
