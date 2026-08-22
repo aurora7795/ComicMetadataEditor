@@ -81,14 +81,14 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
   3. *Fallback & .cbr (RAR)*: Reads via SharpCompress `ArchiveFactory.OpenArchive(stream, new ReaderOptions { LookForHeader = true })` to safely recover metadata across high-latency network shares.
 
 #### `EditMetadata` / `EditMetadataFromJson`
-* **Signature**: `public void EditMetadata(string filePath, Action<ComicInfo> editAction)`
-* **Signature**: `public void EditMetadataFromJson(string filePath, string jsonPatch)`
-* **Description**: Unpacks the file into a temporary folder, deserializes existing metadata or creates a new instance, applies edits (via lambda or dynamic JSON patch), serializes back to XML, compresses to `.tmp`, validates, and performs an atomic backup swap.
+* **Signature**: `public void EditMetadata(string filePath, Action<ComicInfo> editAction, string? batchJobId = null, string? changeReason = null, string? coverDHash = null, string? matchedThumbnailUrl = null, double? matchConfidence = null, double? visualSimilarity = null)`
+* **Signature**: `public void EditMetadataFromJson(string filePath, string jsonPatch, string? batchJobId = null, string? changeReason = null)`
+* **Description**: Takes an automated pre-write metadata backup snapshot via `MetadataBackupService`, unpacks the archive into a temporary folder, deserializes existing metadata or creates a new instance, applies edits (via lambda or dynamic JSON patch), serializes back to XML, compresses to `.tmp`, validates, and performs an atomic backup swap.
 
 #### `BulkEditMetadata` / `BulkEditMetadataFromJson`
-* **Signature**: `public BulkEditReport BulkEditMetadata(string directoryPath, Action<ComicInfo> editAction)`
-* **Signature**: `public BulkEditReport BulkEditMetadataFromJson(string directoryPath, string jsonPatch)`
-* **Description**: Executes metadata edits on all `.cbz`/`.cbr` archives in a directory, catching individual errors and returning a `BulkEditReport`.
+* **Signature**: `public BulkEditReport BulkEditMetadata(string directoryPath, Action<ComicInfo> editAction, string? batchJobId = null)`
+* **Signature**: `public BulkEditReport BulkEditMetadataFromJson(string directoryPath, string jsonPatch, string? batchJobId = null)`
+* **Description**: Executes metadata edits on all `.cbz`/`.cbr` archives in a directory under a shared `batchJobId`, creating pre-write snapshots for each file and returning a `BulkEditReport`.
 
 #### `GetMetadataDiff`
 * **Signature**: `public List<MetadataDiffItem> GetMetadataDiff(string filePath, string jsonPatch)`
@@ -115,52 +115,75 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 
 ## 3. Supplementary Core Services
 
-### `ImageHasher.cs` (Perceptual Image Hashing)
-* **Namespace**: `InkTag.Core`
-* **Method**: `public static ulong ComputeDHash64(ReadOnlySpan<byte> imageBytes)`
-* **Method**: `public static int HammingDistance(ulong hashA, ulong hashB)`
-* **Description**: Computes a 64-bit difference hash (dHash) by downscaling image bytes to 9×8 grayscale and comparing horizontal gradient intensities. Used for cover deduplication and visual matching against scraper candidates.
+### `MetadataBackupService.cs` (Disaster Recovery & Rollback Engine)
+* **Namespace**: `InkTag.Core.Backup`
+* **Methods**:
+  * `CreateBackup(string filePath, string? currentXmlContent, byte[]? coverBytes, string? batchJobId, string? changeReason, ...)`: Creates a timestamped pre-write snapshot of `ComicInfo.xml` with source SHA-256 and cover dHash in `~/.local/share/InkTag/backups/`.
+  * `RestoreBackup(string filePath, string timestamp)`: Restores an archive's metadata to a specified snapshot.
+  * `ListBackups(string? filePath = null)`: Returns snapshot history for a file or the entire system.
+  * `ListBatchJobs()`: Lists all recorded multi-file batch operations.
+  * `RestoreBatchJob(string batchJobId)`: Atomically rolls back all files modified in a multi-file batch.
+  * `GetProvenance(string filePath, string timestamp)`: Retrieves forensic audit metadata for a snapshot.
 
-### `ComicFilenameParser.cs` (Smart Filename Parsing)
+### `PerceptualHashService.cs` (Perceptual Image Hashing & dHash)
+* **Namespace**: `InkTag.Core.Images`
+* **Methods**:
+  * `ComputeDHash(ReadOnlySpan<byte> imageBytes)`: Computes a 64-bit difference hash (dHash) by downscaling image bytes to 9×8 grayscale and comparing horizontal gradient intensities.
+  * `CalculateSimilarity(ulong hashA, ulong hashB)`: Returns visual similarity score (0.0 to 1.0) based on Hamming distance.
+  * `IsVisualMatch(ulong hashA, ulong hashB, double threshold = 0.90)`: Fast boolean match check.
+
+### `ComicBookInfoParser.cs` (Legacy CBI Ingestion)
+* **Namespace**: `InkTag.Core.Parsing`
+* **Methods**:
+  * `TryParse(string jsonOrComment, out ComicInfo comic)`: Parses legacy ComicBookInfo JSON embedded in zip archive comments and maps it to modern `ComicInfo` schema properties.
+
+### `KomgaSyncService.cs` & `KomgaClient.cs` (Media Server Integration)
+* **Namespace**: `InkTag.Core.Komga`
+* **Methods**:
+  * `TestConnectionAsync()`: Verifies connectivity and authentication with self-hosted Komga servers.
+  * `SyncComicsAsync(IEnumerable<string> filePaths, KomgaSyncOptions options)`: Analyzes remote Komga book metadata and synchronizes `<StoryArc>` and `<SeriesGroup>` into Komga Collections with Docker/NAS path translation.
+
+### `ComicFilenameParser.cs` (Smart Filename & Ancestor Path Parsing)
 * **Namespace**: `InkTag.Core.Parsing`
 * **Method**: `public static ParsedComicFilename Parse(string filenameOrPath, bool inspectParentHierarchy = true)`
-* **Description**: Extracts `Series`, `Number` (including attached acronym numbers like `IM015` -> issue `15`, alphanumeric/decimal/annual issues like `#005`, `1.5`, `Annual #1`), `Volume`, and `Year` from raw filenames. Interrogates parent and grandparent directory hierarchies to resolve series names from abbreviations/initials (e.g. `/iron man/IM015.cbz` -> Series: `"Iron Man"`, Issue: `"15"`).
+* **Description**: Extracts `Series`, `Number`, `Volume`, and `Year` from raw filenames. Interrogates 2-level ancestor directory hierarchies to resolve series names and start years from parent folders (e.g. `/The Avengers (1963)/048.cbz` -> Series: `"The Avengers"`, Issue: `"48"`, Year: `1963`).
 
 ### `ComicFileRenamer.cs` (Bulk File Renaming Engine)
 * **Namespace**: `InkTag.Core.Renaming`
 * **Properties**:
   * `StandardTemplates`: `IReadOnlyList<string>` single source of truth for standard renaming templates across CLI, MCP, and GUI.
 * **Methods**:
-  * `GenerateFilename(ComicInfo comic, string originalFilePath, string templatePattern, bool preserveScanInfo = false)`: Generates a sanitized, filesystem-safe filename using token replacement (`{Series}`, `#{Number:3}`, `{Year}`, `{Title}`, `{Publisher}`, `{Volume}`, `{ScanInfo}`). Automatically clears scanner/release tags by default unless `{ScanInfo}` is explicitly requested.
-  * `PreviewBatchRename(IEnumerable<(string FilePath, ComicInfo Comic)> items, string templatePattern, bool preserveScanInfo = false)`: Generates batch rename previews with collision detection across the batch and against existing disk files.
-  * `RenameFile(string originalFilePath, string newFilename, bool overwrite = false)`: Atomically moves the file to its new name.
-  * `ExecuteBatchRename(IEnumerable<RenameItemPreview> items, bool overwrite = false)`: Executes a validated rename batch and returns a `RenameBatchResult`.
-
-### `AppLogger.cs` (Structured Diagnostics & Rotation)
-* **Namespace**: `InkTag.Core.Logging`
-* **Description**: Cross-platform thread-safe diagnostic logger with automatic 5 MB file size rotation (`InkTag.log.bak`), formatted timestamp output, and system file manager reveal.
+  * `GenerateFilename(ComicInfo comic, string originalFilePath, string templatePattern, bool preserveScanInfo = false)`: Generates a sanitized, filesystem-safe filename using token replacement (`{Series}`, `#{Number:3}`, `{Year}`, `{Title}`, `{Publisher}`, `{Volume}`, `{ScanInfo}`).
+  * `PreviewBatchRename(...)`: Generates batch rename previews with collision detection across the batch and against existing disk files.
+  * `RenameFile(...)`: Atomically moves the file to its new name.
+  * `ExecuteBatchRename(...)`: Executes a validated rename batch and returns a `RenameBatchResult`.
 
 ### `BulkScrapeQueueService.cs` (Parallel Auto-Tag Queue Pipeline)
 * **Namespace**: `InkTag.Core.Scrapers`
 * **Methods**:
-  * `CreateQueue(IEnumerable<string> filePaths)`: Parses filenames and parent directory hierarchies (handling untagged files or short acronyms like `/Iron Man/IM015.cbz` -> Series: `"Iron Man"`) and initializes staged queue items with local cover extractions.
-  * `ProcessQueueAsync(IEnumerable<BulkScrapeQueueItem> queue, BulkScrapeOptions options, ...)`: Executes streaming parallel cover hashing, smart series volume clustering, chronological ComicVine matching, and perceptual visual similarity calculation.
-  * `ApplyMatchedMetadataAsync(IEnumerable<BulkScrapeQueueItem> items, ScrapeMergeMode mergeMode, bool renameFiles, string renameTemplate, bool preserveScanInfo, ...)`: Writes matched ComicVine metadata back to comic archives on disk, with optional safe auto-renaming.
+  * `CreateQueue(IEnumerable<string> filePaths)`: Parses filenames and parent directory hierarchies and initializes staged queue items with local cover extractions.
+  * `ProcessQueueAsync(...)`: Executes streaming parallel cover hashing, smart series volume clustering, on-demand candidate thumbnail hashing for all matched issues, and volume lifespan confidence scoring.
+  * `ApplyMatchedMetadataAsync(...)`: Writes matched ComicVine metadata back to comic archives on disk with automated pre-write backup snapshotting.
 
 ---
 
 ## 4. Interfaces (`InkTag.Mcp` & `InkTag.Cli`)
 
-### Model Context Protocol (`InkTag.Mcp`) Tools
+### Model Context Protocol (`InkTag.Mcp`) Tools (14 Tools)
 * **`read_comic_metadata`**: Reads metadata XML as JSON object (`path`).
 * **`update_comic_metadata`**: Applies JSON patch to archive or folder (`path`, `patch`, `dryRun`).
 * **`extract_cover_image`**: Unpacks front cover art (`path`, `outputPath`, `returnBase64`).
-* **`bulk_scrape_directory`**: Parallel auto-tag queue on directory with volume clustering and visual matching.
-* **`rename_comic_files`**: Renames comic archives on disk using configurable metadata templates.
-* **`scan_comics`**: Scans directory for archives missing specified metadata tags (`directory`, `missingFields`).
+* **`bulk_scrape_directory`**: Parallel auto-tag queue on directory with volume clustering and visual matching (`directory`, `mode`, `dryRun`).
+* **`scrape_comic_metadata`**: Scrapes and applies metadata from ComicVine to a single local comic archive (`path`, `mode`, `dryRun`).
+* **`rename_comic_files`**: Renames comic archives on disk using configurable metadata templates (`path`, `template`, `preserveScanInfo`, `dryRun`).
+* **`scan_comics`**: Scans directory for archives missing specified metadata tags (`directory`, `missingFields`, `onlyUntagged`).
 * **`get_comic_schema`**: Returns JSON Schema for `ComicInfo`.
-* **`search_external_metadata`**: Searches ComicVine issues matching series, issue, and year.
-* **`scrape_comic_metadata`**: Scrapes and applies metadata from ComicVine to a local comic archive.
+* **`search_external_metadata`**: Searches ComicVine issues matching series, issue, and year (`series`, `issueNumber`, `year`).
+* **`list_metadata_backups`**: Lists pre-write metadata backups (`path`).
+* **`restore_comic_backup`**: Restores archive metadata to a timestamped snapshot (`path`, `timestamp`).
+* **`list_batch_jobs`**: Lists multi-file batch operations available for rollback.
+* **`restore_batch_job`**: Atomically rolls back an entire multi-file batch job (`batchJobId`).
+* **`get_backup_provenance`**: Retrieves deep forensic provenance for a snapshot (`path`, `timestamp`).
 
 ### Agentic CLI (`InkTag.Cli`) Subcommands
 * **`read <file-path> [--json]`**: Read metadata from an archive.

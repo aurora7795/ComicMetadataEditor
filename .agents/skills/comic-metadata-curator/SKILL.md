@@ -85,12 +85,71 @@ dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- update /path/to/comics 
 
 ---
 
-### 4. Executing Safe Metadata Updates
-Apply validated property changes back into comic archives. The library automatically creates backup swap files to prevent corruption:
+### 4. Automated Bulk Tagging with ComicVine & Visual dHash
+Automatically query ComicVine and verify visual cover matches:
+
+**CLI Command:**
+```bash
+dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- scrape /path/to/comics --mode fill-missing --dry-run --json
+```
+
+**MCP Tool Call:**
+```json
+{
+  "name": "bulk_scrape_directory",
+  "arguments": {
+    "directory": "/path/to/comics",
+    "mode": "fill-missing",
+    "dryRun": false
+  }
+}
+```
+
+---
+
+### 5. Executing Safe Metadata Updates
+Apply validated property changes back into comic archives. The library automatically creates pre-write backup snapshots and atomic swap files:
 
 **CLI Command:**
 ```bash
 dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- update /path/to/comics/issue1.cbz --patch '{"Writer":"Stan Lee", "Penciller":"Steve Ditko", "Year":1962}' --json
+```
+
+**MCP Tool Call:**
+```json
+{
+  "name": "update_comic_metadata",
+  "arguments": {
+    "path": "/path/to/comics/issue1.cbz",
+    "patch": { "Writer": "Stan Lee", "Penciller": "Steve Ditko", "Year": 1962 },
+    "dryRun": false
+  }
+}
+```
+
+---
+
+### 6. Atomic Disaster Recovery & Batch Rollback
+If a modification needs to be undone, query history and rollback single files or entire batch jobs:
+
+**MCP Rollback Tool Calls:**
+```json
+// Rollback single file snapshot
+{
+  "name": "restore_comic_backup",
+  "arguments": {
+    "path": "/path/to/comics/issue1.cbz",
+    "timestamp": "2026-08-22T23:30:00Z"
+  }
+}
+
+// Rollback entire multi-file batch
+{
+  "name": "restore_batch_job",
+  "arguments": {
+    "batchJobId": "batch_20260822_123456_a4f910"
+  }
+}
 ```
 
 ---
@@ -104,3 +163,4 @@ When normalizing comic metadata, follow these rules:
 * **Creator Fields**: Separate multiple creators with commas (e.g. `"Stan Lee, Jack Kirby"`).
 * **Dates**: Ensure `Year`, `Month`, and `Day` are valid numeric integers.
 * **Issue Numbers**: Use standard numeric or issue strings (`"1"`, `"1.5"`, `"Annual 1"`).
+* **Tagging Attribution**: Ensure automated ComicVine scrapers append standard tagging notes in `<Notes>` with `[Issue ID XXXX]` and `[Cover Match XX%]`.
