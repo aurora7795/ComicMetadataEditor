@@ -1,4 +1,7 @@
 using System;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -11,25 +14,46 @@ namespace InkTag.Gui.Views;
 public partial class SettingsWindow : Window
 {
     private readonly AppSettingsService _settingsService;
+    private static int _lastSelectedTabIndex = 0;
 
     public SettingsWindow()
     {
         InitializeComponent();
         _settingsService = new AppSettingsService();
         LoadCurrentSettings();
+
+        if (SettingsTabControl != null && _lastSelectedTabIndex >= 0 && _lastSelectedTabIndex < 4)
+        {
+            SettingsTabControl.SelectedIndex = _lastSelectedTabIndex;
+        }
+    }
+
+    private void SettingsTabControl_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (SettingsTabControl != null && SettingsTabControl.SelectedIndex >= 0)
+        {
+            _lastSelectedTabIndex = SettingsTabControl.SelectedIndex;
+        }
     }
 
     private void LoadCurrentSettings()
     {
         var settings = _settingsService.Settings;
-        ApiKeyTextBox.Text = settings.ComicVineApiKey;
+        
+        // General Tab
         MergePolicyComboBox.SelectedIndex = settings.DefaultMergeMode == ScrapeMergeMode.OverwriteAll ? 1 : 0;
-        VisualMatchCheckBox.IsChecked = settings.AutoApplyOnVisualMatch;
-        VisualThresholdTextBox.Text = ((int)(settings.VisualMatchConfidenceThreshold * 100)).ToString();
-        DebugLoggingCheckBox.IsChecked = settings.EnableDebugLogging;
+        BulkAutoRenameCheckBox.IsChecked = settings.BulkScrapeAutoRenameFiles;
+        RenameTemplateTextBox.Text = !string.IsNullOrWhiteSpace(settings.BulkScrapeRenameTemplate) 
+            ? settings.BulkScrapeRenameTemplate 
+            : "{Series} #{Number:3} ({Year})";
         ClearLegacyZipCommentsCheckBox.IsChecked = settings.ClearLegacyZipCommentsOnUpgrade;
 
-        // Komga
+        // Scraping Tab
+        ApiKeyTextBox.Text = settings.ComicVineApiKey;
+        VisualMatchCheckBox.IsChecked = settings.AutoApplyOnVisualMatch;
+        VisualThresholdTextBox.Text = ((int)(settings.VisualMatchConfidenceThreshold * 100)).ToString();
+
+        // Komga Tab
         KomgaUrlTextBox.Text = settings.KomgaServerUrl;
         KomgaApiKeyTextBox.Text = settings.KomgaApiKey;
         KomgaUserTextBox.Text = settings.KomgaUser;
@@ -42,6 +66,9 @@ public partial class SettingsWindow : Window
             KomgaLocalPrefixTextBox.Text = settings.KomgaPathMappings[0].LocalPrefix;
             KomgaServerPrefixTextBox.Text = settings.KomgaPathMappings[0].ServerPrefix;
         }
+
+        // Diagnostics Tab
+        DebugLoggingCheckBox.IsChecked = settings.EnableDebugLogging;
     }
 
     private async void TestKomga_Click(object? sender, RoutedEventArgs e)
@@ -118,26 +145,96 @@ public partial class SettingsWindow : Window
     {
         var cache = new ScraperCacheService();
         cache.Clear();
-        StatusTextBlock.Text = "🗑️ Local response cache cleared.";
-        StatusTextBlock.Foreground = Avalonia.Media.Brushes.Cyan;
+        CacheStatusTextBlock.Text = "🗑️ Local response cache successfully cleared.";
+        CacheStatusTextBlock.Foreground = Avalonia.Media.Brushes.Cyan;
+    }
+
+    private void OpenLogsFolder_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            string logsDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "Library/Application Support/InkTag/logs" :
+                RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "AppData/Roaming/InkTag/logs" :
+                ".config/InkTag/logs");
+
+            if (!Directory.Exists(logsDir))
+            {
+                Directory.CreateDirectory(logsDir);
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                Process.Start("open", logsDir);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Process.Start("explorer.exe", logsDir);
+            }
+            else
+            {
+                Process.Start("xdg-open", logsDir);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to open logs folder: {ex.Message}");
+        }
+    }
+
+    private void ResetDefaults_Click(object? sender, RoutedEventArgs e)
+    {
+        var defaults = new AppSettings();
+
+        // Reset UI fields
+        MergePolicyComboBox.SelectedIndex = 0;
+        BulkAutoRenameCheckBox.IsChecked = defaults.BulkScrapeAutoRenameFiles;
+        RenameTemplateTextBox.Text = defaults.BulkScrapeRenameTemplate;
+        ClearLegacyZipCommentsCheckBox.IsChecked = defaults.ClearLegacyZipCommentsOnUpgrade;
+
+        ApiKeyTextBox.Text = defaults.ComicVineApiKey;
+        VisualMatchCheckBox.IsChecked = defaults.AutoApplyOnVisualMatch;
+        VisualThresholdTextBox.Text = ((int)(defaults.VisualMatchConfidenceThreshold * 100)).ToString();
+
+        KomgaUrlTextBox.Text = defaults.KomgaServerUrl;
+        KomgaApiKeyTextBox.Text = defaults.KomgaApiKey;
+        KomgaUserTextBox.Text = defaults.KomgaUser;
+        KomgaPasswordTextBox.Text = defaults.KomgaPassword;
+        KomgaAutoSyncCheckBox.IsChecked = defaults.KomgaAutoSyncOnSave;
+        KomgaStoryArcsCheckBox.IsChecked = defaults.KomgaSyncStoryArcsToCollections;
+        KomgaLocalPrefixTextBox.Text = "";
+        KomgaServerPrefixTextBox.Text = "";
+
+        DebugLoggingCheckBox.IsChecked = defaults.EnableDebugLogging;
+
+        ResetStatusTextBlock.Text = "🔄 Reset all fields to default values.";
+        ResetStatusTextBlock.Foreground = Avalonia.Media.Brushes.Yellow;
     }
 
     private void Save_Click(object? sender, RoutedEventArgs e)
     {
         var settings = _settingsService.Settings;
-        settings.ComicVineApiKey = ApiKeyTextBox.Text?.Trim() ?? "";
+
+        // General
         settings.DefaultMergeMode = MergePolicyComboBox.SelectedIndex == 1 
             ? ScrapeMergeMode.OverwriteAll 
             : ScrapeMergeMode.FillMissingOnly;
-        settings.AutoApplyOnVisualMatch = VisualMatchCheckBox.IsChecked == true;
-        settings.EnableDebugLogging = DebugLoggingCheckBox.IsChecked == true;
+        settings.BulkScrapeAutoRenameFiles = BulkAutoRenameCheckBox.IsChecked == true;
+        settings.BulkScrapeRenameTemplate = !string.IsNullOrWhiteSpace(RenameTemplateTextBox.Text) 
+            ? RenameTemplateTextBox.Text.Trim() 
+            : "{Series} #{Number:3} ({Year})";
         settings.ClearLegacyZipCommentsOnUpgrade = ClearLegacyZipCommentsCheckBox.IsChecked == true;
+
+        // Scraping
+        settings.ComicVineApiKey = ApiKeyTextBox.Text?.Trim() ?? "";
+        settings.AutoApplyOnVisualMatch = VisualMatchCheckBox.IsChecked == true;
         if (double.TryParse(VisualThresholdTextBox.Text, out double thresh))
         {
             settings.VisualMatchConfidenceThreshold = Math.Clamp(thresh > 1 ? thresh / 100.0 : thresh, 0.50, 1.0);
         }
 
-        // Save Komga
+        // Komga
         settings.KomgaServerUrl = KomgaUrlTextBox.Text?.Trim() ?? "";
         settings.KomgaApiKey = KomgaApiKeyTextBox.Text?.Trim() ?? "";
         settings.KomgaUser = KomgaUserTextBox.Text?.Trim() ?? "";
@@ -156,6 +253,9 @@ public partial class SettingsWindow : Window
                 ServerPrefix = serverPrefix
             });
         }
+
+        // Diagnostics
+        settings.EnableDebugLogging = DebugLoggingCheckBox.IsChecked == true;
 
         _settingsService.SaveSettings(settings);
         Close();

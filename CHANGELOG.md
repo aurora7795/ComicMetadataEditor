@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Modern Tabbed Settings Interface**: Re-architected the Settings dialog into 4 focused categories (`⚙️ General`, `🔍 Scraping`, `🌐 Komga Server`, and `🛠️ Diagnostics & Advanced`) using rounded card containers.
+- **Session Tab Persistence**: Settings window remembers the active tab across opens during the application session.
+- **Diagnostics & Log Utilities**: Added direct "Open Logs Directory" action and "Reset to Defaults" button in the Advanced settings tab.
 - **Komga Media Server REST API Integration**: Direct REST API integration with self-hosted Komga servers (`KomgaClient`, `KomgaSyncService`).
 - **Targeted Sub-Second Cache Invalidation**: Automatic and manual targeted book/series analysis (`POST /api/v1/books/{id}/analyze`, `POST /api/v1/series/{id}/analyze`) updating web and mobile readers instantly without full-library rescans.
 - **StoryArc to Komga Collection Sync**: Automatic creation and synchronization of Komga Collections from `<StoryArc>` tags.

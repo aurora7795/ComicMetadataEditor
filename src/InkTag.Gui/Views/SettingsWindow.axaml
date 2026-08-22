@@ -2,124 +2,244 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="InkTag.Gui.Views.SettingsWindow"
         Title="InkTag Settings"
-        Width="540" Height="580"
+        Width="680" Height="640"
         WindowStartupLocation="CenterOwner"
         CanResize="True"
         Background="#1E1E1E" Foreground="White">
 
   <Border Padding="20">
-    <Grid RowDefinitions="*, Auto">
-      <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="15" Margin="0,0,10,0">
-          <TextBlock Text="⚙️ InkTag Configuration" FontSize="18" FontWeight="Bold" Foreground="#3592FF"/>
-          <Separator Background="#3F3F46"/>
+    <Grid RowDefinitions="Auto, *, Auto">
+      
+      <!-- Window Title -->
+      <StackPanel Grid.Row="0" Margin="0,0,0,12" Spacing="4">
+        <TextBlock Text="⚙️ InkTag Configuration" FontSize="18" FontWeight="Bold" Foreground="#3592FF"/>
+        <TextBlock Text="Configure scrapers, media servers, automated tagging, and application diagnostics." FontSize="12" Foreground="#888888"/>
+      </StackPanel>
 
-          <!-- ComicVine API Key -->
-          <StackPanel Spacing="5">
-            <TextBlock Text="ComicVine API Key:" FontWeight="Medium"/>
-            <Grid ColumnDefinitions="*, Auto">
-              <TextBox Name="ApiKeyTextBox" Grid.Column="0" PasswordChar="•" Watermark="Enter your ComicVine API key..."/>
-              <Button Grid.Column="1" Content="Test Key" Click="TestApiKey_Click" Padding="12,6" Background="#2D2D30" Margin="8,0,0,0"/>
-            </Grid>
-            <TextBlock Name="StatusTextBlock" Text="" FontSize="11" Foreground="Gray"/>
-            <StackPanel Orientation="Horizontal" Spacing="4">
-              <TextBlock Text="Get a free key at" FontSize="11" Foreground="#888" VerticalAlignment="Center"/>
-              <Button Content="https://comicvine.gamespot.com/api/" Click="OpenApiUrl_Click" Classes="linkButton" FontSize="11" VerticalAlignment="Center"/>
+      <!-- Tabbed Content -->
+      <TabControl Name="SettingsTabControl" Grid.Row="1" SelectionChanged="SettingsTabControl_SelectionChanged">
+        
+        <!-- Tab 1: General -->
+        <TabItem Header="⚙️ General">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+            <StackPanel Spacing="12" Margin="0,0,10,0">
+              
+              <!-- Merge Policy Card -->
+              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Scraper Merge Policy" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
+                  <TextBlock Text="Controls whether scraping fills in empty tags only or overwrites all existing metadata." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <ComboBox Name="MergePolicyComboBox" HorizontalAlignment="Stretch" Margin="0,4,0,0">
+                    <ComboBoxItem Content="Fill Missing Only (Preserve Existing Edits)"/>
+                    <ComboBoxItem Content="Overwrite All Fields"/>
+                  </ComboBox>
+                </StackPanel>
+              </Border>
+
+              <!-- Auto-Rename Card -->
+              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="File Auto-Renaming" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
+                  <TextBlock Text="Template format used when automatically renaming comic files based on metadata." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <CheckBox Name="BulkAutoRenameCheckBox" Content="Automatically rename files after bulk scraping" Margin="0,2,0,0"/>
+                  <StackPanel Spacing="4" Margin="0,4,0,0">
+                    <TextBlock Text="Filename Template:" FontSize="12" Foreground="#AAAAAA"/>
+                    <TextBox Name="RenameTemplateTextBox" Watermark="{}{Series} #{Number:3} ({Year})"/>
+                    <TextBlock Text="Available tokens: {Series}, {Number}, {Number:3}, {Year}, {Volume}, {Publisher}, {Title}" FontSize="11" Foreground="#666666"/>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
+              <!-- Legacy Archive Metadata Card -->
+              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Legacy ComicBookInfo (CBI) Ingestion" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
+                  <TextBlock Text="When reading legacy archives containing ComicBookInfo ZIP comments, upgrade to modern ComicInfo.xml schema." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <CheckBox Name="ClearLegacyZipCommentsCheckBox" Content="Clear legacy ZIP archive comments when upgrading to ComicInfo.xml" IsChecked="True" Margin="0,2,0,0"/>
+                </StackPanel>
+              </Border>
+
             </StackPanel>
-          </StackPanel>
+          </ScrollViewer>
+        </TabItem>
 
-          <!-- Komga Server Integration -->
-          <StackPanel Spacing="5" Margin="0,10,0,0">
-            <TextBlock Text="🌐 Komga Media Server Integration:" FontWeight="Medium" Foreground="#E5C07B"/>
-            <TextBlock Text="Synchronize metadata, trigger targeted cache invalidation, and group StoryArcs into collections." FontSize="11" Foreground="Gray"/>
-            <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
-              <TextBox Name="KomgaUrlTextBox" Grid.Column="0" Watermark="http://localhost:25600 or http://nas:25600"/>
-              <Button Grid.Column="1" Content="Test Server" Click="TestKomga_Click" Padding="12,6" Background="#2D2D30" Margin="8,0,0,0"/>
-            </Grid>
-            <TextBlock Name="KomgaStatusTextBlock" Text="" FontSize="11" Foreground="Gray"/>
-
-            <Grid ColumnDefinitions="*, *" Margin="0,4,0,0">
-              <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,4,0">
-                <TextBlock Text="API Key (Token):" FontSize="11" Foreground="#AAA"/>
-                <TextBox Name="KomgaApiKeyTextBox" PasswordChar="•" Watermark="Komga API Key..."/>
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="2" Margin="4,0,0,0">
-                <TextBlock Text="Or User / Password:" FontSize="11" Foreground="#AAA"/>
-                <Grid ColumnDefinitions="*, *">
-                  <TextBox Name="KomgaUserTextBox" Grid.Column="0" Watermark="email@komga.org" Margin="0,0,2,0"/>
-                  <TextBox Name="KomgaPasswordTextBox" Grid.Column="1" PasswordChar="•" Watermark="Password" Margin="2,0,0,0"/>
-                </Grid>
-              </StackPanel>
-            </Grid>
-
-            <CheckBox Name="KomgaAutoSyncCheckBox" Content="Auto-sync modified comics to Komga on save" Margin="0,4,0,0"/>
-            <CheckBox Name="KomgaStoryArcsCheckBox" Content="Automatically create &amp; sync Komga Collections from StoryArc tags" IsChecked="True"/>
-
-            <Expander Header="Docker / NAS Path Prefix Mapping (Optional)" Margin="0,4,0,0">
-              <Grid ColumnDefinitions="*, *" Margin="0,4,0,0">
-                <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,4,0">
-                  <TextBlock Text="Local Client Root:" FontSize="11" Foreground="#888"/>
-                  <TextBox Name="KomgaLocalPrefixTextBox" Watermark="/Volumes/comics or Z:\comics"/>
+        <!-- Tab 2: Scraping -->
+        <TabItem Header="🔍 Scraping">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+            <StackPanel Spacing="12" Margin="0,0,10,0">
+              
+              <!-- ComicVine API Card -->
+              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="ComicVine API Integration" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
+                  <TextBlock Text="Required for online issue searching, creator credits, character lists, and volume info." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
+                    <TextBox Name="ApiKeyTextBox" Grid.Column="0" PasswordChar="•" Watermark="Enter your ComicVine API key..."/>
+                    <Button Grid.Column="1" Content="Test Key" Click="TestApiKey_Click" Padding="14,6" Background="#2D2D30" Margin="8,0,0,0"/>
+                  </Grid>
+                  <TextBlock Name="StatusTextBlock" Text="" FontSize="11" Foreground="Gray"/>
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="Get a free key at" FontSize="11" Foreground="#888888" VerticalAlignment="Center"/>
+                    <Button Content="https://comicvine.gamespot.com/api/" Click="OpenApiUrl_Click" Classes="linkButton" FontSize="11" VerticalAlignment="Center"/>
+                  </StackPanel>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Spacing="2" Margin="4,0,0,0">
-                  <TextBlock Text="Komga Server Root:" FontSize="11" Foreground="#888"/>
-                  <TextBox Name="KomgaServerPrefixTextBox" Watermark="/data/comics"/>
+              </Border>
+
+              <!-- Visual Cover Matching Card -->
+              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Visual Cover Matching (Perceptual Hashing)" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
+                  <TextBlock Text="Compares cover artwork hashes against ComicVine cover images for automated issue matching." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <CheckBox Name="VisualMatchCheckBox" Content="Enable automated cover matching &amp; visual verification" IsChecked="True" Margin="0,2,0,0"/>
+                  <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
+                    <TextBlock Grid.Column="0" Text="Visual Match Confidence Threshold (Default 90%):" VerticalAlignment="Center" Foreground="#AAAAAA" FontSize="12"/>
+                    <TextBox Name="VisualThresholdTextBox" Grid.Column="1" Text="90" Width="60" TextAlignment="Center"/>
+                  </Grid>
                 </StackPanel>
-              </Grid>
-            </Expander>
-          </StackPanel>
+              </Border>
 
-          <!-- Default Merge Policy -->
-          <StackPanel Spacing="5" Margin="0,10,0,0">
-            <TextBlock Text="Default Scraper Merge Policy:" FontWeight="Medium"/>
-            <ComboBox Name="MergePolicyComboBox" HorizontalAlignment="Stretch">
-              <ComboBoxItem Content="Fill Missing Only (Preserve Existing Edits)"/>
-              <ComboBoxItem Content="Overwrite All Fields"/>
-            </ComboBox>
-          </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
 
-          <!-- Visual Cover Match Options -->
-          <StackPanel Spacing="5" Margin="0,10,0,0">
-            <TextBlock Text="Cover Image Matching (Perceptual Hashing):" FontWeight="Medium"/>
-            <CheckBox Name="VisualMatchCheckBox" Content="Enable automated cover matching &amp; visual verification" IsChecked="True"/>
-            <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
-              <TextBlock Grid.Column="0" Text="Visual Match Confidence Threshold (Default 90%):" VerticalAlignment="Center" Foreground="Gray" FontSize="12"/>
-              <TextBox Name="VisualThresholdTextBox" Grid.Column="1" Text="90" Width="60" TextAlignment="Center"/>
-            </Grid>
-          </StackPanel>
+        <!-- Tab 3: Komga Server -->
+        <TabItem Header="🌐 Komga Server">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+            <StackPanel Spacing="12" Margin="0,0,10,0">
+              
+              <!-- Server Connection Card -->
+              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Komga Media Server" FontWeight="SemiBold" FontSize="14" Foreground="#E5C07B"/>
+                  <TextBlock Text="Direct REST integration for targeted cache invalidation, collection syncing, and series management." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  
+                  <StackPanel Spacing="4" Margin="0,4,0,0">
+                    <TextBlock Text="Server Base URL:" FontSize="12" Foreground="#AAAAAA"/>
+                    <Grid ColumnDefinitions="*, Auto">
+                      <TextBox Name="KomgaUrlTextBox" Grid.Column="0" Watermark="http://localhost:25600 or http://192.168.1.30:25600"/>
+                      <Button Grid.Column="1" Content="Test Server" Click="TestKomga_Click" Padding="14,6" Background="#2D2D30" Margin="8,0,0,0"/>
+                    </Grid>
+                    <TextBlock Name="KomgaStatusTextBlock" Text="" FontSize="11" Foreground="Gray"/>
+                  </StackPanel>
 
-          <!-- Cache Management -->
-          <StackPanel Spacing="5" Margin="0,10,0,0">
-            <TextBlock Text="Local Response Cache:" FontWeight="Medium"/>
-            <Grid ColumnDefinitions="*, Auto">
-              <TextBlock Grid.Column="0" Text="Response &amp; cover hash cache (~/.cache/InkTag/scraper_cache.json)" VerticalAlignment="Center" Foreground="Gray" FontSize="12"/>
-              <Button Grid.Column="1" Content="Clear Cache" Click="ClearCache_Click" Padding="10,5" Background="#3E3E42"/>
-            </Grid>
-          </StackPanel>
+                  <Grid ColumnDefinitions="*, *" Margin="0,6,0,0">
+                    <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,4,0">
+                      <TextBlock Text="API Key (Recommended):" FontSize="11" Foreground="#AAAAAA"/>
+                      <TextBox Name="KomgaApiKeyTextBox" PasswordChar="•" Watermark="Komga API Key..."/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4" Margin="4,0,0,0">
+                      <TextBlock Text="Or User / Password:" FontSize="11" Foreground="#AAAAAA"/>
+                      <Grid ColumnDefinitions="*, *">
+                        <TextBox Name="KomgaUserTextBox" Grid.Column="0" Watermark="email@komga.org" Margin="0,0,2,0"/>
+                        <TextBox Name="KomgaPasswordTextBox" Grid.Column="1" PasswordChar="•" Watermark="Password" Margin="2,0,0,0"/>
+                      </Grid>
+                    </StackPanel>
+                  </Grid>
+                </StackPanel>
+              </Border>
 
-          <!-- Diagnostics & Verbose Logging -->
-          <StackPanel Spacing="5" Margin="0,10,0,0">
-            <TextBlock Text="Diagnostics &amp; Logging:" FontWeight="Medium"/>
-            <CheckBox Name="DebugLoggingCheckBox" Content="Enable Verbose / Debug Logging (file timings and network diagnostics)"/>
-          </StackPanel>
+              <!-- Automation Rules Card -->
+              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Synchronization Rules" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
+                  <CheckBox Name="KomgaAutoSyncCheckBox" Content="Auto-sync modified comics to Komga on save" Margin="0,2,0,0"/>
+                  <CheckBox Name="KomgaStoryArcsCheckBox" Content="Automatically create &amp; sync Komga Collections from StoryArc tags" IsChecked="True"/>
+                </StackPanel>
+              </Border>
 
-          <!-- Legacy Metadata & Upgrades -->
-          <StackPanel Spacing="5" Margin="0,10,0,0">
-            <TextBlock Text="Legacy Metadata Upgrades (ComicBookInfo):" FontWeight="Medium"/>
-            <CheckBox Name="ClearLegacyZipCommentsCheckBox" Content="Clear legacy ZIP archive comments when upgrading to ComicInfo.xml" IsChecked="True"/>
-          </StackPanel>
-        </StackPanel>
-      </ScrollViewer>
+              <!-- Path Mapping Card -->
+              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Docker &amp; NAS Path Prefix Mapping (Optional)" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
+                  <TextBlock Text="Translate local mount points to remote server paths if Komga runs in a Docker container or NAS." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <Grid ColumnDefinitions="*, *" Margin="0,4,0,0">
+                    <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,4,0">
+                      <TextBlock Text="Local Client Root:" FontSize="11" Foreground="#AAAAAA"/>
+                      <TextBox Name="KomgaLocalPrefixTextBox" Watermark="/Volumes/General/Comics/Western"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4" Margin="4,0,0,0">
+                      <TextBlock Text="Komga Server Root:" FontSize="11" Foreground="#AAAAAA"/>
+                      <TextBox Name="KomgaServerPrefixTextBox" Watermark="/data/Western"/>
+                    </StackPanel>
+                  </Grid>
+                </StackPanel>
+              </Border>
 
-      <!-- Action Buttons -->
-      <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,15,0,0">
-        <Button Content="Cancel" Click="Cancel_Click" Padding="15,6" Background="#2D2D30"/>
-        <Button Content="Save Settings" Click="Save_Click" Padding="15,6" Background="#007ACC" Foreground="White" FontWeight="Bold"/>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <!-- Tab 4: Diagnostics & Advanced -->
+        <TabItem Header="🛠️ Diagnostics &amp; Advanced">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+            <StackPanel Spacing="12" Margin="0,0,10,0">
+              
+              <!-- Response Cache Card -->
+              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Scraper Response Cache" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
+                  <TextBlock Text="Caches ComicVine search queries and perceptual cover hashes to speed up queries and prevent API rate limits." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
+                    <TextBlock Grid.Column="0" Text="Cache file: ~/.cache/InkTag/scraper_cache.json" VerticalAlignment="Center" Foreground="#AAAAAA" FontSize="12"/>
+                    <Button Grid.Column="1" Content="Clear Cache" Click="ClearCache_Click" Padding="14,6" Background="#3E3E42"/>
+                  </Grid>
+                  <TextBlock Name="CacheStatusTextBlock" Text="" FontSize="11" Foreground="Gray"/>
+                </StackPanel>
+              </Border>
+
+              <!-- Diagnostics & Logging Card -->
+              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Diagnostics &amp; System Logs" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
+                  <TextBlock Text="Verbose debug logging writes detailed seek timings, network status, and sync telemetry." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <CheckBox Name="DebugLoggingCheckBox" Content="Enable Verbose / Debug Logging" Margin="0,2,0,0"/>
+                  <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
+                    <TextBlock Grid.Column="0" Text="Application Log Directory:" VerticalAlignment="Center" Foreground="#AAAAAA" FontSize="12"/>
+                    <Button Grid.Column="1" Content="Open Logs Directory" Click="OpenLogsFolder_Click" Padding="14,6" Background="#2D2D30"/>
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+              <!-- Reset Settings Card -->
+              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Reset Configuration" FontWeight="SemiBold" FontSize="14" Foreground="#E06C75"/>
+                  <TextBlock Text="Reset all settings to default values. API keys and server connection settings will be cleared." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
+                    <TextBlock Name="ResetStatusTextBlock" Grid.Column="0" Text="" VerticalAlignment="Center" FontSize="11" Foreground="Gray"/>
+                    <Button Grid.Column="1" Content="Reset to Defaults" Click="ResetDefaults_Click" Padding="14,6" Background="#4A2525" Foreground="#FF8888"/>
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+      </TabControl>
+
+      <!-- Footer Buttons -->
+      <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,15,0,0">
+        <Button Content="Cancel" Click="Cancel_Click" Padding="18,7" Background="#2D2D30"/>
+        <Button Content="Save Settings" Click="Save_Click" Padding="20,7" Background="#007ACC" Foreground="White" FontWeight="Bold"/>
       </StackPanel>
     </Grid>
   </Border>
 
   <Window.Styles>
+    <Style Selector="TabControl">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="TabItem">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="Padding" Value="14,8"/>
+      <Setter Property="Foreground" Value="#AAAAAA"/>
+    </Style>
+    <Style Selector="TabItem:selected">
+      <Setter Property="Foreground" Value="#3592FF"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
     <Style Selector="Button.linkButton">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="Foreground" Value="#569CD6"/>
