@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **MCP Strict Read-Only Mode (`INKTAG_MCP_READ_ONLY=true` / `--read-only`)**:
+  - Adds environment variable and command-line flag enforcement to prevent all file modifications, renames, and archive writes during audit and indexing agent sessions.
+  - Returns explicit `UnauthorizedAccessException` error messages when write operations are attempted.
+- **Automated Pre-Write Metadata Backups & Disaster Recovery**:
+  - Automatic timestamped snapshotting of `ComicInfo.xml` prior to any archive modification or metadata write across Core (`EditMetadata`, `UpdateMetadataXml`), GUI, CLI, and MCP.
+  - Backups are stored cleanly in the user's isolated application data directory (`~/.local/share/InkTag/backups/`) with automatic retention cleanup.
+  - New MCP tools `ListMetadataBackups` and `RestoreComicBackup` to query history and instantly rollback comic archives to earlier metadata states.
+
+### Changed
+- **Safe-by-Default Dry-Runs for MCP Mutating Tools**:
+  - Mutating tools (`UpdateComicMetadata`, `RenameComicFiles`, `ScrapeComicMetadata`, `BulkScrapeDirectory`) now default to `dryRun = true`, requiring AI agents to explicitly pass `dryRun = false` to commit disk changes.
+
 ---
 
 ## [0.12.0] - 2026-08-22

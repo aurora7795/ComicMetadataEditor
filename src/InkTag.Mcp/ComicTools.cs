@@ -15,6 +15,29 @@ public static class ComicTools
     private static readonly MetadataEditor _editor = new();
     private static readonly InkTag.Core.Configuration.AppSettingsService _settingsService = new();
 
+    public static bool? ReadOnlyOverride { get; set; }
+
+    public static bool IsReadOnlyMode => ReadOnlyOverride ?? CheckReadOnlyEnvironment();
+
+    private static bool CheckReadOnlyEnvironment()
+    {
+        string? env = Environment.GetEnvironmentVariable("INKTAG_MCP_READ_ONLY");
+        return string.Equals(env, "true", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(env, "1", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(env, "yes", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Validates that write operations are permitted in the current MCP server session.
+    /// </summary>
+    public static void EnsureWriteAccess(string operationName)
+    {
+        if (IsReadOnlyMode)
+        {
+            throw new UnauthorizedAccessException($"Access denied: Cannot perform '{operationName}' because the InkTag MCP server is running in strict READ-ONLY mode (INKTAG_MCP_READ_ONLY=true or --read-only).");
+        }
+    }
+
     /// <summary>
     /// Validates that a file or directory path is contained within the configured or default allowed roots.
     /// </summary>
@@ -76,14 +99,19 @@ public static class ComicTools
         return $"Metadata for {Path.GetFileName(path)}:\n{json}";
     }
 
-    [McpServerTool, Description("Updates metadata properties in a comic archive or directory using a JSON patch.")]
+    [McpServerTool, Description("Updates metadata properties in a comic archive or directory using a JSON patch. Defaults to dryRun=true (preview only). Set dryRun=false to commit changes.")]
     public static string UpdateComicMetadata(
         [Description("Target file or directory path")] string path,
         [Description("Key-value property updates (e.g. {\"Writer\": \"Stan Lee\"})")] JsonElement patch,
-        [Description("If true, previews diffs without modifying files on disk.")] bool dryRun = false,
+        [Description("If true (default), previews diffs without modifying files on disk. Set dryRun=false to write changes.")] bool dryRun = true,
         [Description("If true, updates files in subdirectories recursively.")] bool recursive = false)
     {
         ValidatePathAccess(path);
+        if (!dryRun)
+        {
+            EnsureWriteAccess("UpdateComicMetadata");
+        }
+
         string patchJson = patch.GetRawText();
         var result = AgentOperations.UpdatePath(_editor, path, patchJson, dryRun, recursive);
 
@@ -222,14 +250,19 @@ public static class ComicTools
         return JsonSerializer.Serialize(results, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    [McpServerTool, Description("Scrapes and applies metadata from ComicVine to a local comic archive.")]
+    [McpServerTool, Description("Scrapes and applies metadata from ComicVine to a local comic archive. Defaults to dryRun=true (preview only). Set dryRun=false to commit changes.")]
     public static string ScrapeComicMetadata(
         [Description("Path to comic archive (.cbz / .cbr)")] string path,
         [Description("Merge mode: 'fill-missing' (default) or 'overwrite'")] string mode = "fill-missing",
-        [Description("If true, previews updates without writing to disk")] bool dryRun = false,
+        [Description("If true (default), previews updates without writing to disk. Set dryRun=false to write changes.")] bool dryRun = true,
         [Description("Optional ComicVine API key")] string? apiKey = null)
     {
         ValidatePathAccess(path);
+        if (!dryRun)
+        {
+            EnsureWriteAccess("ScrapeComicMetadata");
+        }
+
         var settingsService = new InkTag.Core.Configuration.AppSettingsService();
         if (!string.IsNullOrEmpty(apiKey))
         {
@@ -265,15 +298,20 @@ public static class ComicTools
         }, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    [McpServerTool, Description("Queues and executes a bulk scrape on a folder using smart series volume clustering and perceptual cover visual matching.")]
+    [McpServerTool, Description("Queues and executes a bulk scrape on a folder using smart series volume clustering and perceptual cover visual matching. Defaults to dryRun=true (preview only). Set dryRun=false to commit changes.")]
     public static string BulkScrapeDirectory(
         [Description("Directory path containing comic archives")] string directory,
         [Description("Merge mode: 'fill-missing' (default) or 'overwrite'")] string mode = "fill-missing",
-        [Description("If true, previews updates without writing to archives on disk")] bool dryRun = false,
+        [Description("If true (default), previews updates without writing to archives on disk. Set dryRun=false to write changes.")] bool dryRun = true,
         [Description("If true, scans subdirectories recursively")] bool recursive = false,
         [Description("Optional ComicVine API key")] string? apiKey = null)
     {
         ValidatePathAccess(directory);
+        if (!dryRun)
+        {
+            EnsureWriteAccess("BulkScrapeDirectory");
+        }
+
         if (!Directory.Exists(directory))
         {
             throw new DirectoryNotFoundException($"Directory not found: {directory}");
@@ -335,15 +373,20 @@ public static class ComicTools
         }, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    [McpServerTool, Description("Bulk renames comic archive files on disk based on embedded ComicInfo metadata and a customizable template pattern.")]
+    [McpServerTool, Description("Bulk renames comic archive files on disk based on embedded ComicInfo metadata and a customizable template pattern. Defaults to dryRun=true (preview only). Set dryRun=false to commit changes.")]
     public static string RenameComicFiles(
         [Description("Target file or directory path")] string path,
         [Description("Template pattern e.g. '{Series} #{Number:3} ({Year})' or '{Series} #{Number:3} - {Title} ({Year})'")] string template = "{Series} #{Number:3} ({Year})",
         [Description("If true, preserves scanner/release tags (e.g. (digital))")] bool preserveScanInfo = true,
-        [Description("If true, previews rename operations without modifying files on disk")] bool dryRun = false,
+        [Description("If true (default), previews rename operations without modifying files on disk. Set dryRun=false to commit renames.")] bool dryRun = true,
         [Description("If true, processes subdirectories recursively")] bool recursive = false)
     {
         ValidatePathAccess(path);
+        if (!dryRun)
+        {
+            EnsureWriteAccess("RenameComicFiles");
+        }
+
         var filesToProcess = new List<string>();
         if (File.Exists(path))
         {
@@ -534,6 +577,63 @@ public static class ComicTools
                 mediaStatus = b.Media?.Status,
                 mediaComment = b.Media?.Comment
             })
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    [McpServerTool, Description("Lists automated pre-write metadata backup snapshots for comic archives.")]
+    public static string ListMetadataBackups(
+        [Description("Optional archive file path filter")] string? path = null,
+        [Description("Maximum number of backup records to return (default: 50)")] int limit = 50)
+    {
+        if (!string.IsNullOrEmpty(path))
+        {
+            ValidatePathAccess(path);
+        }
+
+        var backupService = new InkTag.Core.Backup.MetadataBackupService();
+        var backups = backupService.ListBackups(path, limit);
+
+        return JsonSerializer.Serialize(new
+        {
+            backupCount = backups.Count,
+            backups = backups.Select(b => new
+            {
+                id = b.Id,
+                archivePath = b.ArchivePath,
+                originalFileName = b.OriginalFileName,
+                operationType = b.OperationType,
+                timestamp = b.Timestamp
+            })
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    [McpServerTool, Description("Restores a comic archive's ComicInfo.xml metadata from a previous backup snapshot.")]
+    public static string RestoreComicBackup(
+        [Description("Path to comic archive (.cbz / .cbr)")] string path,
+        [Description("Optional specific backup ID (defaults to the most recent backup for this archive)")] string? backupId = null)
+    {
+        ValidatePathAccess(path);
+        EnsureWriteAccess("RestoreComicBackup");
+
+        var backupService = new InkTag.Core.Backup.MetadataBackupService();
+        bool restored = backupService.RestoreBackup(path, backupId);
+
+        var metadata = _editor.ReadMetadata(path);
+
+        return JsonSerializer.Serialize(new
+        {
+            success = restored,
+            path,
+            backupId,
+            message = "Metadata successfully restored from backup snapshot.",
+            currentMetadata = new
+            {
+                title = metadata.Title,
+                series = metadata.Series,
+                number = metadata.Number,
+                year = metadata.Year,
+                writer = metadata.Writer
+            }
         }, new JsonSerializerOptions { WriteIndented = true });
     }
 }

@@ -650,14 +650,15 @@ public class MetadataEditor
                 .FirstOrDefault(f => Path.GetFileName(f).Equals("ComicInfo.xml", StringComparison.OrdinalIgnoreCase));
 
             ComicInfo comicInfo;
+            string? originalXmlContent = null;
             if (existingXmlFile != null && File.Exists(existingXmlFile))
             {
                 try
                 {
                     // Validate the XML against the official schema before deserialization (logs warnings)
                     ValidateXml(existingXmlFile);
-                    string xmlContent = File.ReadAllText(existingXmlFile);
-                    comicInfo = DeserializeComicInfo(xmlContent);
+                    originalXmlContent = File.ReadAllText(existingXmlFile);
+                    comicInfo = DeserializeComicInfo(originalXmlContent);
                 }
                 catch (Exception ex)
                 {
@@ -682,6 +683,17 @@ public class MetadataEditor
             {
                 // If no ComicInfo.xml existed in archive, read existing legacy metadata (e.g. from zip comment)
                 comicInfo = ReadMetadata(filePath);
+            }
+
+            // Create automated pre-write metadata backup snapshot
+            try
+            {
+                var backupService = new InkTag.Core.Backup.MetadataBackupService();
+                backupService.CreateBackup(filePath, originalXmlContent, "EditMetadata");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.LogWarning($"Pre-write metadata backup failed for '{filePath}': {ex.Message}");
             }
 
             // Clean up any legacy ComicBookInfo.json files so the repacked archive contains only the modern ComicInfo.xml
@@ -818,6 +830,106 @@ public class MetadataEditor
                 {
                     AppLogger.LogDebug($"Temporary zip cleanup notice for '{tempCbzPath}': {ex.Message}");
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Replaces the embedded ComicInfo.xml in a comic archive with the provided XML string content.
+    /// </summary>
+    public void UpdateMetadataXml(string filePath, string xmlContent, bool createBackup = true)
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+
+        string? tempCbzPath = null;
+        string? backupOriginalPath = null;
+        string? backupTargetPath = null;
+        string originalExtension = Path.GetExtension(filePath) ?? "";
+        string targetPath = originalExtension.Equals(".cbr", StringComparison.OrdinalIgnoreCase) 
+            ? Path.ChangeExtension(filePath, ".cbz") 
+            : filePath;
+
+        try
+        {
+            // 1. Extract the archive contents safely
+            using (Stream stream = File.OpenRead(filePath))
+            using (var archive = ArchiveFactory.OpenArchive(stream))
+            {
+                foreach (var entry in archive.Entries)
+                {
+                    if (!entry.IsDirectory)
+                    {
+                        entry.WriteToDirectory(tempDir, new ExtractionOptions { Overwrite = true, ExtractFullPath = false });
+                    }
+                }
+            }
+
+            // Create pre-write backup snapshot if enabled
+            if (createBackup)
+            {
+                string? existingXmlFile = Directory.GetFiles(tempDir, "*", SearchOption.AllDirectories)
+                    .FirstOrDefault(f => Path.GetFileName(f).Equals("ComicInfo.xml", StringComparison.OrdinalIgnoreCase));
+                string? originalXml = (existingXmlFile != null && File.Exists(existingXmlFile)) ? File.ReadAllText(existingXmlFile) : null;
+                try
+                {
+                    var backupService = new InkTag.Core.Backup.MetadataBackupService();
+                    backupService.CreateBackup(filePath, originalXml, "UpdateMetadataXml");
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.LogWarning($"Pre-write backup failed during UpdateMetadataXml for '{filePath}': {ex.Message}");
+                }
+            }
+
+            // Write updated XML
+            string xmlPath = Path.Combine(tempDir, "ComicInfo.xml");
+            File.WriteAllText(xmlPath, xmlContent, Encoding.UTF8);
+
+            // Repack into temporary CBZ archive
+            tempCbzPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".cbz.tmp");
+            using (Stream stream = File.OpenWrite(tempCbzPath))
+            using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+            {
+                foreach (var file in Directory.GetFiles(tempDir, "*", SearchOption.AllDirectories))
+                {
+                    string entryName = GetRelativePath(tempDir, file).Replace('\\', '/');
+                    writer.Write(entryName, file);
+                }
+            }
+
+            FileInfo tempCbzInfo = new FileInfo(tempCbzPath);
+            if (!tempCbzInfo.Exists || tempCbzInfo.Length == 0)
+            {
+                throw new InvalidDataException("Generated temporary archive is empty or invalid.");
+            }
+
+            // Atomic file replace with fallback
+            if (File.Exists(targetPath))
+            {
+                backupTargetPath = targetPath + ".target.bak." + Guid.NewGuid().ToString("N");
+                File.Move(targetPath, backupTargetPath);
+            }
+            if (!targetPath.Equals(filePath, StringComparison.OrdinalIgnoreCase) && File.Exists(filePath))
+            {
+                backupOriginalPath = filePath + ".orig.bak." + Guid.NewGuid().ToString("N");
+                File.Move(filePath, backupOriginalPath);
+            }
+
+            File.Move(tempCbzPath, targetPath);
+
+            if (backupTargetPath != null && File.Exists(backupTargetPath)) File.Delete(backupTargetPath);
+            if (backupOriginalPath != null && File.Exists(backupOriginalPath)) File.Delete(backupOriginalPath);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                try { Directory.Delete(tempDir, true); } catch { }
+            }
+            if (tempCbzPath != null && File.Exists(tempCbzPath))
+            {
+                try { File.Delete(tempCbzPath); } catch { }
             }
         }
     }

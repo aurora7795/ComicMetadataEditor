@@ -156,6 +156,7 @@ Add the configuration block below to your AI client (**OpenClaw**, **Claude Desk
 | Variable | Required | Description |
 | :--- | :---: | :--- |
 | `INKTAG_ALLOWED_ROOT_PATHS` | **Recommended** | Restricts the AI agent to specific folders. Separate paths with `:` on macOS/Linux or `;` on Windows. |
+| `INKTAG_MCP_READ_ONLY` | Optional | When set to `true` (or launch with `--read-only`), strictly disables all archive modifications, renames, and writes. |
 | `COMICVINE_API_KEY` | Optional | ComicVine API key. If omitted, falls back to the key stored in InkTag Desktop settings. |
 | `KOMGA_SERVER_URL` | Optional | Self-hosted Komga server URL (e.g. `http://192.168.1.30:25600`). |
 | `KOMGA_API_KEY` | Optional | Komga API Key for automated targeted analysis and collection synchronization. |
@@ -164,18 +165,23 @@ Add the configuration block below to your AI client (**OpenClaw**, **Claude Desk
 
 #### 🛠️ Available MCP Tools
 
+> [!NOTE]
+> All mutating tools (`update_comic_metadata`, `rename_comic_files`, `scrape_comic_metadata`, `bulk_scrape_directory`) default to **`dryRun: true`** (preview only) for prompt-injection safety. AI agents must explicitly pass `dryRun: false` to write changes to disk. Every write automatically creates a timestamped pre-write backup snapshot in `~/.local/share/InkTag/backups/`.
+
 | Tool | Parameters | Description |
 | :--- | :--- | :--- |
 | **`read_comic_metadata`** | `filePath` | Extracts full metadata (`ComicInfo.xml` & legacy CBI) as clean JSON. |
-| **`update_comic_metadata`** | `filePath`, `metadataJson`, `dryRun` | Applies JSON metadata patches with validation against `ComicInfo.xsd`. |
+| **`update_comic_metadata`** | `filePath`, `patch`, `dryRun`, `recursive` | Applies JSON metadata patches (defaults to `dryRun: true`). |
 | **`extract_cover_image`** | `filePath`, `outputPath`, `returnBase64` | Extracts the cover page (supports base64 image return for LLM vision models). |
-| **`scan_comics`** | `directoryPath`, `missingFields`, `recursive` | Audits libraries for unorganized, untagged, or incomplete archives. |
-| **`search_comic_online`** | `series`, `issueNumber`, `year` | Searches ComicVine volumes and issues with thumbnail URLs and confidence scores. |
-| **`scrape_and_apply_metadata`** | `filePath`, `issueId`, `dryRun`, `mergeMode` | Scrapes ComicVine metadata, verifies cover perceptual hashes, and tags the archive. |
-| **`bulk_scrape_and_apply`** | `directoryPath`, `dryRun`, `mergeMode`, `recursive`, `autoRename` | Parallel identification queue with cover visual hashing and batch auto-tagging. |
-| **`rename_comics`** | `targetPath`, `template`, `dryRun`, `recursive` | Standardizes file names using configurable naming templates with duplicate protection. |
-| **`check_komga_server`** | *none* | Tests connectivity, version, and library roots on your Komga server. |
-| **`sync_komga_book_or_series`** | `filePath` | Performs targeted sub-second Komga cache invalidation and Collection synchronization. |
+| **`scan_comics`** | `directoryPath`, `missingFields`, `recursive`, `onlyUntagged` | Audits libraries for unorganized, untagged, or incomplete archives. |
+| **`search_external_metadata`** | `series`, `issueNumber`, `year`, `apiKey` | Searches ComicVine volumes and issues with thumbnail URLs and confidence scores. |
+| **`scrape_comic_metadata`** | `path`, `mode`, `dryRun`, `apiKey` | Scrapes ComicVine metadata, verifies cover perceptual hashes, and tags the archive (defaults to `dryRun: true`). |
+| **`bulk_scrape_directory`** | `directory`, `mode`, `dryRun`, `recursive`, `apiKey` | Parallel identification queue with cover visual hashing and batch auto-tagging (defaults to `dryRun: true`). |
+| **`rename_comic_files`** | `path`, `template`, `preserveScanInfo`, `dryRun`, `recursive` | Standardizes file names using configurable naming templates (defaults to `dryRun: true`). |
+| **`list_metadata_backups`** | `path`, `limit` | Lists automated pre-write metadata backup snapshots for comic archives. |
+| **`restore_comic_backup`** | `path`, `backupId` | Restores a comic archive's `ComicInfo.xml` metadata from a previous backup snapshot. |
+| **`check_komga_server`** | `serverUrl`, `apiKey` | Tests connectivity, version, and library roots on your Komga server. |
+| **`sync_komga_book_or_series`** | `path`, `storyArc` | Performs targeted sub-second Komga cache invalidation and Collection synchronization. |
 | **`audit_komga_library`** | `libraryId` | Audits Komga series count, total books, and library path bindings. |
 | **`get_comic_schema`** | *none* | Returns the complete JSON schema for `ComicInfo` fields. |
 
