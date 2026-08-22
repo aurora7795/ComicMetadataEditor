@@ -98,44 +98,179 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.6.0] - 2026-08-14
+## [0.6.0] - 2026-08-08
 
 ### Changed
 - **Official MCP C# SDK**: Migrated MCP server implementation to the official `ModelContextProtocol` C# SDK (`v2.1.0`).
+- **Security Dependency Update**: Updated `Tmds.DBus.Protocol` dependency.
 
 ---
 
-## [0.5.0] - 2026-08-11
+## [0.5.4] - 2026-08-04
+
+### Added
+- **Full 35-Column DataGrid**: Comprehensive ComicInfo v2.1 field representation with column reordering, resizing, and sorting.
+- **GitHub CLI Workflow Integration**: Established agent rules for issue tracking via `gh` CLI.
+
+---
+
+## [0.5.3] - 2026-08-04
+
+### Added
+- **Resizable Inspector Panel**: Interactive splitter for the right-hand Inspector pane.
+### Fixed
+- **Linux AppImage Auto-Update**: Resolved Velopack updater path resolution on Linux AppImage environments.
+
+---
+
+## [0.5.2] - 2026-08-03
+
+### Fixed
+- **Inspector Panel Layout**: Correctly collapse inspector panel on toggle and expand DataGrid table to fill available workspace width.
+
+---
+
+## [0.5.1] - 2026-08-03
+
+### Fixed
+- **Linux AppImage Startup**: Resolved `TypeLoadException` in DBus communication during AppImage initialization.
+
+---
+
+## [0.5.0] - 2026-08-03
 
 ### Added
 - **Context-Sensitive Inspector Panel**: Dynamic right-hand inspector panel for single and multi-file metadata auditing.
-- **35-Column DataGrid**: Full ComicInfo v2.1 field representation with column reordering and sorting.
 
 ---
 
-## [0.4.0] - 2026-08-10
+## [0.4.4] - 2026-08-02
+
+### Fixed
+- **MacOS Velopack Version Tracking**: Write `sq.version` to `MacOS` directory and check `manager.IsInstalled` for in-place updates.
+
+---
+
+## [0.4.3] - 2026-08-02
+
+### Changed
+- Minor packaging and updater stability improvements.
+
+---
+
+## [0.4.2] - 2026-08-02
+
+### Changed
+- Minor UI performance enhancements.
+
+---
+
+## [0.4.1] - 2026-08-02
+
+### Fixed
+- **MacOS Silent Auto-Update**: Fixed background update application within macOS `.app` bundles.
+
+---
+
+## [0.4.0] - 2026-08-01
 
 ### Added
 - **Cross-Platform MenuBar**: Avalonia MenuBar and macOS NativeMenu integration with standard hotkeys.
 
 ---
 
-## [0.3.0] - 2026-08-09
+## [0.3.1] - 2026-08-01
 
-### Changed
-- **Code Review Refactor**: Major architectural refactor addressing performance, type safety, and async I/O.
+### Added
+- **GitHub API Fallback**: Direct GitHub API release checking for portable builds and Linux AppImages.
 
 ---
 
-## [0.2.0] - 2026-08-08
+## [0.3.0] - 2026-08-01
+
+### Changed
+- **Major Code Review Refactor**: Addressed 15 architectural, performance, and type-safety findings across Core and GUI.
+
+---
+
+## [0.2.3] - 2026-08-01
+
+### Added
+- GitHub Releases fallback update checking on macOS and standalone builds.
+
+---
+
+## [0.2.2] - 2026-08-01
+
+### Fixed
+- Velopack metadata bundling for macOS `.dmg` and Linux AppImage.
+
+---
+
+## [0.2.1] - 2026-08-01
 
 ### Added
 - **Application Logging (`AppLogger`)**: Rolling file logging system and in-app diagnostics log viewer.
-- **Velopack Auto-Updater**: Cross-platform automatic updating support for Windows, macOS, and Linux.
 
 ---
 
-## [0.1.0] - 2026-08-07
+## [0.2.0] - 2026-08-01
+
+### Added
+- **Native macOS Menu Integration**: Custom macOS application menu with 'About InkTag Desktop' dialog.
+
+---
+
+## [0.1.8] - 2026-08-01
+
+### Fixed
+- Passed `.icns` icon file to macOS Velopack pack step.
+
+---
+
+## [0.1.7] - 2026-07-31
+
+### Fixed
+- Updated `GithubSource` parameters in `UpdateService`.
+
+---
+
+## [0.1.5] - 2026-07-31
+
+### Fixed
+- Refactored archive parsing from streaming reader to random-access `ArchiveFactory.OpenArchive` for RAR/CBR reliability.
+
+---
+
+## [0.1.4] - 2026-07-31
+
+### Fixed
+- Updated desktop application display name to InkTag Desktop across all platforms.
+
+---
+
+## [0.1.3] - 2026-07-31
+
+### Fixed
+- Cleaned git submodules to resolve CI checkout issues.
+
+---
+
+## [0.1.2] - 2026-07-31
+
+### Added
+- Standalone self-contained `InkTag.Mcp` binary packages for Windows, macOS, and Linux.
+
+---
+
+## [0.1.1] - 2026-07-31
+
+### Fixed
+- Resolved git shallow clone errors on CI runners.
+
+---
+
+## [0.1.0] - 2026-07-31
 
 ### Added
 - Initial release of InkTag (.NET Core library, Avalonia GUI, CLI, and MCP Server).
