@@ -93,12 +93,14 @@ public class KomgaClient : IDisposable
         _httpClient.DefaultRequestHeaders.Remove("X-Requested-With");
         _httpClient.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
 
+        _httpClient.DefaultRequestHeaders.Remove("X-API-Key");
         _httpClient.DefaultRequestHeaders.Remove("X-Auth-Token");
         _httpClient.DefaultRequestHeaders.Authorization = null;
 
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
             string key = apiKey.Trim();
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", key);
             _httpClient.DefaultRequestHeaders.Add("X-Auth-Token", key);
         }
         else if (!string.IsNullOrWhiteSpace(user) && !string.IsNullOrWhiteSpace(password))
@@ -116,12 +118,12 @@ public class KomgaClient : IDisposable
 
         try
         {
-            string endpoint = $"{_serverUrl}/api/v1/users/me";
-            using var response = await _httpClient.GetAsync(endpoint, ct);
-
-            if (response.IsSuccessStatusCode)
+            // 1. Try v2/users/me (Modern Komga)
+            string endpointV2 = $"{_serverUrl}/api/v2/users/me";
+            using var responseV2 = await _httpClient.GetAsync(endpointV2, ct);
+            if (responseV2.IsSuccessStatusCode)
             {
-                string? mediaType = response.Content.Headers.ContentType?.MediaType;
+                string? mediaType = responseV2.Content.Headers.ContentType?.MediaType;
                 if (mediaType == null || !mediaType.Contains("html", StringComparison.OrdinalIgnoreCase))
                 {
                     AppLogger.LogInfo($"[KomgaClient] Successfully authenticated with Komga server at '{_serverUrl}'.");
@@ -129,9 +131,35 @@ public class KomgaClient : IDisposable
                 }
             }
 
-            if ((int)response.StatusCode == 401 || (int)response.StatusCode == 403)
+            // 2. Try v1/libraries (Direct library access check)
+            string librariesEndpoint = $"{_serverUrl}/api/v1/libraries";
+            using var libResponse = await _httpClient.GetAsync(librariesEndpoint, ct);
+            if (libResponse.IsSuccessStatusCode)
             {
-                AppLogger.LogWarning($"[KomgaClient] Authentication rejected by Komga server at '{_serverUrl}' (HTTP {(int)response.StatusCode}). Check your API Key or Username/Password.");
+                string? mediaType = libResponse.Content.Headers.ContentType?.MediaType;
+                if (mediaType == null || !mediaType.Contains("html", StringComparison.OrdinalIgnoreCase))
+                {
+                    AppLogger.LogInfo($"[KomgaClient] Successfully authenticated with Komga server at '{_serverUrl}'.");
+                    return true;
+                }
+            }
+
+            // 3. Try v1/users/me (Legacy user endpoint)
+            string endpointV1 = $"{_serverUrl}/api/v1/users/me";
+            using var responseV1 = await _httpClient.GetAsync(endpointV1, ct);
+            if (responseV1.IsSuccessStatusCode)
+            {
+                string? mediaType = responseV1.Content.Headers.ContentType?.MediaType;
+                if (mediaType == null || !mediaType.Contains("html", StringComparison.OrdinalIgnoreCase))
+                {
+                    AppLogger.LogInfo($"[KomgaClient] Successfully authenticated with Komga server at '{_serverUrl}'.");
+                    return true;
+                }
+            }
+
+            if ((int)libResponse.StatusCode == 401 || (int)libResponse.StatusCode == 403)
+            {
+                AppLogger.LogWarning($"[KomgaClient] Authentication rejected by Komga server at '{_serverUrl}' (HTTP {(int)libResponse.StatusCode}). Check your API Key or Username/Password.");
                 return false;
             }
 
@@ -179,18 +207,28 @@ public class KomgaClient : IDisposable
         try
         {
             string fileName = Path.GetFileName(filePath);
+            string fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
             string translatedPath = TranslatePath(filePath, mappings);
 
-            // Search by filename on Komga
-            string endpoint = $"{_serverUrl}/api/v1/books?search={Uri.EscapeDataString(fileName)}&size=50";
+            // Search by filename without extension on Komga
+            string endpoint = $"{_serverUrl}/api/v1/books?search={Uri.EscapeDataString(fileNameWithoutExt)}&size=50";
             var page = await GetJsonSafeAsync<KomgaPageWrapper<KomgaBookDto>>(endpoint, ct);
+
+            // Fallback search with full filename if not found
+            if (page?.Content == null || page.Content.Count == 0)
+            {
+                endpoint = $"{_serverUrl}/api/v1/books?search={Uri.EscapeDataString(fileName)}&size=50";
+                page = await GetJsonSafeAsync<KomgaPageWrapper<KomgaBookDto>>(endpoint, ct);
+            }
 
             if (page?.Content != null && page.Content.Count > 0)
             {
                 // 1. Exact translated path match priority
                 var match = page.Content.FirstOrDefault(b =>
                     string.Equals(b.Url, translatedPath, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(Path.GetFileName(b.Url), fileName, StringComparison.OrdinalIgnoreCase));
+                    string.Equals(Path.GetFileName(b.Url), fileName, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(b.Name, fileNameWithoutExt, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(b.Name, fileName, StringComparison.OrdinalIgnoreCase));
 
                 return match ?? page.Content[0];
             }
