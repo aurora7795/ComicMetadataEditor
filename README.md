@@ -180,6 +180,9 @@ Add the configuration block below to your AI client (**OpenClaw**, **Claude Desk
 | **`rename_comic_files`** | `path`, `template`, `preserveScanInfo`, `dryRun`, `recursive` | Standardizes file names using configurable naming templates (defaults to `dryRun: true`). |
 | **`list_metadata_backups`** | `path`, `limit` | Lists automated pre-write metadata backup snapshots for comic archives. |
 | **`restore_comic_backup`** | `path`, `backupId` | Restores a comic archive's `ComicInfo.xml` metadata from a previous backup snapshot. |
+| **`list_batch_jobs`** | `limit` | Lists recent multi-file batch jobs with total backup counts and affected files. |
+| **`restore_batch_job`** | `batchJobId` | Atomically rolls back an entire multi-file batch job to its pre-batch state. |
+| **`get_backup_provenance`** | `backupId` | Retrieves deep forensic provenance (SHA-256 hash, cover dHash, thumbnail URL, diffs). |
 | **`check_komga_server`** | `serverUrl`, `apiKey` | Tests connectivity, version, and library roots on your Komga server. |
 | **`sync_komga_book_or_series`** | `path`, `storyArc` | Performs targeted sub-second Komga cache invalidation and Collection synchronization. |
 | **`audit_komga_library`** | `libraryId` | Audits Komga series count, total books, and library path bindings. |

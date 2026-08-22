@@ -407,10 +407,12 @@ public class BulkScrapeQueueService
         bool renameFiles = false,
         string renameTemplate = ComicFileRenamer.DefaultTemplate,
         IProgress<BulkScrapeProgressReport>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? batchJobId = null)
     {
         var targetList = items.Where(i => i.IsSelected && i.MatchedCandidate != null).ToList();
         int savedCount = 0;
+        string batchId = batchJobId ?? ("batch_" + DateTime.UtcNow.ToString("yyyyMMdd_HHmmss") + "_" + Guid.NewGuid().ToString("N")[..6]);
 
         for (int i = 0; i < targetList.Count; i++)
         {
@@ -423,10 +425,18 @@ public class BulkScrapeQueueService
                 var fetched = item.FetchedMetadata ?? await _scraperService.FetchMetadataAsync(item.MatchedCandidate!.IssueId, ct);
                 item.FetchedMetadata = fetched;
 
-                _metadataEditor.EditMetadata(item.FilePath, comic =>
-                {
-                    _scraperService.ApplyMetadata(comic, fetched, mergeMode);
-                });
+                _metadataEditor.EditMetadata(
+                    item.FilePath,
+                    comic =>
+                    {
+                        _scraperService.ApplyMetadata(comic, fetched, mergeMode);
+                    },
+                    batchJobId: batchId,
+                    changeReason: $"Bulk Auto-Tag ComicVine ({item.MatchedCandidate?.SeriesTitle} #{item.MatchedCandidate?.IssueNumber})",
+                    coverDHash: item.LocalCoverHash != 0 ? item.LocalCoverHash.ToString("X16") : null,
+                    matchedThumbnailUrl: !string.IsNullOrEmpty(item.MatchedCandidate?.SmallCoverUrl) ? item.MatchedCandidate.SmallCoverUrl : item.MatchedCandidate?.CoverUrl,
+                    matchConfidence: item.MatchedCandidate?.MatchConfidence,
+                    visualSimilarity: item.MatchedCandidate?.VisualSimilarity);
 
                 if (renameFiles)
                 {

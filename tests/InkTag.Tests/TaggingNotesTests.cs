@@ -32,6 +32,17 @@ public class TaggingNotesTests
     }
 
     [Fact]
+    public void GenerateTaggingNote_WithVisualMatch_IncludesCoverMatchTag()
+    {
+        string note = ComicVineProvider.GenerateTaggingNote("120048", "18234", visualSimilarity: 0.965);
+
+        Assert.StartsWith("Tagged with InkTag ", note);
+        Assert.Contains("[Issue ID 120048]", note);
+        Assert.Contains("[Volume ID 18234]", note);
+        Assert.EndsWith("[Cover Match 97%]", note);
+    }
+
+    [Fact]
     public void MergeNotes_WhenExistingNotesIsEmpty_ReturnsNewAttributionNote()
     {
         string newNote = "Tagged with InkTag 0.11.0 using info from Comic Vine on 2026-08-22 08:30:00. [Issue ID 120048]";

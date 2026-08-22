@@ -344,15 +344,17 @@ public static class ComicTools
         };
 
         var summaryReport = queueService.ProcessQueueAsync(queue, options).GetAwaiter().GetResult();
+        string batchJobId = "batch_" + DateTime.UtcNow.ToString("yyyyMMdd_HHmmss") + "_" + Guid.NewGuid().ToString("N")[..6];
 
         if (!dryRun)
         {
-            queueService.ApplyMatchedMetadataAsync(queue, mergeMode).GetAwaiter().GetResult();
+            queueService.ApplyMatchedMetadataAsync(queue, mergeMode, batchJobId: batchJobId).GetAwaiter().GetResult();
         }
 
         return JsonSerializer.Serialize(new
         {
             success = true,
+            batchJobId = !dryRun ? batchJobId : null,
             directory,
             dryRun,
             totalFiles = summaryReport.Total,
@@ -634,6 +636,88 @@ public static class ComicTools
                 year = metadata.Year,
                 writer = metadata.Writer
             }
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    [McpServerTool, Description("Lists recent multi-file batch jobs (e.g. bulk auto-tagging or batch operations) with affected file counts.")]
+    public static string ListBatchJobs(
+        [Description("Maximum number of batch records to return (default: 20)")] int limit = 20)
+    {
+        var backupService = new InkTag.Core.Backup.MetadataBackupService();
+        var batches = backupService.ListBatchJobs(limit);
+
+        return JsonSerializer.Serialize(new
+        {
+            batchCount = batches.Count,
+            batches = batches.Select(b => new
+            {
+                batchJobId = b.BatchJobId,
+                timestamp = b.Timestamp,
+                operationType = b.OperationType,
+                totalBackups = b.TotalBackups,
+                affectedFiles = b.AffectedFiles
+            })
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    [McpServerTool, Description("Rolls back an entire multi-file batch job atomically, restoring all affected comic archives to their pre-batch state.")]
+    public static string RestoreBatchJob(
+        [Description("Unique Batch Job ID to rollback (e.g. 'batch_20260822_123456_a4f910')")] string batchJobId)
+    {
+        EnsureWriteAccess("RestoreBatchJob");
+
+        var backupService = new InkTag.Core.Backup.MetadataBackupService();
+        var report = backupService.RestoreBatchJob(batchJobId);
+
+        return JsonSerializer.Serialize(new
+        {
+            success = report.Failed == 0,
+            batchJobId = report.BatchJobId,
+            totalFiles = report.Total,
+            restoredCount = report.Restored,
+            failedCount = report.Failed,
+            restoredFiles = report.RestoredFiles,
+            failures = report.Failures.Select(f => new { path = f.Path, error = f.Error })
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    [McpServerTool, Description("Retrieves deep forensic provenance details for a specific backup snapshot, including pre-write source hash, cover visual dHash, matched thumbnail URL, confidence score, and field-level diffs.")]
+    public static string GetBackupProvenance(
+        [Description("Backup Snapshot ID")] string backupId)
+    {
+        var backupService = new InkTag.Core.Backup.MetadataBackupService();
+        var entry = backupService.GetBackupEntry(backupId);
+
+        if (entry == null)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                success = false,
+                error = $"Backup with ID '{backupId}' was not found."
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        if (!string.IsNullOrEmpty(entry.ArchivePath))
+        {
+            ValidatePathAccess(entry.ArchivePath);
+        }
+
+        return JsonSerializer.Serialize(new
+        {
+            success = true,
+            id = entry.Id,
+            archivePath = entry.ArchivePath,
+            originalFileName = entry.OriginalFileName,
+            operationType = entry.OperationType,
+            timestamp = entry.Timestamp,
+            batchJobId = entry.BatchJobId,
+            sourceFileHash = entry.SourceFileHash,
+            coverDHash = entry.CoverDHash,
+            matchedThumbnailUrl = entry.MatchedThumbnailUrl,
+            matchConfidence = entry.MatchConfidence,
+            visualSimilarity = entry.VisualSimilarity,
+            changeReason = entry.ChangeReason,
+            fieldDiffs = entry.FieldDiffs
         }, new JsonSerializerOptions { WriteIndented = true });
     }
 }

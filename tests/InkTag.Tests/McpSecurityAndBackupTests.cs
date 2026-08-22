@@ -9,6 +9,7 @@ using Xunit;
 
 namespace InkTag.Tests;
 
+[Collection("BackupTests")]
 public class McpSecurityAndBackupTests : IDisposable
 {
     private readonly string _testBackupDir;

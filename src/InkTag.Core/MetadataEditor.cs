@@ -603,7 +603,15 @@ public class MetadataEditor
         return info;
     }
 
-    public void EditMetadata(string filePath, Action<ComicInfo> editAction)
+    public void EditMetadata(
+        string filePath,
+        Action<ComicInfo> editAction,
+        string? batchJobId = null,
+        string? changeReason = null,
+        string? coverDHash = null,
+        string? matchedThumbnailUrl = null,
+        double? matchConfidence = null,
+        double? visualSimilarity = null)
     {
         string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tempDir);
@@ -685,11 +693,20 @@ public class MetadataEditor
                 comicInfo = ReadMetadata(filePath);
             }
 
-            // Create automated pre-write metadata backup snapshot
+            // Create automated pre-write metadata backup snapshot with provenance
             try
             {
                 var backupService = new InkTag.Core.Backup.MetadataBackupService();
-                backupService.CreateBackup(filePath, originalXmlContent, "EditMetadata");
+                backupService.CreateBackup(
+                    filePath,
+                    originalXmlContent,
+                    "EditMetadata",
+                    batchJobId: batchJobId,
+                    coverDHash: coverDHash,
+                    matchedThumbnailUrl: matchedThumbnailUrl,
+                    matchConfidence: matchConfidence,
+                    visualSimilarity: visualSimilarity,
+                    changeReason: changeReason);
             }
             catch (Exception ex)
             {

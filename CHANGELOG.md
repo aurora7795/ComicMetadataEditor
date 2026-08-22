@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Batch-Level Transaction Rollbacks**:
+  - Assigns a unique `BatchJobId` (e.g. `batch_20260822_123456_a4f910`) to multi-file operations across Core, GUI, and MCP.
+  - New MCP tools `ListBatchJobs` and `RestoreBatchJob` enabling atomic, single-command rollback of entire multi-file batches.
+- **Rich Metadata Provenance & Forensic Audit Trail**:
+  - Captures pre-write SHA-256 source hash, 64-bit cover visual `dHash`, remote matched thumbnail URL, match confidence, visual similarity score, change reason, and property-level diffs in the backup manifest.
+  - New MCP tool `GetBackupProvenance` to inspect complete forensic provenance for any snapshot.
+  - Enhanced embedded `ComicInfo.xml` `<Notes>` attribution tag with cover match similarity percentages (e.g. `[Cover Match 97%]`).
 - **MCP Strict Read-Only Mode (`INKTAG_MCP_READ_ONLY=true` / `--read-only`)**:
   - Adds environment variable and command-line flag enforcement to prevent all file modifications, renames, and archive writes during audit and indexing agent sessions.
   - Returns explicit `UnauthorizedAccessException` error messages when write operations are attempted.

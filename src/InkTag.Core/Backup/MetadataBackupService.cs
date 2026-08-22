@@ -15,11 +15,36 @@ public record MetadataBackupEntry(
     string Timestamp,
     string OperationType,
     string? OriginalFileName,
-    string BackupXmlFileName
+    string BackupXmlFileName,
+    string? BatchJobId = null,
+    string? SourceFileHash = null,
+    string? CoverDHash = null,
+    string? MatchedThumbnailUrl = null,
+    double? MatchConfidence = null,
+    double? VisualSimilarity = null,
+    string? ChangeReason = null,
+    List<MetadataDiffItem>? FieldDiffs = null
+);
+
+public record BatchJobSummary(
+    string BatchJobId,
+    string Timestamp,
+    string OperationType,
+    int TotalBackups,
+    List<string> AffectedFiles
+);
+
+public record BatchRollbackReport(
+    string BatchJobId,
+    int Total,
+    int Restored,
+    int Failed,
+    List<string> RestoredFiles,
+    List<(string Path, string Error)> Failures
 );
 
 /// <summary>
-/// Cross-platform automated metadata backup and rollback manager for InkTag.
+/// Cross-platform automated metadata backup, rich provenance tracker, and rollback manager for InkTag.
 /// Saves pre-write snapshots of ComicInfo.xml before any archive write or metadata change.
 /// </summary>
 public class MetadataBackupService
@@ -58,9 +83,20 @@ public class MetadataBackupService
     }
 
     /// <summary>
-    /// Creates a pre-write backup of ComicInfo.xml before an edit or overwrite.
+    /// Creates a pre-write backup of ComicInfo.xml before an edit or overwrite, storing rich provenance metadata.
     /// </summary>
-    public MetadataBackupEntry? CreateBackup(string archivePath, string? originalXml, string operationType)
+    public MetadataBackupEntry? CreateBackup(
+        string archivePath,
+        string? originalXml,
+        string operationType,
+        string? batchJobId = null,
+        string? sourceFileHash = null,
+        string? coverDHash = null,
+        string? matchedThumbnailUrl = null,
+        double? matchConfidence = null,
+        double? visualSimilarity = null,
+        string? changeReason = null,
+        List<MetadataDiffItem>? fieldDiffs = null)
     {
         if (string.IsNullOrEmpty(archivePath)) return null;
 
@@ -89,7 +125,15 @@ public class MetadataBackupService
                     Timestamp: timestamp,
                     OperationType: operationType,
                     OriginalFileName: fileName,
-                    BackupXmlFileName: xmlFileName
+                    BackupXmlFileName: xmlFileName,
+                    BatchJobId: batchJobId,
+                    SourceFileHash: sourceFileHash,
+                    CoverDHash: coverDHash,
+                    MatchedThumbnailUrl: matchedThumbnailUrl,
+                    MatchConfidence: matchConfidence,
+                    VisualSimilarity: visualSimilarity,
+                    ChangeReason: changeReason,
+                    FieldDiffs: fieldDiffs
                 );
 
                 var manifest = LoadManifestInternal();
@@ -112,7 +156,7 @@ public class MetadataBackupService
                 }
 
                 SaveManifestInternal(manifest);
-                AppLogger.LogDebug($"[MetadataBackupService] Created backup '{id}' for '{archivePath}' (Operation: {operationType})");
+                AppLogger.LogDebug($"[MetadataBackupService] Created backup '{id}' for '{archivePath}' (Batch: {batchJobId ?? "none"}, Op: {operationType})");
                 return entry;
             }
             catch (Exception ex)
@@ -138,6 +182,18 @@ public class MetadataBackupService
             }
 
             return manifest.Take(limit).ToList();
+        }
+    }
+
+    /// <summary>
+    /// Retrieves a specific backup entry with full provenance details.
+    /// </summary>
+    public MetadataBackupEntry? GetBackupEntry(string backupId)
+    {
+        lock (Lock)
+        {
+            var manifest = LoadManifestInternal();
+            return manifest.FirstOrDefault(m => string.Equals(m.Id, backupId, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -199,9 +255,101 @@ public class MetadataBackupService
 
         string restoredXml = File.ReadAllText(backupXmlPath, Encoding.UTF8);
         var editor = new MetadataEditor();
-        editor.UpdateMetadataXml(archivePath, restoredXml);
+        editor.UpdateMetadataXml(archivePath, restoredXml, createBackup: false);
         AppLogger.LogInfo($"[MetadataBackupService] Successfully restored backup '{targetEntry.Id}' onto '{archivePath}'.");
         return true;
+    }
+
+    /// <summary>
+    /// Lists recent batch jobs grouped by BatchJobId.
+    /// </summary>
+    public IReadOnlyList<BatchJobSummary> ListBatchJobs(int limit = 20)
+    {
+        lock (Lock)
+        {
+            var manifest = LoadManifestInternal();
+            var batchGroups = manifest
+                .Where(m => !string.IsNullOrEmpty(m.BatchJobId))
+                .GroupBy(m => m.BatchJobId!)
+                .Select(g => new BatchJobSummary(
+                    BatchJobId: g.Key,
+                    Timestamp: g.First().Timestamp,
+                    OperationType: g.First().OperationType,
+                    TotalBackups: g.Count(),
+                    AffectedFiles: g.Select(m => m.ArchivePath).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                ))
+                .Take(limit)
+                .ToList();
+
+            return batchGroups;
+        }
+    }
+
+    /// <summary>
+    /// Atomically restores all files belonging to a specific batch job back to their pre-batch snapshots.
+    /// </summary>
+    public BatchRollbackReport RestoreBatchJob(string batchJobId)
+    {
+        if (string.IsNullOrWhiteSpace(batchJobId))
+        {
+            throw new ArgumentException("BatchJobId cannot be null or empty.", nameof(batchJobId));
+        }
+
+        List<MetadataBackupEntry> batchEntries;
+        lock (Lock)
+        {
+            var manifest = LoadManifestInternal();
+            batchEntries = manifest
+                .Where(m => string.Equals(m.BatchJobId, batchJobId, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        if (batchEntries.Count == 0)
+        {
+            throw new InvalidOperationException($"No batch job found with ID '{batchJobId}'.");
+        }
+
+        var editor = new MetadataEditor();
+        var restoredFiles = new List<string>();
+        var failures = new List<(string Path, string Error)>();
+
+        foreach (var entry in batchEntries)
+        {
+            try
+            {
+                if (!File.Exists(entry.ArchivePath))
+                {
+                    failures.Add((entry.ArchivePath, "File does not exist on disk."));
+                    continue;
+                }
+
+                string backupXmlPath = Path.Combine(BackupDirectory, entry.BackupXmlFileName);
+                if (!File.Exists(backupXmlPath))
+                {
+                    failures.Add((entry.ArchivePath, $"Backup snapshot file '{entry.BackupXmlFileName}' is missing."));
+                    continue;
+                }
+
+                string restoredXml = File.ReadAllText(backupXmlPath, Encoding.UTF8);
+                editor.UpdateMetadataXml(entry.ArchivePath, restoredXml, createBackup: false);
+                restoredFiles.Add(entry.ArchivePath);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.LogWarning($"Failed to restore batch item '{entry.ArchivePath}': {ex.Message}");
+                failures.Add((entry.ArchivePath, ex.Message));
+            }
+        }
+
+        AppLogger.LogInfo($"[MetadataBackupService] Batch rollback completed for '{batchJobId}'. Restored: {restoredFiles.Count}, Failed: {failures.Count}");
+        return new BatchRollbackReport(
+            BatchJobId: batchJobId,
+            Total: batchEntries.Count,
+            Restored: restoredFiles.Count,
+            Failed: failures.Count,
+            RestoredFiles: restoredFiles,
+            Failures: failures
+        );
     }
 
     private List<MetadataBackupEntry> LoadManifestInternal()

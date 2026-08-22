@@ -580,13 +580,14 @@ public class ComicVineProvider : IMetadataScraperProvider
         return comic;
     }
 
-    public static string GenerateTaggingNote(string issueId, string? volumeId = null)
+    public static string GenerateTaggingNote(string issueId, string? volumeId = null, double? visualSimilarity = null)
     {
         var asmVer = typeof(ComicVineProvider).Assembly.GetName().Version;
-        string version = asmVer != null ? $"{asmVer.Major}.{asmVer.Minor}.{asmVer.Build}" : "0.11.0";
+        string version = asmVer != null ? $"{asmVer.Major}.{asmVer.Minor}.{asmVer.Build}" : "0.12.0";
         string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         string volStr = !string.IsNullOrWhiteSpace(volumeId) ? $" [Volume ID {volumeId.Trim()}]" : "";
-        return $"Tagged with InkTag {version} using info from Comic Vine on {timestamp}. [Issue ID {issueId.Trim()}]{volStr}";
+        string visualStr = visualSimilarity.HasValue ? $" [Cover Match {(int)Math.Round(visualSimilarity.Value * 100, MidpointRounding.AwayFromZero)}%]" : "";
+        return $"Tagged with InkTag {version} using info from Comic Vine on {timestamp}. [Issue ID {issueId.Trim()}]{volStr}{visualStr}";
     }
 
     public static string CleanString(string input) => Regex.Replace(Regex.Replace(input, @"[^\w\s]", " "), @"\s+", " ").Trim();
