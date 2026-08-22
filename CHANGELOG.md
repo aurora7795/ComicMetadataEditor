@@ -11,6 +11,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.12.0] - 2026-08-22
+
+### Added
+- **Light Mode, Dark Mode & System Default Theme Support**:
+  - Added configurable `ThemeMode` (`System`, `Dark`, `Light`) in `AppSettings` with instant, dynamic runtime theme switching without application restarts.
+  - Added **Appearance & Theme** card in the General Settings tab with real-time live preview on dropdown selection and rollback on Cancel.
+  - Added quick **View > Theme** submenu (`System Default`, `Dark Mode`, `Light Mode`) to both the desktop menu bar and macOS native menus.
+  - Created complete semantic `ThemeDictionaries` for Avalonia (`AppBackgroundBrush`, `AppCardBrush`, `AppSurfaceBrush`, `AppBorderBrush`, `AppTextPrimaryBrush`, `AppTextSecondaryBrush`, `AppTextMutedBrush`, `AppInputBackgroundBrush`, `AppAccentBrush`, etc.).
+  - Added theme-aware dirty row highlighting with soft pastel mint (`#E6F4EA`) in Light Mode and deep emerald (`#1A3828`) in Dark Mode.
+  - Refactored all modal dialogs (`SettingsWindow`, `AboutWindow`, `ScraperMatchWindow`, `BulkScrapeQueueWindow`, `RenamePreviewWindow`, `SeriesSearchWizardWindow`, `PromptWindow`, `ApiKeyRequiredWindow`, `ErrorSummaryWindow`, `ThirdPartyLicensesWindow`) to adapt seamlessly across themes.
+
+### Changed
+- **Targeted UI Polish & Visual Harmony**:
+  - **Unified Toolbar Actions**: Converted utility tools (`Save All`, `Auto-Tag`, `Bulk Auto-Tag`, `Sync to Komga`, `Refresh`, `Inspector`) to clean neutral outline buttons with subtle borders, reserving solid accent highlights strictly for the primary action (`Open Folder...`).
+  - **Segmented Filter Pill Control**: Encapsulated `All`, `Untagged`, and `Modified` filters into a unified segmented pill group with clean active highlight fill and neutral typography.
+  - **Soft Neutral Framed Status Bar**: Transformed the bottom status bar from solid saturated blue into a framed soft neutral (`#F8FAFC` in Light Mode with `#64748B` slate text; `#18181B` in Dark Mode with `#94A3B8` text) with slim accent progress tracking.
+- **Scraper & Queue DataGrid Fixes**:
+  - Re-added dedicated **Status** badge column in Bulk Auto-Tag Queue DataGrid displaying real-time colored status badges (`Matched`, `Review Needed`, `Unmatched`, `Error`).
+  - Fixed property bindings for candidate thumbnails, series titles, confidence percentages, and visual match indicators in single and bulk match dialogs.
+  - Normalized consecutive whitespace in `ComicVineProvider.CleanString` to ensure high-confidence matching for series titles with non-standard spacing.
+
+---
+
 ## [0.11.1] - 2026-08-22
 
 ### Added

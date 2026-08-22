@@ -121,10 +121,14 @@ public partial class MainWindow : Window
         ComicsGrid.SelectedItems.Clear();
     }
 
-    private void Settings_Click(object? sender, RoutedEventArgs e)
+    private async void Settings_Click(object? sender, RoutedEventArgs e)
     {
         var dialog = new SettingsWindow();
-        dialog.ShowDialog(this);
+        await dialog.ShowDialog(this);
+        if (DataContext is MainWindowViewModel vm)
+        {
+            vm.RefreshThemeFromSettings();
+        }
     }
 
     private async void ScrapeMetadata_Click(object? sender, RoutedEventArgs e)
@@ -421,6 +425,33 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel vm) await vm.SyncToKomgaCommand.ExecuteAsync(null);
     }
     private void NativeToggleDebugLogging_Click(object? sender, EventArgs e) => ToggleDebugLogging_Click(sender, new RoutedEventArgs());
+    private void NativeThemeSystem_Click(object? sender, EventArgs e) => ThemeSystem_Click(sender, new RoutedEventArgs());
+    private void NativeThemeDark_Click(object? sender, EventArgs e) => ThemeDark_Click(sender, new RoutedEventArgs());
+    private void NativeThemeLight_Click(object? sender, EventArgs e) => ThemeLight_Click(sender, new RoutedEventArgs());
+
+    private void ThemeSystem_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            vm.SetTheme(InkTag.Core.Configuration.AppThemeMode.System);
+        }
+    }
+
+    private void ThemeDark_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            vm.SetTheme(InkTag.Core.Configuration.AppThemeMode.Dark);
+        }
+    }
+
+    private void ThemeLight_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            vm.SetTheme(InkTag.Core.Configuration.AppThemeMode.Light);
+        }
+    }
 
     private void ToggleDebugLogging_Click(object? sender, RoutedEventArgs e)
     {

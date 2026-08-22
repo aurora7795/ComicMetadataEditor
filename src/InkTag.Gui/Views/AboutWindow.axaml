@@ -5,37 +5,36 @@
         Width="520" Height="310"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
-        RequestedThemeVariant="Dark"
-        Background="#1E1E1E">
+        Background="{DynamicResource AppBackgroundBrush}">
   <Grid RowDefinitions="*, Auto" Margin="25">
     <StackPanel Orientation="Horizontal" Spacing="20" Grid.Row="0">
       <Image Source="avares://InkTag.Gui/Assets/inktag.png" Width="84" Height="84" VerticalAlignment="Top"/>
       <StackPanel Spacing="6" VerticalAlignment="Top">
-        <TextBlock Text="InkTag Desktop" FontSize="22" FontWeight="Bold" Foreground="White"/>
+        <TextBlock Text="InkTag Desktop" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
         <StackPanel Orientation="Horizontal" Spacing="8">
-          <TextBlock x:Name="VersionTextBlock" Text="Version 0.11.1" FontSize="13" Foreground="#4EC9B0" FontWeight="SemiBold" VerticalAlignment="Center"/>
-          <TextBlock Text="•" Foreground="#666666" FontSize="11" VerticalAlignment="Center"/>
+          <TextBlock x:Name="VersionTextBlock" Text="Version 0.12.0" FontSize="13" Foreground="#4EC9B0" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <TextBlock Text="•" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11" VerticalAlignment="Center"/>
           <Button Content="GitHub Repository" Click="OpenGitHubRepoClick" Classes="linkButton" FontSize="12" VerticalAlignment="Center"/>
         </StackPanel>
 
         <TextBlock Text="Bulk ComicInfo.xml metadata editor, CLI &amp; MCP tool suite." 
-                   TextWrapping="Wrap" FontSize="12" Foreground="#D4D4D4" Margin="0,4,0,0"/>
+                   TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource AppTextSecondaryBrush}" Margin="0,4,0,0"/>
 
-        <TextBlock Text="Created by Martin Bradford Gago" FontSize="12" FontWeight="SemiBold" Foreground="#E6E6E6" Margin="0,10,0,0"/>
-        <TextBlock Text="Developed with Google Antigravity" FontSize="11" Foreground="#808080" Margin="0,1,0,0"/>
+        <TextBlock Text="Created by Martin Bradford Gago" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}" Margin="0,10,0,0"/>
+        <TextBlock Text="Developed with Google Antigravity" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}" Margin="0,1,0,0"/>
 
         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,12,0,0">
           <Button Content="Licensed under MIT" Click="OpenLicenseClick" Classes="linkButton" FontSize="11"/>
-          <TextBlock Text="•" Foreground="#666666" FontSize="11"/>
+          <TextBlock Text="•" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11"/>
           <Button Content="View Contributors" Click="OpenContributorsClick" Classes="linkButton" FontSize="11"/>
-          <TextBlock Text="•" Foreground="#666666" FontSize="11"/>
+          <TextBlock Text="•" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11"/>
           <Button Content="Third-Party Licenses" Click="OpenThirdPartyLicensesClick" Classes="linkButton" FontSize="11"/>
         </StackPanel>
       </StackPanel>
     </StackPanel>
 
     <Button Content="Close" Click="CloseClick" Grid.Row="1" HorizontalAlignment="Right" 
-            Padding="20,6" Background="#0E639C" Foreground="White" Width="90" HorizontalContentAlignment="Center"/>
+            Padding="20,6" Background="{DynamicResource AppAccentBrush}" Foreground="{DynamicResource AppAccentForegroundBrush}" Width="90" HorizontalContentAlignment="Center"/>
   </Grid>
 
   <Window.Styles>

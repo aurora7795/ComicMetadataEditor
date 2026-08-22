@@ -7,8 +7,16 @@ using InkTag.Core.Scrapers;
 
 namespace InkTag.Core.Configuration;
 
+public enum AppThemeMode
+{
+    System = 0,
+    Dark = 1,
+    Light = 2
+}
+
 public class AppSettings
 {
+    public AppThemeMode ThemeMode { get; set; } = AppThemeMode.System;
     public string ComicVineApiKey { get; set; } = string.Empty;
     public ScrapeMergeMode DefaultMergeMode { get; set; } = ScrapeMergeMode.FillMissingOnly;
     public double AutoMatchConfidenceThreshold { get; set; } = 0.85;

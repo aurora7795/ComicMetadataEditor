@@ -60,6 +60,40 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isInspectorVisible = true;
 
     [ObservableProperty]
+    private InkTag.Core.Configuration.AppThemeMode _currentThemeMode = InkTag.Core.Configuration.AppThemeMode.System;
+
+    public bool IsThemeSystem => CurrentThemeMode == InkTag.Core.Configuration.AppThemeMode.System;
+    public bool IsThemeDark => CurrentThemeMode == InkTag.Core.Configuration.AppThemeMode.Dark;
+    public bool IsThemeLight => CurrentThemeMode == InkTag.Core.Configuration.AppThemeMode.Light;
+
+    public void SetTheme(InkTag.Core.Configuration.AppThemeMode mode)
+    {
+        CurrentThemeMode = mode;
+        OnPropertyChanged(nameof(IsThemeSystem));
+        OnPropertyChanged(nameof(IsThemeDark));
+        OnPropertyChanged(nameof(IsThemeLight));
+
+        App.ApplyTheme(mode);
+
+        var settingsService = new InkTag.Core.Configuration.AppSettingsService();
+        var settings = settingsService.Settings;
+        if (settings.ThemeMode != mode)
+        {
+            settings.ThemeMode = mode;
+            settingsService.SaveSettings(settings);
+        }
+    }
+
+    public void RefreshThemeFromSettings()
+    {
+        var settingsService = new InkTag.Core.Configuration.AppSettingsService();
+        CurrentThemeMode = settingsService.Settings.ThemeMode;
+        OnPropertyChanged(nameof(IsThemeSystem));
+        OnPropertyChanged(nameof(IsThemeDark));
+        OnPropertyChanged(nameof(IsThemeLight));
+    }
+
+    [ObservableProperty]
     private ObservableCollection<ComicItemViewModel> _comics = new();
 
     public ObservableCollection<ComicItemViewModel> DisplayedComics { get; } = new();
@@ -177,6 +211,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         Comics.CollectionChanged += OnComicsCollectionChanged;
         BulkEditRules.Add(new BulkEditRuleViewModel());
+        RefreshThemeFromSettings();
     }
 
     public void UpdateCounts()

@@ -4,19 +4,20 @@
         Title="Save Errors Summary"
         Width="600" Height="400"
         WindowStartupLocation="CenterOwner"
-        RequestedThemeVariant="Dark">
+        Background="{DynamicResource AppBackgroundBrush}">
   <Grid RowDefinitions="Auto, *, Auto" Margin="20">
-    <TextBlock Text="The following errors occurred while saving:" FontWeight="Bold" FontSize="16" Grid.Row="0" Margin="0,0,0,10"/>
-    <ListBox Name="ErrorsListBox" Grid.Row="1" Background="#1E1E1E">
+    <TextBlock Text="The following errors occurred while saving:" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource AppTextPrimaryBrush}" Grid.Row="0" Margin="0,0,0,10"/>
+    <ListBox Name="ErrorsListBox" Grid.Row="1" Background="{DynamicResource AppInputBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
       <ListBox.ItemTemplate>
         <DataTemplate>
           <StackPanel Margin="5">
-            <TextBlock Text="{Binding Path}" FontWeight="Bold" Foreground="Red" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding Message}" FontSize="12" Foreground="Gray" TextWrapping="Wrap" Margin="10,2,0,0"/>
+            <TextBlock Text="{Binding Path}" FontWeight="Bold" Foreground="#E06C75" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding Message}" FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap" Margin="10,2,0,0"/>
           </StackPanel>
         </DataTemplate>
       </ListBox.ItemTemplate>
     </ListBox>
-    <Button Content="Close" Click="CloseClick" Grid.Row="2" HorizontalAlignment="Right" Width="80" Margin="0,15,0,0"/>
+    <Button Content="Close" Click="CloseClick" Grid.Row="2" HorizontalAlignment="Right" Width="80" Margin="0,15,0,0"
+            Background="{DynamicResource AppAccentBrush}" Foreground="{DynamicResource AppAccentForegroundBrush}"/>
   </Grid>
 </Window>

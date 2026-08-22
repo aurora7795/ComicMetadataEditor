@@ -6,13 +6,13 @@
         Title="Bulk Auto-Tag &amp; Cover Identification Queue - InkTag"
         Width="1100" Height="680"
         WindowStartupLocation="CenterOwner"
-        Background="#1E1E1E" Foreground="White">
+        Background="{DynamicResource AppBackgroundBrush}">
 
   <Border Padding="16">
     <Grid RowDefinitions="Auto, *, Auto">
       
       <!-- Top Control & Status Dashboard -->
-      <Border Grid.Row="0" Background="#252526" CornerRadius="6" Padding="14" Margin="0,0,0,12" BorderBrush="#333338" BorderThickness="1">
+      <Border Grid.Row="0" Background="{DynamicResource AppCardBrush}" CornerRadius="6" Padding="14" Margin="0,0,0,12" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
         <Grid RowDefinitions="Auto, Auto">
           
           <!-- Summary Metrics & Actions Bar -->
@@ -20,10 +20,10 @@
             
             <!-- Metric Chips -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-              <Border Background="#2D2D30" CornerRadius="4" Padding="10,6">
+              <Border Background="{DynamicResource AppButtonSecondaryBrush}" CornerRadius="4" Padding="10,6">
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                  <TextBlock Text="Total:" Foreground="#AAAAAA" FontSize="12"/>
-                  <TextBlock Text="{Binding TotalCount}" FontWeight="Bold" Foreground="White" FontSize="12"/>
+                  <TextBlock Text="Total:" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="12"/>
+                  <TextBlock Text="{Binding TotalCount}" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}" FontSize="12"/>
                 </StackPanel>
               </Border>
 
@@ -41,42 +41,42 @@
                 </StackPanel>
               </Border>
 
-              <Border Background="#2D2D30" CornerRadius="4" Padding="10,6">
+              <Border Background="{DynamicResource AppButtonSecondaryBrush}" CornerRadius="4" Padding="10,6">
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                  <TextBlock Text="⚪ Unmatched:" Foreground="#888888" FontSize="12"/>
-                  <TextBlock Text="{Binding UnmatchedCount}" FontWeight="Bold" Foreground="#888888" FontSize="12"/>
+                  <TextBlock Text="⚪ Unmatched:" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="12"/>
+                  <TextBlock Text="{Binding UnmatchedCount}" FontWeight="Bold" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="12"/>
                 </StackPanel>
               </Border>
             </StackPanel>
 
-            <!-- Merge Mode Selector -->
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,16,0">
-              <TextBlock Text="Merge Mode:" VerticalAlignment="Center" Foreground="#AAAAAA" FontSize="12"/>
-              <ComboBox SelectedIndex="{Binding SelectedMergeModeIndex}" Width="170" IsEnabled="{Binding CanChangeSelection}">
+            <!-- Mode & Process Controls -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0,0,0">
+              <TextBlock Text="Overwrite Mode:" VerticalAlignment="Center" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="12"/>
+              <ComboBox SelectedIndex="{Binding SelectedMergeModeIndex}" IsEnabled="{Binding CanStart}" Width="170">
                 <ComboBoxItem Content="Fill Missing Only"/>
                 <ComboBoxItem Content="Overwrite All Fields"/>
               </ComboBox>
             </StackPanel>
 
-            <!-- Start / Cancel Buttons -->
             <Button Name="StartQueueButton" Grid.Column="3" Content="▶ Start Bulk Auto-Tag" Click="StartQueue_Click"
-                    IsEnabled="{Binding CanStart}" Background="#007ACC" Foreground="White" FontWeight="Bold" Padding="14,8" CornerRadius="4" Margin="0,0,8,0"/>
+                    IsEnabled="{Binding CanStart}" Background="{DynamicResource AppAccentBrush}" Foreground="{DynamicResource AppAccentForegroundBrush}" FontWeight="Bold" Padding="14,8" CornerRadius="4" Margin="12,0,8,0"/>
+
             <Button Name="CancelQueueButton" Grid.Column="4" Content="⏹ Cancel" Click="CancelQueue_Click"
                     IsEnabled="{Binding IsRunning}" Background="#A80000" Foreground="White" Padding="12,8" CornerRadius="4"/>
           </Grid>
 
-          <!-- Progress Bar & Status Text -->
+          <!-- Progress Bar & Status Line -->
           <Grid Grid.Row="1" RowDefinitions="Auto, Auto" Margin="0,12,0,0">
             <ProgressBar Grid.Row="0" Minimum="0" Maximum="100" Value="{Binding ProgressPercentage}" Height="6" CornerRadius="3"
-                         Foreground="#007ACC" Background="#333338" Margin="0,0,0,6"/>
-            <TextBlock Grid.Row="1" Text="{Binding ProgressStatus}" Foreground="#AAAAAA" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                         Foreground="{DynamicResource AppAccentBrush}" Background="{DynamicResource AppBorderBrush}" Margin="0,0,0,6"/>
+            <TextBlock Grid.Row="1" Text="{Binding ProgressStatus}" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
           </Grid>
 
-          <!-- Success Completion Banner -->
+          <!-- Batch Completion Banner -->
           <Border Grid.Row="2" Background="#123B22" BorderBrush="#107C41" BorderThickness="1" CornerRadius="4"
-                  Padding="12,8" Margin="0,12,0,0" IsVisible="{Binding IsSuccessBannerVisible}">
+                  Padding="10,6" Margin="0,6,0,0" IsVisible="{Binding IsSuccessBannerVisible}">
             <Grid ColumnDefinitions="*, Auto">
-              <TextBlock Text="{Binding SuccessBannerMessage}" Foreground="#4EC9B0" FontWeight="SemiBold" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="0" Text="{Binding SuccessBannerMessage}" Foreground="#4EC9B0" FontWeight="SemiBold" VerticalAlignment="Center"/>
               <Button Grid.Column="1" Content="✓ Return to Grid" Click="Close_Click" Padding="12,5" Background="#107C41" Foreground="White" CornerRadius="3"/>
             </Grid>
           </Border>
@@ -85,11 +85,11 @@
       </Border>
 
       <!-- Main Queue DataGrid -->
-      <Border Grid.Row="1" Background="#252526" CornerRadius="6" Padding="6" BorderBrush="#333338" BorderThickness="1">
+      <Border Grid.Row="1" Background="{DynamicResource AppCardBrush}" CornerRadius="6" Padding="6" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
         <DataGrid Name="QueueDataGrid" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
                   SelectionMode="Extended" AutoGenerateColumns="False" CanUserResizeColumns="True" CanUserSortColumns="True"
-                  GridLinesVisibility="Horizontal" HeadersVisibility="Column" Background="#1E1E1E"
-                  BorderBrush="#3F3F46" BorderThickness="1" KeyDown="QueueDataGrid_KeyDown">
+                  GridLinesVisibility="Horizontal" HeadersVisibility="Column" Background="{DynamicResource AppDataGridBackgroundBrush}"
+                  BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" KeyDown="QueueDataGrid_KeyDown">
 
           <DataGrid.ContextMenu>
             <ContextMenu>
@@ -107,10 +107,22 @@
           <DataGrid.Columns>
             
             <!-- Checkbox Selection -->
-            <DataGridTemplateColumn Header="Include" Width="70">
+            <DataGridTemplateColumn Header="Include" Width="65">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
                   <CheckBox IsChecked="{Binding IsSelected}" Click="ItemCheckBox_Click" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!-- Status Badge Column -->
+            <DataGridTemplateColumn Header="Status" Width="110">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
+                  <Border Background="{Binding StatusBadgeBackground}" CornerRadius="3" Padding="6,3"
+                          HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+                  </Border>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
@@ -119,17 +131,17 @@
             <DataGridTemplateColumn Header="Local Cover" Width="90">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
-                  <Border Width="40" Height="58" Background="#181818" CornerRadius="3" ClipToBounds="True" Margin="4"
+                  <Border Width="40" Height="58" Background="{DynamicResource AppInputBackgroundBrush}" CornerRadius="3" ClipToBounds="True" Margin="4"
                           HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip.ShowDelay="100">
                     <ToolTip.Tip>
-                      <Border Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="4" Padding="6" MaxWidth="280">
+                      <Border Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" MaxWidth="280">
                         <StackPanel Spacing="6">
                           <Image Source="{Binding LocalThumbnail}" Height="320" Stretch="Uniform"
                                  IsVisible="{Binding LocalThumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                           <TextBlock Text="No Cover Extracted" Foreground="Gray" HorizontalAlignment="Center"
                                      IsVisible="{Binding LocalThumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
-                          <TextBlock Text="{Binding Filename}" Foreground="White" FontSize="11" TextWrapping="Wrap"/>
-                          <TextBlock Text="{Binding StatusMessage}" Foreground="#AAAAAA" FontSize="10"/>
+                          <TextBlock Text="{Binding Filename}" Foreground="{DynamicResource AppTextPrimaryBrush}" FontSize="11" TextWrapping="Wrap"/>
+                          <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="10"/>
                         </StackPanel>
                       </Border>
                     </ToolTip.Tip>
@@ -144,69 +156,71 @@
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
                   <StackPanel VerticalAlignment="Center" Margin="8,0">
-                    <TextBlock Text="{Binding Filename}" FontWeight="SemiBold" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Filename}" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
                     <TextBlock Text="{Binding ParsedQueryText}" FontSize="11" Foreground="#569CD6" Margin="0,2,0,0"/>
                   </StackPanel>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
 
-            <!-- Matched Cover Thumbnail -->
-            <DataGridTemplateColumn Header="Online Cover" Width="90">
+            <!-- Matched ComicVine Series & Issue Title -->
+            <DataGridTemplateColumn Header="ComicVine Match" Width="1.4*">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
-                  <Border Width="40" Height="58" Background="#181818" CornerRadius="3" ClipToBounds="True" Margin="4"
+                  <StackPanel VerticalAlignment="Center" Margin="8,0">
+                    <TextBlock Text="{Binding MatchedSeriesName}" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding MatchedIssueTitle}" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                  </StackPanel>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!-- Remote ComicVine Cover Thumbnail -->
+            <DataGridTemplateColumn Header="Remote Cover" Width="90">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
+                  <Border Width="40" Height="58" Background="{DynamicResource AppInputBackgroundBrush}" CornerRadius="3" ClipToBounds="True" Margin="4"
                           HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip.ShowDelay="100">
                     <ToolTip.Tip>
-                      <Border Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="4" Padding="6" MaxWidth="280">
+                      <Border Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" MaxWidth="280">
                         <StackPanel Spacing="6">
-                          <Image Source="{Binding MatchedThumbnail}" Height="320" Stretch="Uniform"
-                                 IsVisible="{Binding MatchedThumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                          <TextBlock Text="No Online Cover" Foreground="Gray" HorizontalAlignment="Center"
-                                     IsVisible="{Binding MatchedThumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
-                          <TextBlock Text="{Binding MatchedTitle}" Foreground="White" FontSize="11" FontWeight="Bold" TextWrapping="Wrap"/>
-                          <TextBlock Text="{Binding MatchedIssueTitle}" Foreground="#CCCCCC" FontSize="11" TextWrapping="Wrap"/>
+                          <Image Source="{Binding RemoteThumbnail}" Height="320" Stretch="Uniform"
+                                 IsVisible="{Binding RemoteThumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                          <TextBlock Text="No Cover" Foreground="Gray" HorizontalAlignment="Center"
+                                     IsVisible="{Binding RemoteThumbnail, Converter={x:Static ObjectConverters.IsNull}}"/>
+                          <TextBlock Text="{Binding MatchedSeriesName}" Foreground="{DynamicResource AppTextPrimaryBrush}" FontSize="11" TextWrapping="Wrap"/>
+                          <TextBlock Text="{Binding MatchedIssueTitle}" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="10"/>
                         </StackPanel>
                       </Border>
                     </ToolTip.Tip>
-                    <Image Source="{Binding MatchedThumbnail}" Stretch="UniformToFill"/>
+                    <Image Source="{Binding RemoteThumbnail}" Stretch="UniformToFill"/>
                   </Border>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
 
-            <!-- Matched Issue Result -->
-            <DataGridTemplateColumn Header="Matched ComicVine Issue" Width="*">
+            <!-- Match Confidence Meter -->
+            <DataGridTemplateColumn Header="Confidence" Width="100">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
-                  <StackPanel VerticalAlignment="Center" Margin="8,0">
-                    <TextBlock Text="{Binding MatchedTitle}" FontWeight="SemiBold" Foreground="#4EC9B0" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding MatchedIssueTitle}" FontSize="11" Foreground="#AAAAAA" Margin="0,2,0,0"
-                               IsVisible="{Binding MatchedIssueTitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                  <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{Binding ConfidencePercentage}" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{Binding ConfidenceColor}" HorizontalAlignment="Center"/>
+                    <ProgressBar Value="{Binding ConfidenceScore}" Minimum="0" Maximum="1" Height="3" Width="60"
+                                 Foreground="{Binding ConfidenceColor}" Background="{DynamicResource AppBorderBrush}"
+                                 IsVisible="{Binding HasMatch}"/>
                   </StackPanel>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
 
             <!-- Visual Similarity Badge -->
-            <DataGridTemplateColumn Header="Visual Match" Width="110">
+            <DataGridTemplateColumn Header="Cover Match" Width="95">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
-                  <Border Background="{Binding VisualBadgeBackground}" CornerRadius="10" Padding="8,3"
-                          HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding VisualSimilarityBadge}" FontSize="11" FontWeight="Medium" Foreground="White"/>
-                  </Border>
-                </DataTemplate>
-              </DataGridTemplateColumn.CellTemplate>
-            </DataGridTemplateColumn>
-
-            <!-- Status Badge -->
-            <DataGridTemplateColumn Header="Status" Width="120">
-              <DataGridTemplateColumn.CellTemplate>
-                <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
-                  <Border Background="{Binding StatusBadgeBackground}" CornerRadius="10" Padding="8,3"
-                          HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip.Tip="{Binding StatusMessage}">
-                    <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="Medium" Foreground="White"/>
+                  <Border Background="{Binding VisualBadgeBackground}" CornerRadius="3" Padding="6,2"
+                          HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding HasVisualScore}">
+                    <TextBlock Text="{Binding VisualScorePercentage}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
                   </Border>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
@@ -217,7 +231,7 @@
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
                   <Button Content="Tweak..." Click="ChangeMatch_Click" Padding="8,4" CornerRadius="4"
-                          Background="#333338" Foreground="#CDD6F4" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                          Background="{DynamicResource AppButtonBackgroundBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
@@ -227,7 +241,7 @@
       </Border>
 
       <!-- Bottom Confirmation Actions Bar -->
-      <Border Grid.Row="2" Background="#252526" CornerRadius="6" Padding="12,10" Margin="0,12,0,0" BorderBrush="#333338" BorderThickness="1">
+      <Border Grid.Row="2" Background="{DynamicResource AppCardBrush}" CornerRadius="6" Padding="12,10" Margin="0,12,0,0" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
         <Grid ColumnDefinitions="Auto, Auto, Auto, *, Auto, Auto">
           
           <CheckBox Grid.Column="0" Content="Select / Deselect All" IsChecked="{Binding SelectAll}" VerticalAlignment="Center"/>
@@ -237,12 +251,12 @@
 
           <ComboBox Grid.Column="2" ItemsSource="{Binding RenameTemplates}" SelectedIndex="{Binding SelectedRenameTemplateIndex}"
                     IsVisible="{Binding AlsoRenameFiles}" VerticalAlignment="Center" MaxWidth="280"
-                    Background="#1E1E1E" Foreground="White" BorderBrush="#3F3F46" Margin="0,0,10,0"/>
+                    Background="{DynamicResource AppInputBackgroundBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" BorderBrush="{DynamicResource AppInputBorderBrush}" Margin="0,0,10,0"/>
 
           <Button Name="ApplyButton" Grid.Column="4" Content="{Binding ApplyButtonText}" Click="ApplyMatched_Click"
                   IsEnabled="{Binding CanApply}" Background="{Binding ApplyButtonBackground}" Foreground="White" FontWeight="Bold" Padding="16,9" CornerRadius="4" Margin="0,0,10,0"/>
 
-          <Button Grid.Column="5" Content="Close" Click="Close_Click" Padding="14,9" CornerRadius="4" Background="#3A3A3C" Foreground="White"/>
+          <Button Grid.Column="5" Content="Close" Click="Close_Click" Padding="14,9" CornerRadius="4" Background="{DynamicResource AppButtonBackgroundBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
         </Grid>
       </Border>
 

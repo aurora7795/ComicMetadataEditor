@@ -5,20 +5,19 @@
         Width="520" Height="240"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
-        RequestedThemeVariant="Dark"
-        Background="#1E1E1E" Foreground="White">
+        Background="{DynamicResource AppBackgroundBrush}">
 
   <Grid RowDefinitions="*, Auto" Margin="22">
     <StackPanel Orientation="Horizontal" Spacing="18" Grid.Row="0" VerticalAlignment="Top">
       <TextBlock Text="🔑" FontSize="36" VerticalAlignment="Top" Margin="0,4,0,0"/>
       <StackPanel Spacing="8" VerticalAlignment="Top">
-        <TextBlock Text="ComicVine API Key Required" FontSize="17" FontWeight="Bold" Foreground="White"/>
+        <TextBlock Text="ComicVine API Key Required" FontSize="17" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
         
         <TextBlock Text="You have not specified a ComicVine API key. An API key is required to search and scrape comic metadata." 
-                   TextWrapping="Wrap" FontSize="13" Foreground="#D4D4D4" LineHeight="18"/>
+                   TextWrapping="Wrap" FontSize="13" Foreground="{DynamicResource AppTextSecondaryBrush}" LineHeight="18"/>
 
         <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,6,0,0">
-          <TextBlock Text="Acquire a free API key at:" FontSize="12" Foreground="#A0A0A0" VerticalAlignment="Center"/>
+          <TextBlock Text="Acquire a free API key at:" FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" VerticalAlignment="Center"/>
           <Button Content="https://comicvine.gamespot.com/api/" Click="OpenApiUrl_Click" Classes="linkButton" FontSize="12" VerticalAlignment="Center"/>
         </StackPanel>
       </StackPanel>
@@ -26,9 +25,9 @@
 
     <!-- Action Buttons -->
     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,15,0,0">
-      <Button Content="Get API Key" Click="OpenApiUrl_Click" Padding="14,6" Background="#2D2D30" Foreground="#569CD6"/>
-      <Button Content="Open Settings" Click="OpenSettings_Click" Padding="14,6" Background="#007ACC" Foreground="White" FontWeight="SemiBold"/>
-      <Button Content="Close" Click="Close_Click" Padding="14,6" Background="#3E3E42" Foreground="White"/>
+      <Button Content="Get API Key" Click="OpenApiUrl_Click" Padding="14,6" Background="{DynamicResource AppButtonBackgroundBrush}" Foreground="#569CD6"/>
+      <Button Content="Open Settings" Click="OpenSettings_Click" Padding="14,6" Background="{DynamicResource AppAccentBrush}" Foreground="{DynamicResource AppAccentForegroundBrush}" FontWeight="SemiBold"/>
+      <Button Content="Close" Click="Close_Click" Padding="14,6" Background="{DynamicResource AppButtonBackgroundBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
     </StackPanel>
   </Grid>
 

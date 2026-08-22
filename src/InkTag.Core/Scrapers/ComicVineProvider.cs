@@ -589,7 +589,7 @@ public class ComicVineProvider : IMetadataScraperProvider
         return $"Tagged with InkTag {version} using info from Comic Vine on {timestamp}. [Issue ID {issueId.Trim()}]{volStr}";
     }
 
-    public static string CleanString(string input) => Regex.Replace(input, @"[^\w\s]", "").Trim();
+    public static string CleanString(string input) => Regex.Replace(Regex.Replace(input, @"[^\w\s]", " "), @"\s+", " ").Trim();
     public static string NormalizeIssueNumber(string input) => Regex.Replace(input, @"^[^\d]+", "").TrimStart('0');
 
     private static string StripHtml(string html)

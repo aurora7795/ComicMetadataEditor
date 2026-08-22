@@ -5,54 +5,53 @@
         Width="520" Height="420"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
-        RequestedThemeVariant="Dark"
-        Background="#1E1E1E">
+        Background="{DynamicResource AppBackgroundBrush}">
   <Grid RowDefinitions="Auto, *, Auto" Margin="20">
-    <TextBlock Text="Third-Party Open Source Licenses" FontSize="16" FontWeight="Bold" Foreground="White" Grid.Row="0" Margin="0,0,0,15"/>
+    <TextBlock Text="Third-Party Open Source Licenses" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}" Grid.Row="0" Margin="0,0,0,15"/>
 
     <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
       <StackPanel Spacing="16" Margin="0,0,10,0">
-        <Border Background="#252526" Padding="12" CornerRadius="4">
+        <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="12" CornerRadius="4">
           <StackPanel Spacing="4">
             <TextBlock Text="Avalonia UI" FontWeight="Bold" Foreground="#4EC9B0"/>
-            <TextBlock Text="License: MIT License" FontSize="12" Foreground="#D4D4D4"/>
-            <TextBlock Text="Copyright (c) AvaloniaUI Foundation and Contributors" FontSize="11" Foreground="#808080"/>
+            <TextBlock Text="License: MIT License" FontSize="12" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+            <TextBlock Text="Copyright (c) AvaloniaUI Foundation and Contributors" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}"/>
             <TextBlock Text="https://github.com/AvaloniaUI/Avalonia" FontSize="11" Foreground="#569CD6"/>
           </StackPanel>
         </Border>
 
-        <Border Background="#252526" Padding="12" CornerRadius="4">
+        <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="12" CornerRadius="4">
           <StackPanel Spacing="4">
             <TextBlock Text="SharpCompress" FontWeight="Bold" Foreground="#4EC9B0"/>
-            <TextBlock Text="License: MIT License" FontSize="12" Foreground="#D4D4D4"/>
-            <TextBlock Text="Copyright (c) 2014 Adam Hathcock" FontSize="11" Foreground="#808080"/>
+            <TextBlock Text="License: MIT License" FontSize="12" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+            <TextBlock Text="Copyright (c) 2014 Adam Hathcock" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}"/>
             <TextBlock Text="https://github.com/adamhathcock/sharpcompress" FontSize="11" Foreground="#569CD6"/>
           </StackPanel>
         </Border>
 
-        <Border Background="#252526" Padding="12" CornerRadius="4">
+        <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="12" CornerRadius="4">
           <StackPanel Spacing="4">
             <TextBlock Text="Velopack" FontWeight="Bold" Foreground="#4EC9B0"/>
-            <TextBlock Text="License: MIT License" FontSize="12" Foreground="#D4D4D4"/>
-            <TextBlock Text="Copyright (c) Clowd LLC and Contributors" FontSize="11" Foreground="#808080"/>
+            <TextBlock Text="License: MIT License" FontSize="12" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+            <TextBlock Text="Copyright (c) Clowd LLC and Contributors" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}"/>
             <TextBlock Text="https://github.com/velopack/velopack" FontSize="11" Foreground="#569CD6"/>
           </StackPanel>
         </Border>
 
-        <Border Background="#252526" Padding="12" CornerRadius="4">
+        <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="12" CornerRadius="4">
           <StackPanel Spacing="4">
             <TextBlock Text="CommunityToolkit.Mvvm" FontWeight="Bold" Foreground="#4EC9B0"/>
-            <TextBlock Text="License: MIT License" FontSize="12" Foreground="#D4D4D4"/>
-            <TextBlock Text="Copyright (c) .NET Foundation and Contributors" FontSize="11" Foreground="#808080"/>
+            <TextBlock Text="License: MIT License" FontSize="12" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+            <TextBlock Text="Copyright (c) .NET Foundation and Contributors" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}"/>
             <TextBlock Text="https://github.com/CommunityToolkit/dotnet" FontSize="11" Foreground="#569CD6"/>
           </StackPanel>
         </Border>
 
-        <Border Background="#252526" Padding="12" CornerRadius="4">
+        <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="12" CornerRadius="4">
           <StackPanel Spacing="4">
             <TextBlock Text="SkiaSharp" FontWeight="Bold" Foreground="#4EC9B0"/>
-            <TextBlock Text="License: MIT License" FontSize="12" Foreground="#D4D4D4"/>
-            <TextBlock Text="Copyright (c) Microsoft Corporation" FontSize="11" Foreground="#808080"/>
+            <TextBlock Text="License: MIT License" FontSize="12" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+            <TextBlock Text="Copyright (c) Microsoft Corporation" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}"/>
             <TextBlock Text="https://github.com/mono/SkiaSharp" FontSize="11" Foreground="#569CD6"/>
           </StackPanel>
         </Border>
@@ -60,6 +59,6 @@
     </ScrollViewer>
 
     <Button Content="Close" Click="CloseClick" Grid.Row="2" HorizontalAlignment="Right" Margin="0,15,0,0"
-            Padding="20,6" Background="#0E639C" Foreground="White" Width="90" HorizontalContentAlignment="Center"/>
+            Padding="20,6" Background="{DynamicResource AppAccentBrush}" Foreground="{DynamicResource AppAccentForegroundBrush}" Width="90" HorizontalContentAlignment="Center"/>
   </Grid>
 </Window>

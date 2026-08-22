@@ -5,7 +5,7 @@
         Width="680" Height="640"
         WindowStartupLocation="CenterOwner"
         CanResize="True"
-        Background="#1E1E1E" Foreground="White">
+        Background="{DynamicResource AppBackgroundBrush}">
 
   <Border Padding="20">
     <Grid RowDefinitions="Auto, *, Auto">
@@ -13,7 +13,7 @@
       <!-- Window Title -->
       <StackPanel Grid.Row="0" Margin="0,0,0,12" Spacing="4">
         <TextBlock Text="⚙️ InkTag Configuration" FontSize="18" FontWeight="Bold" Foreground="#3592FF"/>
-        <TextBlock Text="Configure scrapers, media servers, automated tagging, and application diagnostics." FontSize="12" Foreground="#888888"/>
+        <TextBlock Text="Configure theme appearance, scrapers, media servers, automated tagging, and application diagnostics." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}"/>
       </StackPanel>
 
       <!-- Tabbed Content -->
@@ -24,11 +24,24 @@
           <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
             <StackPanel Spacing="12" Margin="0,0,10,0">
               
-              <!-- Merge Policy Card -->
-              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+              <!-- Appearance & Theme Card -->
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                 <StackPanel Spacing="8">
-                  <TextBlock Text="Scraper Merge Policy" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
-                  <TextBlock Text="Controls whether scraping fills in empty tags only or overwrites all existing metadata." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <TextBlock Text="Appearance &amp; Theme" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                  <TextBlock Text="Choose application appearance theme mode: Light, Dark, or automatically adapt to System OS preferences." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap"/>
+                  <ComboBox Name="ThemeModeComboBox" HorizontalAlignment="Stretch" Margin="0,4,0,0" SelectionChanged="ThemeModeComboBox_SelectionChanged">
+                    <ComboBoxItem Content="System Default (Follow OS Theme)"/>
+                    <ComboBoxItem Content="Dark Mode"/>
+                    <ComboBoxItem Content="Light Mode"/>
+                  </ComboBox>
+                </StackPanel>
+              </Border>
+
+              <!-- Merge Policy Card -->
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Scraper Merge Policy" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                  <TextBlock Text="Controls whether scraping fills in empty tags only or overwrites all existing metadata." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap"/>
                   <ComboBox Name="MergePolicyComboBox" HorizontalAlignment="Stretch" Margin="0,4,0,0">
                     <ComboBoxItem Content="Fill Missing Only (Preserve Existing Edits)"/>
                     <ComboBoxItem Content="Overwrite All Fields"/>
@@ -37,24 +50,24 @@
               </Border>
 
               <!-- Auto-Rename Card -->
-              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                 <StackPanel Spacing="8">
-                  <TextBlock Text="File Auto-Renaming" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
-                  <TextBlock Text="Template format used when automatically renaming comic files based on metadata." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <TextBlock Text="File Auto-Renaming" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                  <TextBlock Text="Template format used when automatically renaming comic files based on metadata." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap"/>
                   <CheckBox Name="BulkAutoRenameCheckBox" Content="Automatically rename files after bulk scraping" Margin="0,2,0,0"/>
                   <StackPanel Spacing="4" Margin="0,4,0,0">
-                    <TextBlock Text="Filename Template:" FontSize="12" Foreground="#AAAAAA"/>
+                    <TextBlock Text="Filename Template:" FontSize="12" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                     <TextBox Name="RenameTemplateTextBox" Watermark="{}{Series} #{Number:3} ({Year})"/>
-                    <TextBlock Text="Available tokens: {Series}, {Number}, {Number:3}, {Year}, {Volume}, {Publisher}, {Title}" FontSize="11" Foreground="#666666"/>
+                    <TextBlock Text="Available tokens: {Series}, {Number}, {Number:3}, {Year}, {Volume}, {Publisher}, {Title}" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}"/>
                   </StackPanel>
                 </StackPanel>
               </Border>
 
               <!-- Legacy Archive Metadata Card -->
-              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                 <StackPanel Spacing="8">
-                  <TextBlock Text="Legacy ComicBookInfo (CBI) Ingestion" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
-                  <TextBlock Text="When reading legacy archives containing ComicBookInfo ZIP comments, upgrade to modern ComicInfo.xml schema." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <TextBlock Text="Legacy ComicBookInfo (CBI) Ingestion" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                  <TextBlock Text="When reading legacy archives containing ComicBookInfo ZIP comments, upgrade to modern ComicInfo.xml schema." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap"/>
                   <CheckBox Name="ClearLegacyZipCommentsCheckBox" Content="Clear legacy ZIP archive comments when upgrading to ComicInfo.xml" IsChecked="True" Margin="0,2,0,0"/>
                 </StackPanel>
               </Border>
@@ -69,40 +82,40 @@
             <StackPanel Spacing="12" Margin="0,0,10,0">
               
               <!-- ComicVine API Card -->
-              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                 <StackPanel Spacing="8">
-                  <TextBlock Text="ComicVine API Integration" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
-                  <TextBlock Text="Required for online issue searching, creator credits, character lists, and volume info." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <TextBlock Text="ComicVine API Integration" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                  <TextBlock Text="Required for online issue searching, creator credits, character lists, and volume info." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap"/>
                   <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
                     <TextBox Name="ApiKeyTextBox" Grid.Column="0" PasswordChar="•" Watermark="Enter your ComicVine API key..."/>
-                    <Button Grid.Column="1" Content="Test Key" Click="TestApiKey_Click" Padding="14,6" Background="#2D2D30" Margin="8,0,0,0"/>
+                    <Button Grid.Column="1" Content="Test Key" Click="TestApiKey_Click" Padding="14,6" Background="{DynamicResource AppButtonBackgroundBrush}" Margin="8,0,0,0"/>
                   </Grid>
                   <TextBlock Name="StatusTextBlock" Text="" FontSize="11" Foreground="Gray"/>
                   <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="Get a free key at" FontSize="11" Foreground="#888888" VerticalAlignment="Center"/>
+                    <TextBlock Text="Get a free key at" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}" VerticalAlignment="Center"/>
                     <Button Content="https://comicvine.gamespot.com/api/" Click="OpenApiUrl_Click" Classes="linkButton" FontSize="11" VerticalAlignment="Center"/>
                   </StackPanel>
                 </StackPanel>
               </Border>
 
               <!-- Visual Cover Matching Card -->
-              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                 <StackPanel Spacing="8">
-                  <TextBlock Text="Visual Cover Matching (Perceptual Hashing)" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
-                  <TextBlock Text="Compares cover artwork hashes against ComicVine cover images for automated issue matching." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <TextBlock Text="Visual Cover Matching (Perceptual Hashing)" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                  <TextBlock Text="Compares cover artwork hashes against ComicVine cover images for automated issue matching." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap"/>
                   <CheckBox Name="VisualMatchCheckBox" Content="Enable automated cover matching &amp; visual verification" IsChecked="True" Margin="0,2,0,0"/>
                   <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
-                    <TextBlock Grid.Column="0" Text="Visual Match Confidence Threshold (Default 90%):" VerticalAlignment="Center" Foreground="#AAAAAA" FontSize="12"/>
+                    <TextBlock Grid.Column="0" Text="Visual Match Confidence Threshold (Default 90%):" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="12"/>
                     <TextBox Name="VisualThresholdTextBox" Grid.Column="1" Text="90" Width="60" TextAlignment="Center"/>
                   </Grid>
                 </StackPanel>
               </Border>
 
               <!-- Tagging Attribution Notes Card -->
-              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                 <StackPanel Spacing="8">
-                  <TextBlock Text="Metadata Attribution Notes" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
-                  <TextBlock Text="Automatically add standardized tagging source notes with ComicVine Issue and Volume IDs to the Notes field." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <TextBlock Text="Metadata Attribution Notes" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                  <TextBlock Text="Automatically add standardized tagging source notes with ComicVine Issue and Volume IDs to the Notes field." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap"/>
                   <CheckBox Name="WriteTaggingAttributionCheckBox" Content="Add tagging attribution notes (with Issue &amp; Volume IDs) to Notes field" IsChecked="True" Margin="0,2,0,0"/>
                 </StackPanel>
               </Border>
@@ -117,27 +130,27 @@
             <StackPanel Spacing="12" Margin="0,0,10,0">
               
               <!-- Server Connection Card -->
-              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                 <StackPanel Spacing="8">
                   <TextBlock Text="Komga Media Server" FontWeight="SemiBold" FontSize="14" Foreground="#E5C07B"/>
-                  <TextBlock Text="Direct REST integration for targeted cache invalidation, collection syncing, and series management." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <TextBlock Text="Direct REST integration for targeted cache invalidation, collection syncing, and series management." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap"/>
                   
                   <StackPanel Spacing="4" Margin="0,4,0,0">
-                    <TextBlock Text="Server Base URL:" FontSize="12" Foreground="#AAAAAA"/>
+                    <TextBlock Text="Server Base URL:" FontSize="12" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                     <Grid ColumnDefinitions="*, Auto">
                       <TextBox Name="KomgaUrlTextBox" Grid.Column="0" Watermark="http://localhost:25600 or http://192.168.1.30:25600"/>
-                      <Button Grid.Column="1" Content="Test Server" Click="TestKomga_Click" Padding="14,6" Background="#2D2D30" Margin="8,0,0,0"/>
+                      <Button Grid.Column="1" Content="Test Server" Click="TestKomga_Click" Padding="14,6" Background="{DynamicResource AppButtonBackgroundBrush}" Margin="8,0,0,0"/>
                     </Grid>
                     <TextBlock Name="KomgaStatusTextBlock" Text="" FontSize="11" Foreground="Gray"/>
                   </StackPanel>
 
                   <Grid ColumnDefinitions="*, *" Margin="0,6,0,0">
                     <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,4,0">
-                      <TextBlock Text="API Key (Recommended):" FontSize="11" Foreground="#AAAAAA"/>
+                      <TextBlock Text="API Key (Recommended):" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                       <TextBox Name="KomgaApiKeyTextBox" PasswordChar="•" Watermark="Komga API Key..."/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="4" Margin="4,0,0,0">
-                      <TextBlock Text="Or User / Password:" FontSize="11" Foreground="#AAAAAA"/>
+                      <TextBlock Text="Or User / Password:" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                       <Grid ColumnDefinitions="*, *">
                         <TextBox Name="KomgaUserTextBox" Grid.Column="0" Watermark="email@komga.org" Margin="0,0,2,0"/>
                         <TextBox Name="KomgaPasswordTextBox" Grid.Column="1" PasswordChar="•" Watermark="Password" Margin="2,0,0,0"/>
@@ -148,26 +161,26 @@
               </Border>
 
               <!-- Automation Rules Card -->
-              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                 <StackPanel Spacing="8">
-                  <TextBlock Text="Synchronization Rules" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
+                  <TextBlock Text="Synchronization Rules" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
                   <CheckBox Name="KomgaAutoSyncCheckBox" Content="Auto-sync modified comics to Komga on save" Margin="0,2,0,0"/>
                   <CheckBox Name="KomgaStoryArcsCheckBox" Content="Automatically create &amp; sync Komga Collections from StoryArc tags" IsChecked="True"/>
                 </StackPanel>
               </Border>
 
               <!-- Path Mapping Card -->
-              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                 <StackPanel Spacing="8">
-                  <TextBlock Text="Docker &amp; NAS Path Prefix Mapping (Optional)" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
-                  <TextBlock Text="Translate local mount points to remote server paths if Komga runs in a Docker container or NAS." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <TextBlock Text="Docker &amp; NAS Path Prefix Mapping (Optional)" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                  <TextBlock Text="Translate local mount points to remote server paths if Komga runs in a Docker container or NAS." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap"/>
                   <Grid ColumnDefinitions="*, *" Margin="0,4,0,0">
                     <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,4,0">
-                      <TextBlock Text="Local Client Root:" FontSize="11" Foreground="#AAAAAA"/>
+                      <TextBlock Text="Local Client Root:" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                       <TextBox Name="KomgaLocalPrefixTextBox" Watermark="/Volumes/General/Comics/"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="4" Margin="4,0,0,0">
-                      <TextBlock Text="Komga Server Root:" FontSize="11" Foreground="#AAAAAA"/>
+                      <TextBlock Text="Komga Server Root:" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                       <TextBox Name="KomgaServerPrefixTextBox" Watermark="/data/Comics/"/>
                     </StackPanel>
                   </Grid>
@@ -184,36 +197,36 @@
             <StackPanel Spacing="12" Margin="0,0,10,0">
               
               <!-- Response Cache Card -->
-              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                 <StackPanel Spacing="8">
-                  <TextBlock Text="Scraper Response Cache" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
-                  <TextBlock Text="Caches ComicVine search queries and perceptual cover hashes to speed up queries and prevent API rate limits." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <TextBlock Text="Scraper Response Cache" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                  <TextBlock Text="Caches ComicVine search queries and perceptual cover hashes to speed up queries and prevent API rate limits." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap"/>
                   <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
-                    <TextBlock Grid.Column="0" Text="Cache file: ~/.cache/InkTag/scraper_cache.json" VerticalAlignment="Center" Foreground="#AAAAAA" FontSize="12"/>
-                    <Button Grid.Column="1" Content="Clear Cache" Click="ClearCache_Click" Padding="14,6" Background="#3E3E42"/>
+                    <TextBlock Grid.Column="0" Text="Cache file: ~/.cache/InkTag/scraper_cache.json" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="12"/>
+                    <Button Grid.Column="1" Content="Clear Cache" Click="ClearCache_Click" Padding="14,6" Background="{DynamicResource AppButtonBackgroundBrush}"/>
                   </Grid>
                   <TextBlock Name="CacheStatusTextBlock" Text="" FontSize="11" Foreground="Gray"/>
                 </StackPanel>
               </Border>
 
               <!-- Diagnostics & Logging Card -->
-              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                 <StackPanel Spacing="8">
-                  <TextBlock Text="Diagnostics &amp; System Logs" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
-                  <TextBlock Text="Verbose debug logging writes detailed seek timings, network status, and sync telemetry." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <TextBlock Text="Diagnostics &amp; System Logs" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                  <TextBlock Text="Verbose debug logging writes detailed seek timings, network status, and sync telemetry." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap"/>
                   <CheckBox Name="DebugLoggingCheckBox" Content="Enable Verbose / Debug Logging" Margin="0,2,0,0"/>
                   <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
-                    <TextBlock Grid.Column="0" Text="Application Log Directory:" VerticalAlignment="Center" Foreground="#AAAAAA" FontSize="12"/>
-                    <Button Grid.Column="1" Content="Open Logs Directory" Click="OpenLogsFolder_Click" Padding="14,6" Background="#2D2D30"/>
+                    <TextBlock Grid.Column="0" Text="Application Log Directory:" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="12"/>
+                    <Button Grid.Column="1" Content="Open Logs Directory" Click="OpenLogsFolder_Click" Padding="14,6" Background="{DynamicResource AppButtonBackgroundBrush}"/>
                   </Grid>
                 </StackPanel>
               </Border>
 
               <!-- Reset Settings Card -->
-              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                 <StackPanel Spacing="8">
                   <TextBlock Text="Reset Configuration" FontWeight="SemiBold" FontSize="14" Foreground="#E06C75"/>
-                  <TextBlock Text="Reset all settings to default values. API keys and server connection settings will be cleared." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <TextBlock Text="Reset all settings to default values. API keys and server connection settings will be cleared." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap"/>
                   <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
                     <TextBlock Name="ResetStatusTextBlock" Grid.Column="0" Text="" VerticalAlignment="Center" FontSize="11" Foreground="Gray"/>
                     <Button Grid.Column="1" Content="Reset to Defaults" Click="ResetDefaults_Click" Padding="14,6" Background="#4A2525" Foreground="#FF8888"/>
@@ -229,8 +242,8 @@
 
       <!-- Footer Buttons -->
       <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,15,0,0">
-        <Button Content="Cancel" Click="Cancel_Click" Padding="18,7" Background="#2D2D30"/>
-        <Button Content="Save Settings" Click="Save_Click" Padding="20,7" Background="#007ACC" Foreground="White" FontWeight="Bold"/>
+        <Button Content="Cancel" Click="Cancel_Click" Padding="18,7" Background="{DynamicResource AppButtonBackgroundBrush}"/>
+        <Button Content="Save Settings" Click="Save_Click" Padding="20,7" Background="{DynamicResource AppAccentBrush}" Foreground="{DynamicResource AppAccentForegroundBrush}" FontWeight="Bold"/>
       </StackPanel>
     </Grid>
   </Border>
@@ -243,7 +256,7 @@
       <Setter Property="FontSize" Value="13"/>
       <Setter Property="FontWeight" Value="Medium"/>
       <Setter Property="Padding" Value="14,8"/>
-      <Setter Property="Foreground" Value="#AAAAAA"/>
+      <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
     </Style>
     <Style Selector="TabItem:selected">
       <Setter Property="Foreground" Value="#3592FF"/>

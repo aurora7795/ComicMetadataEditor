@@ -142,7 +142,13 @@ public class BulkScrapeItemViewModel : ObservableObject
     public Bitmap? MatchedThumbnail
     {
         get => _matchedThumbnail;
-        set => SetProperty(ref _matchedThumbnail, value);
+        set
+        {
+            if (SetProperty(ref _matchedThumbnail, value))
+            {
+                OnPropertyChanged(nameof(RemoteThumbnail));
+            }
+        }
     }
 
     private ComicSearchResult? _lastLoadedCandidate;
@@ -156,14 +162,21 @@ public class BulkScrapeItemViewModel : ObservableObject
             _lastLoadedCandidate = value;
             Item.MatchedCandidate = value;
             OnPropertyChanged(nameof(MatchedCandidate));
+            OnPropertyChanged(nameof(HasMatch));
             OnPropertyChanged(nameof(MatchedSeriesAndIssue));
+            OnPropertyChanged(nameof(MatchedSeriesName));
             OnPropertyChanged(nameof(MatchedTitle));
             OnPropertyChanged(nameof(MatchedIssueTitle));
             OnPropertyChanged(nameof(VisualSimilarity));
             OnPropertyChanged(nameof(VisualSimilarityBadge));
+            OnPropertyChanged(nameof(VisualScorePercentage));
+            OnPropertyChanged(nameof(HasVisualScore));
             OnPropertyChanged(nameof(VisualMatchText));
             OnPropertyChanged(nameof(VisualBadgeBackground));
             OnPropertyChanged(nameof(ConfidenceBadge));
+            OnPropertyChanged(nameof(ConfidencePercentage));
+            OnPropertyChanged(nameof(ConfidenceScore));
+            OnPropertyChanged(nameof(ConfidenceColor));
             
             if (value != null)
             {
@@ -187,21 +200,38 @@ public class BulkScrapeItemViewModel : ObservableObject
         }
     }
 
+    public string MatchedSeriesName => MatchedSeriesAndIssue;
     public string MatchedTitle => MatchedSeriesAndIssue;
     public string MatchedIssueTitle => MatchedCandidate?.IssueTitle ?? string.Empty;
+    public Bitmap? RemoteThumbnail => MatchedThumbnail;
 
+    public bool HasMatch => MatchedCandidate != null;
     public double VisualSimilarity => MatchedCandidate?.VisualSimilarity ?? 0.0;
     public double MatchConfidence => MatchedCandidate?.MatchConfidence ?? 0.0;
+
+    public double ConfidenceScore => MatchConfidence;
+    public string ConfidencePercentage => MatchedCandidate != null ? $"{MatchConfidence:P0}" : "—";
+    public string ConfidenceBadge => MatchedCandidate != null ? $"{MatchConfidence:P0} Conf." : "—";
+
+    public IBrush ConfidenceColor
+    {
+        get
+        {
+            if (MatchedCandidate == null) return BrushDarkGray;
+            if (MatchConfidence >= 0.8) return BrushGreen;
+            if (MatchConfidence >= 0.5) return BrushAmber;
+            return BrushRed;
+        }
+    }
+
+    public bool HasVisualScore => MatchedCandidate?.VisualSimilarity.HasValue == true && MatchedCandidate.VisualSimilarity.Value > 0.01;
+    public string VisualScorePercentage => HasVisualScore ? $"{MatchedCandidate!.VisualSimilarity!.Value:P0}" : "—";
 
     public string VisualSimilarityBadge => (MatchedCandidate?.VisualSimilarity.HasValue == true && MatchedCandidate.VisualSimilarity.Value > 0)
         ? $"{MatchedCandidate.VisualSimilarity.Value:P0} Visual"
         : "—";
 
     public string VisualMatchText => VisualSimilarityBadge;
-
-    public string ConfidenceBadge => MatchedCandidate != null
-        ? $"{MatchedCandidate.MatchConfidence:P0} Conf."
-        : "—";
 
     public IBrush VisualBadgeBackground
     {

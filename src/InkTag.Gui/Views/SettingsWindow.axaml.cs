@@ -15,12 +15,17 @@ public partial class SettingsWindow : Window
 {
     private readonly AppSettingsService _settingsService;
     private static int _lastSelectedTabIndex = 0;
+    private readonly AppThemeMode _initialThemeMode;
+    private bool _isInitializing = true;
+    private bool _saved = false;
 
     public SettingsWindow()
     {
         InitializeComponent();
         _settingsService = new AppSettingsService();
+        _initialThemeMode = _settingsService.Settings.ThemeMode;
         LoadCurrentSettings();
+        _isInitializing = false;
 
         if (SettingsTabControl != null && _lastSelectedTabIndex >= 0 && _lastSelectedTabIndex < 4)
         {
@@ -36,11 +41,28 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void ThemeModeComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_isInitializing || ThemeModeComboBox == null || ThemeModeComboBox.SelectedIndex < 0) return;
+        var selectedMode = (AppThemeMode)ThemeModeComboBox.SelectedIndex;
+        App.ApplyTheme(selectedMode);
+    }
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        if (!_saved)
+        {
+            App.ApplyTheme(_initialThemeMode);
+        }
+        base.OnClosing(e);
+    }
+
     private void LoadCurrentSettings()
     {
         var settings = _settingsService.Settings;
         
         // General Tab
+        ThemeModeComboBox.SelectedIndex = (int)settings.ThemeMode;
         MergePolicyComboBox.SelectedIndex = settings.DefaultMergeMode == ScrapeMergeMode.OverwriteAll ? 1 : 0;
         BulkAutoRenameCheckBox.IsChecked = settings.BulkScrapeAutoRenameFiles;
         RenameTemplateTextBox.Text = !string.IsNullOrWhiteSpace(settings.BulkScrapeRenameTemplate) 
@@ -165,6 +187,14 @@ public partial class SettingsWindow : Window
         RenameTemplateTextBox.Text = defaults.BulkScrapeRenameTemplate;
         ClearLegacyZipCommentsCheckBox.IsChecked = defaults.ClearLegacyZipCommentsOnUpgrade;
 
+        // General
+        ThemeModeComboBox.SelectedIndex = (int)defaults.ThemeMode;
+        MergePolicyComboBox.SelectedIndex = defaults.DefaultMergeMode == ScrapeMergeMode.OverwriteAll ? 1 : 0;
+        BulkAutoRenameCheckBox.IsChecked = defaults.BulkScrapeAutoRenameFiles;
+        RenameTemplateTextBox.Text = defaults.BulkScrapeRenameTemplate;
+        ClearLegacyZipCommentsCheckBox.IsChecked = defaults.ClearLegacyZipCommentsOnUpgrade;
+
+        // Scraping
         ApiKeyTextBox.Text = defaults.ComicVineApiKey;
         VisualMatchCheckBox.IsChecked = defaults.AutoApplyOnVisualMatch;
         VisualThresholdTextBox.Text = ((int)(defaults.VisualMatchConfidenceThreshold * 100)).ToString();
@@ -190,6 +220,7 @@ public partial class SettingsWindow : Window
         var settings = _settingsService.Settings;
 
         // General
+        settings.ThemeMode = (AppThemeMode)(ThemeModeComboBox.SelectedIndex >= 0 ? ThemeModeComboBox.SelectedIndex : 0);
         settings.DefaultMergeMode = MergePolicyComboBox.SelectedIndex == 1 
             ? ScrapeMergeMode.OverwriteAll 
             : ScrapeMergeMode.FillMissingOnly;
@@ -231,7 +262,9 @@ public partial class SettingsWindow : Window
         // Diagnostics
         settings.EnableDebugLogging = DebugLoggingCheckBox.IsChecked == true;
 
+        _saved = true;
         _settingsService.SaveSettings(settings);
+        App.ApplyTheme(settings.ThemeMode);
         Close();
     }
 
@@ -242,6 +275,7 @@ public partial class SettingsWindow : Window
 
     private void Cancel_Click(object? sender, RoutedEventArgs e)
     {
+        App.ApplyTheme(_initialThemeMode);
         Close();
     }
 }

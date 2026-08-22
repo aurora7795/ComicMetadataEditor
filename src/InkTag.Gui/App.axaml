@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="InkTag.Gui.App"
              Name="InkTag Desktop"
-             RequestedThemeVariant="Dark">
+             RequestedThemeVariant="Default">
   <NativeMenu.Menu>
     <NativeMenu>
       <NativeMenuItem Header="About InkTag Desktop" Click="About_Click" />
@@ -10,8 +10,148 @@
       <NativeMenuItem Header="Settings..." Gesture="{OnPlatform 'Ctrl+,', macOS='Cmd+,'}" Click="Settings_Click" />
     </NativeMenu>
   </NativeMenu.Menu>
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <!-- Dark Theme Tokens -->
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#1E1E1E"/>
+          <SolidColorBrush x:Key="AppSurfaceBrush" Color="#252526"/>
+          <SolidColorBrush x:Key="AppCardBrush" Color="#252526"/>
+          <SolidColorBrush x:Key="AppHeaderBrush" Color="#2D2D30"/>
+          <SolidColorBrush x:Key="AppToolbarBrush" Color="#2D2D30"/>
+          <SolidColorBrush x:Key="AppBorderBrush" Color="#3F3F46"/>
+          <SolidColorBrush x:Key="AppCardBorderBrush" Color="#3F3F46"/>
+          <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#CCCCCC"/>
+          <SolidColorBrush x:Key="AppTextMutedBrush" Color="#888888"/>
+          <SolidColorBrush x:Key="AppInputBackgroundBrush" Color="#1E1E1E"/>
+          <SolidColorBrush x:Key="AppInputBorderBrush" Color="#3F3F46"/>
+          <SolidColorBrush x:Key="AppButtonBackgroundBrush" Color="#3E3E42"/>
+          <SolidColorBrush x:Key="AppButtonSecondaryBrush" Color="#202023"/>
+          <SolidColorBrush x:Key="AppButtonOutlineBackgroundBrush" Color="#252526"/>
+          <SolidColorBrush x:Key="AppButtonOutlineBorderBrush" Color="#3F3F46"/>
+          <SolidColorBrush x:Key="AppStatusBarBackgroundBrush" Color="#18181B"/>
+          <SolidColorBrush x:Key="AppStatusBarForegroundBrush" Color="#E2E8F0"/>
+          <SolidColorBrush x:Key="AppStatusBarMutedBrush" Color="#94A3B8"/>
+          <SolidColorBrush x:Key="AppStatusBarBorderBrush" Color="#27272A"/>
+          <SolidColorBrush x:Key="AppDataGridBackgroundBrush" Color="#1E1E1E"/>
+          <SolidColorBrush x:Key="AppDataGridGridLinesBrush" Color="#3F3F46"/>
+          <SolidColorBrush x:Key="AppDataGridRowAltBrush" Color="#252526"/>
+          <SolidColorBrush x:Key="AppDirtyRowBrush" Color="#1A3828"/>
+          <SolidColorBrush x:Key="AppDirtyRowTextBrush" Color="#4EC9B0"/>
+          <SolidColorBrush x:Key="AppAccentBrush" Color="#007ACC"/>
+          <SolidColorBrush x:Key="AppAccentForegroundBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="AppPillGroupBackgroundBrush" Color="#18181A"/>
+          <SolidColorBrush x:Key="AppPillActiveBrush" Color="#3F3F46"/>
+          <SolidColorBrush x:Key="AppPillActiveTextBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="AppPillInactiveBrush" Color="#00000000"/>
+          <SolidColorBrush x:Key="AppPillInactiveTextBrush" Color="#94A3B8"/>
+          <SolidColorBrush x:Key="AppOverlayBackdropBrush" Color="#90000000"/>
+        </ResourceDictionary>
+
+        <!-- Light Theme Tokens -->
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F3F3F7"/>
+          <SolidColorBrush x:Key="AppSurfaceBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="AppCardBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="AppHeaderBrush" Color="#ECECEF"/>
+          <SolidColorBrush x:Key="AppToolbarBrush" Color="#ECECEF"/>
+          <SolidColorBrush x:Key="AppBorderBrush" Color="#D1D1D6"/>
+          <SolidColorBrush x:Key="AppCardBorderBrush" Color="#E0E0E6"/>
+          <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#1C1C1E"/>
+          <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#3A3A3C"/>
+          <SolidColorBrush x:Key="AppTextMutedBrush" Color="#8E8E93"/>
+          <SolidColorBrush x:Key="AppInputBackgroundBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="AppInputBorderBrush" Color="#C6C6C8"/>
+          <SolidColorBrush x:Key="AppButtonBackgroundBrush" Color="#E5E5EA"/>
+          <SolidColorBrush x:Key="AppButtonSecondaryBrush" Color="#EFEFF4"/>
+          <SolidColorBrush x:Key="AppButtonOutlineBackgroundBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="AppButtonOutlineBorderBrush" Color="#D1D5DB"/>
+          <SolidColorBrush x:Key="AppStatusBarBackgroundBrush" Color="#F8FAFC"/>
+          <SolidColorBrush x:Key="AppStatusBarForegroundBrush" Color="#334155"/>
+          <SolidColorBrush x:Key="AppStatusBarMutedBrush" Color="#64748B"/>
+          <SolidColorBrush x:Key="AppStatusBarBorderBrush" Color="#E2E8F0"/>
+          <SolidColorBrush x:Key="AppDataGridBackgroundBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="AppDataGridGridLinesBrush" Color="#E5E5EA"/>
+          <SolidColorBrush x:Key="AppDataGridRowAltBrush" Color="#F8F8FA"/>
+          <SolidColorBrush x:Key="AppDirtyRowBrush" Color="#E6F4EA"/>
+          <SolidColorBrush x:Key="AppDirtyRowTextBrush" Color="#137333"/>
+          <SolidColorBrush x:Key="AppAccentBrush" Color="#007ACC"/>
+          <SolidColorBrush x:Key="AppAccentForegroundBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="AppPillGroupBackgroundBrush" Color="#EAEAEA"/>
+          <SolidColorBrush x:Key="AppPillActiveBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="AppPillActiveTextBrush" Color="#1E293B"/>
+          <SolidColorBrush x:Key="AppPillInactiveBrush" Color="#00000000"/>
+          <SolidColorBrush x:Key="AppPillInactiveTextBrush" Color="#64748B"/>
+          <SolidColorBrush x:Key="AppOverlayBackdropBrush" Color="#60000000"/>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
   <Application.Styles>
     <FluentTheme />
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
+
+    <!-- Neutral Outline Toolbar Button Style -->
+    <Style Selector="Button.outline">
+      <Setter Property="Background" Value="{DynamicResource AppButtonOutlineBackgroundBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource AppButtonOutlineBorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Padding" Value="10,5"/>
+    </Style>
+    <Style Selector="Button.outline:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AppButtonBackgroundBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+    </Style>
+
+    <!-- Neutral Outline ToggleButton Style -->
+    <Style Selector="ToggleButton.outline">
+      <Setter Property="Background" Value="{DynamicResource AppButtonOutlineBackgroundBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource AppButtonOutlineBorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Padding" Value="10,5"/>
+    </Style>
+    <Style Selector="ToggleButton.outline:checked /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AppButtonBackgroundBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
+      <Setter Property="TextBlock.Foreground" Value="{DynamicResource AppAccentBrush}"/>
+    </Style>
+
+    <!-- Segmented Filter RadioButton Style -->
+    <Style Selector="RadioButton.filterPill">
+      <Setter Property="Background" Value="{DynamicResource AppPillInactiveBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource AppPillInactiveTextBrush}"/>
+      <Setter Property="Padding" Value="10,4"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Template">
+        <ControlTemplate TargetType="RadioButton">
+          <Border Name="PillBorder"
+                  Background="{TemplateBinding Background}"
+                  CornerRadius="{TemplateBinding CornerRadius}"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"/>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="RadioButton.filterPill:checked">
+      <Setter Property="Background" Value="{DynamicResource AppPillActiveBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource AppPillActiveTextBrush}"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="RadioButton.filterPill:pointerover">
+      <Setter Property="Opacity" Value="0.9"/>
+    </Style>
   </Application.Styles>
 </Application>
