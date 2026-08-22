@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.12.1] - 2026-08-22
+
 ### Added
 - **Batch-Level Transaction Rollbacks**:
   - Assigns a unique `BatchJobId` (e.g. `batch_20260822_123456_a4f910`) to multi-file operations across Core, GUI, and MCP.
