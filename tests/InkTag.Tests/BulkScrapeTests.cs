@@ -376,4 +376,65 @@ public class BulkScrapeTests
             }
         }
     }
+
+    [Fact]
+    public void BulkScrapeItemViewModel_GeneratesInformativeTooltipsAndBadges()
+    {
+        var item = new BulkScrapeQueueItem
+        {
+            FilePath = "C:\\Comics\\The Avengers #063 (1969).cbz",
+            ParsedQuery = new ComicSearchQuery
+            {
+                Series = "The Avengers",
+                IssueNumber = "63",
+                Year = 1969
+            },
+            LocalCoverBytes = new byte[] { 1, 2, 3 },
+            LocalCoverHash = 0xAAAAAAAAAAAAAAAAUL
+        };
+
+        var candidate = new ComicSearchResult
+        {
+            SeriesTitle = "The Avengers",
+            IssueNumber = "63",
+            VolumeStartYear = 1963,
+            VisualSimilarity = 0.94,
+            MatchConfidence = 0.95
+        };
+
+        var vm = new InkTag.Gui.ViewModels.BulkScrapeItemViewModel(item);
+        vm.MatchedCandidate = candidate;
+
+        Assert.Equal("94%", vm.VisualMatchLabel);
+        Assert.Contains("94%", vm.VisualMatchTooltip);
+        Assert.Contains("The Avengers", vm.ConfidenceTooltip);
+        Assert.Contains("#63", vm.ConfidenceTooltip);
+        Assert.Contains("94%", vm.ConfidenceTooltip);
+        Assert.Contains("Volume Start: 1963", vm.ConfidenceTooltip);
+    }
+
+    [Fact]
+    public void BulkScrapeItemViewModel_HandlesTextOnlyAndNoCoverGracefully()
+    {
+        var itemNoCover = new BulkScrapeQueueItem
+        {
+            FilePath = "C:\\Comics\\The Avengers #048.cbz",
+            ParsedQuery = new ComicSearchQuery { Series = "The Avengers", IssueNumber = "48" },
+            LocalCoverBytes = Array.Empty<byte>(),
+            LocalCoverHash = 0
+        };
+
+        var candidate = new ComicSearchResult
+        {
+            SeriesTitle = "The Avengers",
+            IssueNumber = "48",
+            MatchConfidence = 0.90
+        };
+
+        var vm = new InkTag.Gui.ViewModels.BulkScrapeItemViewModel(itemNoCover);
+        vm.MatchedCandidate = candidate;
+
+        Assert.Equal("No Local Cover", vm.VisualMatchLabel);
+        Assert.Contains("Local comic archive does not contain a readable cover", vm.VisualMatchTooltip);
+    }
 }

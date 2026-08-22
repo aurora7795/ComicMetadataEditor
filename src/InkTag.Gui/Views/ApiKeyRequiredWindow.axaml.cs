@@ -44,7 +44,7 @@ public partial class ApiKeyRequiredWindow : Window
 
     private async void OpenSettings_Click(object? sender, RoutedEventArgs e)
     {
-        var settingsWindow = new SettingsWindow();
+        var settingsWindow = new SettingsWindow(initialTabIndex: 1, focusApiKey: true);
         await settingsWindow.ShowDialog(this);
 
         var settingsService = new AppSettingsService();

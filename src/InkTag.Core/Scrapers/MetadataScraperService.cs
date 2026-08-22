@@ -57,10 +57,11 @@ public class MetadataScraperService
                 
                 if (matchingVolume != null)
                 {
-                    var volumeIssues = await _provider.FetchSeriesIssuesAsync(matchingVolume.VolumeId, apiKey, 1, 50, query, ct);
+                    var volumeIssues = (await _provider.FetchSeriesIssuesAsync(matchingVolume.VolumeId, apiKey, 1, 50, query, ct)).ToList();
                     var seenIds = new HashSet<string>(globalResults.Select(r => r.IssueId));
                     foreach (var vIssue in volumeIssues)
                     {
+                        vIssue.VolumeStartYear = matchingVolume.StartYear;
                         if (seenIds.Add(vIssue.IssueId))
                         {
                             globalResults.Add(vIssue);

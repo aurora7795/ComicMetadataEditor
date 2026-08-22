@@ -36,6 +36,9 @@ public class ComicSearchResult
     // Confidence score calculated during search (0.0 to 1.0)
     public double MatchConfidence { get; set; }
 
+    // Start year of the volume series if resolved through volume search
+    public int? VolumeStartYear { get; set; }
+
     // Perceptual dHash fingerprint (64-bit)
     public ulong? CoverHash { get; set; }
 

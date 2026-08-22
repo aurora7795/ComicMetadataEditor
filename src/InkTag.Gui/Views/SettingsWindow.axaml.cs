@@ -19,7 +19,11 @@ public partial class SettingsWindow : Window
     private bool _isInitializing = true;
     private bool _saved = false;
 
-    public SettingsWindow()
+    public SettingsWindow() : this(-1, false)
+    {
+    }
+
+    public SettingsWindow(int initialTabIndex, bool focusApiKey = false)
     {
         InitializeComponent();
         _settingsService = new AppSettingsService();
@@ -27,9 +31,23 @@ public partial class SettingsWindow : Window
         LoadCurrentSettings();
         _isInitializing = false;
 
-        if (SettingsTabControl != null && _lastSelectedTabIndex >= 0 && _lastSelectedTabIndex < 4)
+        int targetIndex = initialTabIndex >= 0 ? initialTabIndex : _lastSelectedTabIndex;
+        if (SettingsTabControl != null && targetIndex >= 0 && targetIndex < 4)
         {
-            SettingsTabControl.SelectedIndex = _lastSelectedTabIndex;
+            SettingsTabControl.SelectedIndex = targetIndex;
+            _lastSelectedTabIndex = targetIndex;
+        }
+
+        if (focusApiKey)
+        {
+            Opened += (s, e) =>
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    ApiKeyTextBox?.Focus();
+                    ApiKeyTextBox?.SelectAll();
+                });
+            };
         }
     }
 

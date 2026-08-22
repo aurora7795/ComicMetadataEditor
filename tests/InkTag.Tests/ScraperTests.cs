@@ -695,6 +695,27 @@ public class ScraperTests
         }
     }
 
+    [Fact]
+    public void ComicVineProvider_AllowsVolumeLifespanYearWithoutPenalty()
+    {
+        var candidateFromVolume1963 = new ComicSearchResult
+        {
+            SeriesTitle = "The Avengers",
+            IssueNumber = "63",
+            VolumeStartYear = 1963
+        };
+
+        var target1969Query = new ComicSearchQuery
+        {
+            Series = "The Avengers",
+            IssueNumber = "63",
+            Year = 1969
+        };
+
+        double confidence = ComicVineProvider.CalculateConfidence(candidateFromVolume1963, target1969Query, null);
+        Assert.True(confidence >= 0.95, $"Expected confidence >= 0.95 for issue 1969 in volume 1963, got {confidence}");
+    }
+
     private class CustomMockHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> _handler;
