@@ -86,22 +86,100 @@ Because pre-built `.dmg` releases are open-source:
 ## 🤖 AI Agent & MCP Integration
 
 ### 1. Model Context Protocol (MCP) Server
-Run the MCP server (powered by the official **`ModelContextProtocol` C# SDK** `v2.1.0`) to expose comic metadata tools directly to AI assistants:
+InkTag includes a high-performance, official **`ModelContextProtocol` C# SDK** (`v2.1.0`) server that connects AI assistants directly to your comic library for automated cataloging, auditing, visual verification, and Komga sync.
 
-```bash
-dotnet run --project src/InkTag.Mcp/InkTag.Mcp.csproj
+#### 🚀 Quick-Start Configuration
+Add the configuration block below to your AI client (**OpenClaw**, **Claude Desktop**, **Cursor**, **Windsurf**, **Cline**, or **Antigravity**):
+
+<details open>
+<summary><b>🍏 macOS (Bundled with InkTag.app)</b></summary>
+
+```json
+{
+  "mcpServers": {
+    "inktag": {
+      "command": "/Applications/InkTag.app/Contents/MacOS/InkTag.Mcp",
+      "args": [],
+      "env": {
+        "COMICVINE_API_KEY": "YOUR_COMICVINE_API_KEY",
+        "INKTAG_ALLOWED_ROOT_PATHS": "/Volumes/General/Comics:/Users/YOUR_USERNAME/Comics"
+      }
+    }
+  }
+}
 ```
+</details>
 
-**Exposed MCP Tools:**
-* `scrape_comic_metadata`: Scrape and apply ComicVine metadata with visual cover match verification and confidence metrics.
-* `bulk_scrape_directory`: Automated parallel queue to scrape and cover-match whole directories of comics.
-* `rename_comic_files`: Batch rename comic files based on metadata using configurable naming templates with collision protection.
-* `search_comic_vine`: Search ComicVine candidate issues with confidence scores and thumbnail URLs.
-* `read_comic_metadata`: Read XML metadata from archive as structured JSON.
-* `update_comic_metadata`: Apply JSON property edits (with optional `dryRun`).
-* `extract_cover_image`: Extract cover image (optionally returns base64 for vision LLMs).
-* `scan_comics`: Scan directory for files missing specific metadata fields.
-* `get_comic_schema`: Get JSON Schema for `ComicInfo`.
+<details>
+<summary><b>🪟 Windows (Standalone MCP Download)</b></summary>
+
+```json
+{
+  "mcpServers": {
+    "inktag": {
+      "command": "C:\\Tools\\InkTag.Mcp.exe",
+      "args": [],
+      "env": {
+        "COMICVINE_API_KEY": "YOUR_COMICVINE_API_KEY",
+        "INKTAG_ALLOWED_ROOT_PATHS": "D:\\Comics;C:\\Users\\YOUR_USERNAME\\Comics"
+      }
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><b>🐧 Linux (Standalone Tarball or Source)</b></summary>
+
+```json
+{
+  "mcpServers": {
+    "inktag": {
+      "command": "/usr/local/bin/InkTag.Mcp",
+      "args": [],
+      "env": {
+        "COMICVINE_API_KEY": "YOUR_COMICVINE_API_KEY",
+        "INKTAG_ALLOWED_ROOT_PATHS": "/media/comics:/home/YOUR_USERNAME/comics"
+      }
+    }
+  }
+}
+```
+*Or run directly from source:* `dotnet run --project src/InkTag.Mcp/InkTag.Mcp.csproj`
+</details>
+
+---
+
+#### 🔐 Environment Variables & Security Sandboxing
+
+| Variable | Required | Description |
+| :--- | :---: | :--- |
+| `INKTAG_ALLOWED_ROOT_PATHS` | **Recommended** | Restricts the AI agent to specific folders. Separate paths with `:` on macOS/Linux or `;` on Windows. |
+| `COMICVINE_API_KEY` | Optional | ComicVine API key. If omitted, falls back to the key stored in InkTag Desktop settings. |
+| `KOMGA_SERVER_URL` | Optional | Self-hosted Komga server URL (e.g. `http://192.168.1.30:25600`). |
+| `KOMGA_API_KEY` | Optional | Komga API Key for automated targeted analysis and collection synchronization. |
+
+---
+
+#### 🛠️ Available MCP Tools
+
+| Tool | Parameters | Description |
+| :--- | :--- | :--- |
+| **`read_comic_metadata`** | `filePath` | Extracts full metadata (`ComicInfo.xml` & legacy CBI) as clean JSON. |
+| **`update_comic_metadata`** | `filePath`, `metadataJson`, `dryRun` | Applies JSON metadata patches with validation against `ComicInfo.xsd`. |
+| **`extract_cover_image`** | `filePath`, `outputPath`, `returnBase64` | Extracts the cover page (supports base64 image return for LLM vision models). |
+| **`scan_comics`** | `directoryPath`, `missingFields`, `recursive` | Audits libraries for unorganized, untagged, or incomplete archives. |
+| **`search_comic_online`** | `series`, `issueNumber`, `year` | Searches ComicVine volumes and issues with thumbnail URLs and confidence scores. |
+| **`scrape_and_apply_metadata`** | `filePath`, `issueId`, `dryRun`, `mergeMode` | Scrapes ComicVine metadata, verifies cover perceptual hashes, and tags the archive. |
+| **`bulk_scrape_and_apply`** | `directoryPath`, `dryRun`, `mergeMode`, `recursive`, `autoRename` | Parallel identification queue with cover visual hashing and batch auto-tagging. |
+| **`rename_comics`** | `targetPath`, `template`, `dryRun`, `recursive` | Standardizes file names using configurable naming templates with duplicate protection. |
+| **`check_komga_server`** | *none* | Tests connectivity, version, and library roots on your Komga server. |
+| **`sync_komga_book_or_series`** | `filePath` | Performs targeted sub-second Komga cache invalidation and Collection synchronization. |
+| **`audit_komga_library`** | `libraryId` | Audits Komga series count, total books, and library path bindings. |
+| **`get_comic_schema`** | *none* | Returns the complete JSON schema for `ComicInfo` fields. |
+
+---
 
 ### 2. Structured Agentic CLI (`InkTag.Cli`)
 Run subcommands with `--json` for machine-parseable execution:
