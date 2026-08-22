@@ -9,30 +9,30 @@ This page outlines the MVVM framework and code blueprints for the `InkTag.Gui` p
 The desktop client follows the standard MVVM design pattern:
 
 * **Views**:
-  * `MainWindow.axaml`: Main workspace layout, top toolbar, spreadsheet DataGrid, resizable details/bulk sidebar, and status bar.
-  * `BulkScrapeQueueWindow.axaml`: Staged batch review queue displaying side-by-side local vs matched cover thumbnails, visual similarity % badges, live progress metrics, inline candidate tweaking, auto-rename toggle, completion banner, and duplicate-save protection.
+  * `MainWindow.axaml`: Main workspace layout, top toolbar with neutral outline action buttons, segmented filter pill selector, spreadsheet DataGrid with theme-aware dirty row highlights, resizable details/bulk sidebar, and framed neutral status bar.
+  * `BulkScrapeQueueWindow.axaml`: Staged batch review queue displaying side-by-side local vs matched cover thumbnails, colored status badges (`Saved`, `Matched`, `Review Needed`, `Error`), visual cover similarity badges (`94%`, `Text Only`, `No Local Cover`), structured confidence breakdown tooltips, inline candidate tweaking, auto-rename toggle, and batch archive updates.
   * `RenamePreviewWindow.axaml`: Live batch file renaming preview dialog with token template selection, collision warning badges, and single-click disk execution.
   * `SeriesSearchWizardWindow.axaml`: Search and interactive volume picker with publisher badges, aliases, descriptions, and dynamic visual match sorting (placing highest visual cover matches at the top).
   * `ScraperMatchWindow.axaml`: Candidate matcher with cover image previews, confidence scores, visual similarity ordering (highest visual match at the top), and conflict resolution.
-  * `ApiKeyRequiredWindow.axaml`: Modal prompt guiding users to configure their ComicVine API key.
-  * `SettingsWindow.axaml`: Application settings (ComicVine API key, caching, scraper thresholds).
+  * `ApiKeyRequiredWindow.axaml`: Modal prompt guiding users to configure their ComicVine API key, opening directly to the Scraping settings tab with auto-focus.
+  * `SettingsWindow.axaml`: 4-tab modern configuration window (`General`, `Scraping`, `Komga`, `Advanced`) with dynamic theme selection live-preview and targeted tab focus.
   * `AboutWindow.axaml`, `ThirdPartyLicensesWindow.axaml`, `ErrorSummaryWindow.axaml`, `PromptWindow.axaml`: Utility and diagnostic dialogs.
 * **ViewModels**:
-  * `MainWindowViewModel`: Main controller managing collection state, scanning, saving, bulk tools, and updates.
-  * `BulkScrapeQueueViewModel` & `BulkScrapeItemViewModel`: Bulk auto-tag queue orchestrator, managing background item progression, visual thumbnail loading, status badges, and batch archive updates.
+  * `MainWindowViewModel`: Main controller managing collection state, scanning, saving, bulk tools, Komga library synchronization, and updates.
+  * `BulkScrapeQueueViewModel` & `BulkScrapeItemViewModel`: Bulk auto-tag queue orchestrator, managing background item progression, visual thumbnail loading, `VisualMatchLabel`, `VisualMatchTooltip`, `ConfidenceTooltip`, and batch archive updates.
   * `RenamePreviewViewModel` & `RenameItemPreviewViewModel`: File rename preview manager with template presets, custom pattern testing, collision resolution, and batch disk execution.
   * `ComicItemViewModel`: File-level model wrapping `ComicInfo` with property validation and dirty tracking.
   * `SeriesSearchWizardViewModel` & `SeriesItemViewModel`: Series search query orchestrator and item representations.
   * `ScraperMatchViewModel` & `CandidateMatchViewModel` / `CandidateItemViewModel`: Issue matching, live perceptual dHash cover similarity calculation, and dynamic top-match re-ranking.
-  * `SettingsViewModel`: User preferences manager.
   * `BulkEditRuleViewModel`: Multi-rule batch modifier.
-* **Services**:
+* **Services & Styling**:
+  * `App.axaml`: Defines semantic `ThemeDictionaries` (`AppBackgroundBrush`, `AppCardBrush`, `AppSurfaceBrush`, `AppBorderBrush`, `AppTextPrimaryBrush`, `AppTextSecondaryBrush`, `AppTextMutedBrush`, `AppInputBackgroundBrush`, `AppAccentBrush`) supporting `System Default`, `Dark Mode`, and `Light Mode`.
   * `ComicScannerService`: Bounded parallel directory scanner (`Parallel.ForEachAsync` with 2–8 workers, real-time `ScanProgressReport` callbacks reporting active files and sizes, unseekable virtual mount detection, and microsecond cancellation).
   * `ArchiveCoverService`: Asynchronous thumbnail extractor with size-capped LRU bitmap cache.
   * `LruImageCache`: Thread-safe size-bounded (60-item) LRU bitmap cache with automatic `IDisposable.Dispose()` invocation for evicted web thumbnails in scraper/wizard ViewModels.
   * `UpdateService`: Dual-mode update manager (Velopack in-place + direct GitHub Releases API fallback) with thread-safe synchronized caching.
 * **Converters**:
-  * `IsDirtyToBrushConverter.cs`: Highlights rows/cells with unsaved changes.
+  * `IsDirtyToBrushConverter.cs`: Highlights rows with unsaved changes using theme-aware pastel mint (`#E6F4EA`) in Light Mode and deep emerald (`#1A3828`) in Dark Mode.
 
 ---
 

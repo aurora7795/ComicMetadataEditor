@@ -103,5 +103,47 @@ Auto-tags and applies metadata from ComicVine to a local comic archive with visu
 - **Parameters**:
   - `path` (string, required): Path to comic archive (.cbz / .cbr).
   - `mode` (string, optional): `"fill-missing"` (default) or `"overwrite"`.
-  - `dryRun` (boolean, optional): Previews updates without modifying files on disk.
+  - `dryRun` (boolean, optional): Previews updates without modifying files on disk (default: `true`).
   - `apiKey` (string, optional): Optional ComicVine API key override.
+
+#### 10. `list_metadata_backups`
+Lists all historical pre-write metadata backups stored for a specific comic archive or across the entire system.
+- **Parameters**:
+  - `path` (string, optional): Filter history to a specific comic file path.
+
+#### 11. `restore_comic_backup`
+Rolls back a comic archive's metadata to a previous timestamped snapshot from the local backup store.
+- **Parameters**:
+  - `path` (string, required): Path to the comic archive to restore.
+  - `timestamp` (string, required): Exact snapshot timestamp or ISO-8601 string to restore.
+
+#### 12. `list_batch_jobs`
+Lists all recorded multi-file batch operations (such as bulk auto-tags or directory updates) available for atomic rollback.
+- **Parameters**: None
+
+#### 13. `restore_batch_job`
+Atomically rolls back all comic archives modified in a multi-file batch job back to their exact pre-write snapshot states.
+- **Parameters**:
+  - `batchJobId` (string, required): Unique batch job identifier (e.g. `batch_20260822_123456_a4f910`).
+
+#### 14. `get_backup_provenance`
+Retrieves forensic provenance metadata for a specific backup snapshot, including pre-write source SHA-256 hash, 64-bit cover visual dHash, matched thumbnail URL, confidence score, and property diffs.
+- **Parameters**:
+  - `path` (string, required): Path to the comic archive.
+  - `timestamp` (string, required): Snapshot timestamp.
+
+---
+
+## 🛡️ MCP Security & Safety Defenses
+
+### 1. Strict Read-Only Mode (`INKTAG_MCP_READ_ONLY=true` / `--read-only`)
+When invoked with the `--read-only` command-line flag or when the `INKTAG_MCP_READ_ONLY=true` environment variable is set:
+- All mutating operations (`update_comic_metadata`, `rename_comic_files`, `scrape_comic_metadata`, `bulk_scrape_directory`, `restore_comic_backup`, `restore_batch_job`) are strictly disabled.
+- Any attempt by an AI agent to execute write operations immediately returns an `UnauthorizedAccessException` with descriptive guidance.
+- Read-only analysis and inspection tools remain fully accessible.
+
+### 2. Safe-by-Default Dry Runs
+All mutating MCP tools default to `dryRun = true`. AI agents must explicitly pass `dryRun = false` in tool invocations to commit changes to disk.
+
+### 3. Automated Pre-Write Disaster Recovery Backups
+Whenever a mutation occurs (`dryRun = false`), `MetadataBackupService` automatically takes an atomic snapshot of the pre-write `ComicInfo.xml`, computes source SHA-256 and cover dHash fingerprints, and records the change in `~/.local/share/InkTag/backups/manifest.json`.

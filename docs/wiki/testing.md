@@ -8,11 +8,26 @@ This page details the testing strategy and validation checklists for verifying t
 
 ### 1. Unit & Integration Test Suite (`InkTag.Tests`)
 * **Target Project**: `tests/InkTag.Tests/InkTag.Tests.csproj`
-* **Test Classes & Coverage (94 Tests)**:
+* **Test Classes & Coverage (177 Tests)**:
+  * **`McpSecurityAndBackupTests` & `BatchRollbackAndProvenanceTests`**:
+    * Automated pre-write `ComicInfo.xml` snapshot creation upon mutating tool invocation.
+    * Strict read-only mode (`INKTAG_MCP_READ_ONLY=true` / `--read-only`) preventing all file modifications.
+    * Atomic batch rollback (`RestoreBatchJob`) restoring all files modified in a multi-file batch.
+    * Forensic provenance extraction (source SHA-256, cover dHash, matched thumbnail URL, diffs).
+    * Snapshot retention management and manifest serialization.
+  * **`KomgaClientTests`**:
+    * REST API authentication and connectivity verification against self-hosted Komga servers.
+    * Series and book cache analysis, story arc to collections synchronization, and Docker/NAS path translation.
+  * **`ComicBookInfoParserTests`**:
+    * Parsing legacy ComicBookInfo JSON embedded in zip archive comments.
+    * Upgrading legacy CBI properties to ComicInfo.xml v2.1 schema tags.
+  * **`ThemeSettingsTests`**:
+    * Dynamic runtime theme switching (`AppThemeMode.System`, `Dark`, `Light`) without app restarts.
+    * Settings persistence and theme dictionary resolution.
   * **`BulkScrapeTests`**:
     * Queue initialization, filename parsing, and local cover extraction.
-    * Smart series volume grouping, volume StartYear matching, and candidate cover hashing.
-    * Candidate confidence ranking, issue number matching, and penalty calculations.
+    * Smart series volume grouping, volume lifespan year scoring, on-demand candidate thumbnail hashing for issues > #50.
+    * Candidate confidence ranking, issue number matching, and visual similarity badge / tooltip generation.
     * Metadata writing back to CBZ archives and auto-renaming archives on disk (`renameFiles: true`).
   * **`RenamingTests`**:
     * Standard template formatting, story title inclusion, numberless formatting, and decimal/fraction issue padding.
@@ -32,13 +47,16 @@ This page details the testing strategy and validation checklists for verifying t
     * Network share concurrency: `OpenReadOptimized` allowing concurrent reads during external open file locks.
     * Parallel directory scanning: index-preserved alphabetical sorting, real-time `IProgress` callbacks, and clean cancellation.
   * **`ScraperTests`**:
-    * `ImageHasher`: 64-bit dHash generation and Hamming distance computation.
-    * `ComicFilenameParser`: Smart extraction of series, volume, decimal issues, and years.
-    * `ComicVineProvider`: Volume search parsing, HTML entity decoding, description fallbacks, and publication edition aliases.
-    * ViewModels: Tooltip truncation triggers and API key required dialog flows.
+    * `PerceptualHashService`: 64-bit dHash generation and Hamming distance computation.
+    * `ComicFilenameParser`: Smart extraction of series, volume, decimal issues, years, and 2-level ancestor directory traversal.
+    * `ComicVineProvider`: Volume search parsing, HTML entity decoding, description fallbacks, volume lifespan scoring, and publication edition aliases.
+    * ViewModels: Tooltip formatting, status badge resolution, and API key required dialog flows.
   * **`AgentOperationsTests`**:
     * Top-level vs. recursive directory scanning (`ScanDirectory`) and missing metadata field detection.
     * Single-file and directory metadata updates (`UpdatePath`) with dry-run diff previews and live bulk editing.
+  * **`LruImageCacheTests` & `AppLoggerTests`**:
+    * LRU bitmap eviction and disposal of unneeded thumbnails.
+    * Thread-safe log writing and rotation.
   * **`UpdateServiceTests`**:
     * Version tag parsing (`TryParseVersion`) and dynamic `CurrentAppVersion` resolution from executing assembly metadata.
 
