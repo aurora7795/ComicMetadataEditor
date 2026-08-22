@@ -240,7 +240,7 @@
 
         <!-- Comic DataGrid Table -->
         <DataGrid Grid.Row="1" Name="ComicsGrid" ItemsSource="{Binding DisplayedComics}" SelectedItem="{Binding ActiveComic}" 
-                  SelectionMode="Extended" CanUserSortColumns="True"
+                  SelectionMode="Extended" CanUserSortColumns="True" CanUserResizeColumns="True"
                   Background="#1E1E1E" AutoGenerateColumns="False" 
                   BorderBrush="#3F3F46" BorderThickness="1"
                   GridLinesVisibility="All" HeadersVisibility="Column"
@@ -263,20 +263,20 @@
             </Style>
           </DataGrid.Styles>
           <DataGrid.Columns>
-            <DataGridCheckBoxColumn Header="Untagged" Binding="{Binding IsUntagged}" IsReadOnly="True" Width="80"/>
+            <DataGridCheckBoxColumn Header="Untagged" Binding="{Binding IsUntagged}" IsReadOnly="True" Width="85"/>
             <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" IsReadOnly="True" Width="200"/>
             <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="180"/>
             <DataGridTextColumn Header="Series" Binding="{Binding Series}" Width="160"/>
             <DataGridTextColumn Header="Issue #" Binding="{Binding Number}" Width="80"/>
-            <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="70"/>
+            <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="75"/>
             <DataGridTextColumn Header="Volume" Binding="{Binding Volume}" Width="80"/>
             <DataGridTextColumn Header="Publisher" Binding="{Binding Publisher}" Width="140"/>
             <DataGridTextColumn Header="Imprint" Binding="{Binding Imprint}" Width="120"/>
             <DataGridTextColumn Header="Series Group" Binding="{Binding SeriesGroup}" Width="140"/>
             <DataGridTextColumn Header="Story Arc" Binding="{Binding StoryArc}" Width="140"/>
-            <DataGridTextColumn Header="Year" Binding="{Binding Year}" Width="70"/>
-            <DataGridTextColumn Header="Month" Binding="{Binding Month}" Width="65"/>
-            <DataGridTextColumn Header="Day" Binding="{Binding Day}" Width="65"/>
+            <DataGridTextColumn Header="Year" Binding="{Binding Year}" Width="75"/>
+            <DataGridTextColumn Header="Month" Binding="{Binding Month}" Width="80"/>
+            <DataGridTextColumn Header="Day" Binding="{Binding Day}" Width="75"/>
             <DataGridTextColumn Header="Genre" Binding="{Binding Genre}" Width="120"/>
             <DataGridTextColumn Header="Tags" Binding="{Binding Tags}" Width="140"/>
             <DataGridTextColumn Header="Writer" Binding="{Binding Writer}" Width="140"/>

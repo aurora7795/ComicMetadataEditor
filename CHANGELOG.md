@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Interactive DataGrid Column Resizing**: Enabled user column width resizing on the main spreadsheet (`CanUserResizeColumns="True"`) and widened compact date columns (`Month`, `Day`, `Year`) to prevent header clipping.
 - **Modern Tabbed Settings Interface**: Re-architected the Settings dialog into 4 focused categories (`⚙️ General`, `🔍 Scraping`, `🌐 Komga Server`, and `🛠️ Diagnostics & Advanced`) using rounded card containers.
 - **Session Tab Persistence**: Settings window remembers the active tab across opens during the application session.
 - **Diagnostics & Log Utilities**: Added direct "Open Logs Directory" action and "Reset to Defaults" button in the Advanced settings tab.
