@@ -93,12 +93,13 @@ public class KomgaClient : IDisposable
         _httpClient.DefaultRequestHeaders.Remove("X-Requested-With");
         _httpClient.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
 
+        _httpClient.DefaultRequestHeaders.Remove("X-Auth-Token");
+        _httpClient.DefaultRequestHeaders.Authorization = null;
+
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
             string key = apiKey.Trim();
-            _httpClient.DefaultRequestHeaders.Remove("X-Auth-Token");
             _httpClient.DefaultRequestHeaders.Add("X-Auth-Token", key);
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", key);
         }
         else if (!string.IsNullOrWhiteSpace(user) && !string.IsNullOrWhiteSpace(password))
         {

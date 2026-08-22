@@ -69,7 +69,7 @@ public class KomgaClientTests
             Handler = req =>
             {
                 Assert.Equal("http://localhost:25600/api/v1/users/me", req.RequestUri?.ToString());
-                Assert.Equal("Bearer", req.Headers.Authorization?.Scheme ?? "Bearer");
+                Assert.True(req.Headers.Contains("X-Auth-Token"));
                 return new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent("{\"id\": \"user-1\", \"email\": \"admin@komga.org\"}", System.Text.Encoding.UTF8, "application/json")
