@@ -210,6 +210,19 @@ public class MetadataScraperService
             object? fetchedVal = prop.GetValue(fetched);
             if (fetchedVal == null) continue;
 
+            if (prop.Name == nameof(ComicInfo.Notes))
+            {
+                if (_settingsService.Settings.WriteTaggingAttributionToNotes && !string.IsNullOrWhiteSpace(fetched.Notes))
+                {
+                    prop.SetValue(target, MergeNotes(target.Notes, fetched.Notes));
+                }
+                else if (mode == ScrapeMergeMode.OverwriteAll)
+                {
+                    prop.SetValue(target, fetchedVal);
+                }
+                continue;
+            }
+
             object? targetVal = prop.GetValue(target);
 
             if (mode == ScrapeMergeMode.OverwriteAll || allowedFields != null)
@@ -224,6 +237,35 @@ public class MetadataScraperService
                 }
             }
         }
+    }
+
+    public static string MergeNotes(string? existingNotes, string newAttributionNote)
+    {
+        if (string.IsNullOrWhiteSpace(existingNotes))
+        {
+            return newAttributionNote;
+        }
+
+        var lines = existingNotes.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None).ToList();
+        bool replaced = false;
+
+        for (int i = 0; i < lines.Count; i++)
+        {
+            string trimmed = lines[i].TrimStart();
+            if (trimmed.StartsWith("Tagged with ", StringComparison.OrdinalIgnoreCase))
+            {
+                lines[i] = newAttributionNote;
+                replaced = true;
+                break;
+            }
+        }
+
+        if (!replaced)
+        {
+            lines.Add(newAttributionNote);
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     public static ComicSearchQuery ExtractQueryFromComicInfo(ComicInfo comic, string? filePath = null)

@@ -465,6 +465,8 @@ public class ComicVineProvider : IMetadataScraperProvider
             return comic;
         }
 
+        string issueId = res.TryGetProperty("id", out var idProp) ? idProp.ToString() : "";
+
         if (res.TryGetProperty("name", out var nameProp) && nameProp.ValueKind == JsonValueKind.String)
         {
             comic.Title = nameProp.GetString();
@@ -493,13 +495,20 @@ public class ComicVineProvider : IMetadataScraperProvider
             comic.Day = coverDate.Day;
         }
 
+        string? volumeId = null;
         if (res.TryGetProperty("volume", out var volObj) && volObj.ValueKind == JsonValueKind.Object)
         {
+            if (volObj.TryGetProperty("id", out var vId))
+            {
+                volumeId = vId.ToString();
+            }
             if (volObj.TryGetProperty("name", out var vName))
             {
                 comic.Series = vName.GetString();
             }
         }
+
+        comic.Notes = GenerateTaggingNote(issueId, volumeId);
 
         if (res.TryGetProperty("site_detail_url", out var urlProp) && urlProp.ValueKind == JsonValueKind.String)
         {
@@ -569,6 +578,15 @@ public class ComicVineProvider : IMetadataScraperProvider
         }
 
         return comic;
+    }
+
+    public static string GenerateTaggingNote(string issueId, string? volumeId = null)
+    {
+        var asmVer = typeof(ComicVineProvider).Assembly.GetName().Version;
+        string version = asmVer != null ? $"{asmVer.Major}.{asmVer.Minor}.{asmVer.Build}" : "0.11.0";
+        string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        string volStr = !string.IsNullOrWhiteSpace(volumeId) ? $" [Volume ID {volumeId.Trim()}]" : "";
+        return $"Tagged with InkTag {version} using info from Comic Vine on {timestamp}. [Issue ID {issueId.Trim()}]{volStr}";
     }
 
     public static string CleanString(string input) => Regex.Replace(input, @"[^\w\s]", "").Trim();

@@ -52,6 +52,7 @@ public partial class SettingsWindow : Window
         ApiKeyTextBox.Text = settings.ComicVineApiKey;
         VisualMatchCheckBox.IsChecked = settings.AutoApplyOnVisualMatch;
         VisualThresholdTextBox.Text = ((int)(settings.VisualMatchConfidenceThreshold * 100)).ToString();
+        WriteTaggingAttributionCheckBox.IsChecked = settings.WriteTaggingAttributionToNotes;
 
         // Komga Tab
         KomgaUrlTextBox.Text = settings.KomgaServerUrl;
@@ -167,6 +168,7 @@ public partial class SettingsWindow : Window
         ApiKeyTextBox.Text = defaults.ComicVineApiKey;
         VisualMatchCheckBox.IsChecked = defaults.AutoApplyOnVisualMatch;
         VisualThresholdTextBox.Text = ((int)(defaults.VisualMatchConfidenceThreshold * 100)).ToString();
+        WriteTaggingAttributionCheckBox.IsChecked = defaults.WriteTaggingAttributionToNotes;
 
         KomgaUrlTextBox.Text = defaults.KomgaServerUrl;
         KomgaApiKeyTextBox.Text = defaults.KomgaApiKey;
@@ -200,6 +202,7 @@ public partial class SettingsWindow : Window
         // Scraping
         settings.ComicVineApiKey = ApiKeyTextBox.Text?.Trim() ?? "";
         settings.AutoApplyOnVisualMatch = VisualMatchCheckBox.IsChecked == true;
+        settings.WriteTaggingAttributionToNotes = WriteTaggingAttributionCheckBox.IsChecked == true;
         if (double.TryParse(VisualThresholdTextBox.Text, out double thresh))
         {
             settings.VisualMatchConfidenceThreshold = Math.Clamp(thresh > 1 ? thresh / 100.0 : thresh, 0.50, 1.0);

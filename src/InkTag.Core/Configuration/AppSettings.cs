@@ -20,6 +20,7 @@ public class AppSettings
     public string BulkScrapeRenameTemplate { get; set; } = "{Series} #{Number:3} ({Year})";
     public List<string> AllowedRootPaths { get; set; } = new();
     public bool ClearLegacyZipCommentsOnUpgrade { get; set; } = true;
+    public bool WriteTaggingAttributionToNotes { get; set; } = true;
 
     // Komga Server Settings
     public string KomgaServerUrl { get; set; } = string.Empty;

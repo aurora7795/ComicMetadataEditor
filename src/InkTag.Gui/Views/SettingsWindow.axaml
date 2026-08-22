@@ -98,6 +98,15 @@
                 </StackPanel>
               </Border>
 
+              <!-- Tagging Attribution Notes Card -->
+              <Border Background="#252526" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Metadata Attribution Notes" FontWeight="SemiBold" FontSize="14" Foreground="#E0E0E0"/>
+                  <TextBlock Text="Automatically add standardized tagging source notes with ComicVine Issue and Volume IDs to the Notes field." FontSize="12" Foreground="#888888" TextWrapping="Wrap"/>
+                  <CheckBox Name="WriteTaggingAttributionCheckBox" Content="Add tagging attribution notes (with Issue &amp; Volume IDs) to Notes field" IsChecked="True" Margin="0,2,0,0"/>
+                </StackPanel>
+              </Border>
+
             </StackPanel>
           </ScrollViewer>
         </TabItem>

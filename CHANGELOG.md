@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Standardized Tagging Notes Attribution**: Automatically generate standard attribution notes in the `<Notes>` metadata field when scraping from ComicVine (`Tagged with InkTag <version> using info from Comic Vine on YYYY-MM-DD HH:MM:SS. [Issue ID <id>] [Volume ID <volId>]`). Smartly preserves user custom comments and previous notes, with a toggle in **Settings > Scraping**.
 - **Interactive DataGrid Column Resizing**: Enabled user column width resizing on the main spreadsheet (`CanUserResizeColumns="True"`) and widened compact date columns (`Month`, `Day`, `Year`) to prevent header clipping.
 - **Modern Tabbed Settings Interface**: Re-architected the Settings dialog into 4 focused categories (`⚙️ General`, `🔍 Scraping`, `🌐 Komga Server`, and `🛠️ Diagnostics & Advanced`) using rounded card containers.
 - **Session Tab Persistence**: Settings window remembers the active tab across opens during the application session.
