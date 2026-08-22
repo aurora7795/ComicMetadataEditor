@@ -72,7 +72,7 @@ public class KomgaClientTests
                 Assert.Equal("Bearer", req.Headers.Authorization?.Scheme ?? "Bearer");
                 return new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new StringContent("{\"id\": \"user-1\", \"email\": \"admin@komga.org\"}")
+                    Content = new StringContent("{\"id\": \"user-1\", \"email\": \"admin@komga.org\"}", System.Text.Encoding.UTF8, "application/json")
                 };
             }
         };

@@ -80,7 +80,12 @@ public class KomgaSyncService
                 string? seriesDir = Path.GetDirectoryName(filePath);
                 string seriesName = !string.IsNullOrWhiteSpace(comicInfo.Series) 
                     ? comicInfo.Series 
-                    : Path.GetFileName(seriesDir ?? string.Empty);
+                    : Parsing.ComicFilenameParser.Parse(filePath, inspectParentHierarchy: true).Series;
+
+                if (string.IsNullOrWhiteSpace(seriesName))
+                {
+                    seriesName = Path.GetFileName(seriesDir ?? string.Empty);
+                }
 
                 var series = await _client.FindSeriesByPathOrNameAsync(seriesDir ?? string.Empty, seriesName, mappings, ct);
                 if (series != null)
@@ -94,7 +99,7 @@ public class KomgaSyncService
                 }
                 else
                 {
-                    report.Failures.Add((filePath, "Book or Series not yet discovered by Komga."));
+                    report.Failures.Add((filePath, $"Book '{Path.GetFileName(filePath)}' or Series '{seriesName}' not found in Komga. Verify your Komga library roots or Path Mappings."));
                 }
             }
         }

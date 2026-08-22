@@ -38,22 +38,67 @@ public class KomgaClient : IDisposable
         string? password = null,
         HttpClient? httpClient = null)
     {
-        _serverUrl = (serverUrl ?? string.Empty).Trim().TrimEnd('/');
+        _serverUrl = CleanServerUrl(serverUrl);
         _ownsHttpClient = httpClient == null;
-        _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        _httpClient = httpClient ?? CreateDefaultHttpClient();
 
         ConfigureAuthentication(apiKey, user, password);
+    }
+
+    private static HttpClient CreateDefaultHttpClient()
+    {
+        var handler = new SocketsHttpHandler
+        {
+            AllowAutoRedirect = false,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+        };
+
+        return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(15) };
+    }
+
+    public static string CleanServerUrl(string rawUrl)
+    {
+        if (string.IsNullOrWhiteSpace(rawUrl)) return string.Empty;
+        rawUrl = rawUrl.Trim();
+
+        if (!rawUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !rawUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            rawUrl = "http://" + rawUrl;
+        }
+
+        if (Uri.TryCreate(rawUrl, UriKind.Absolute, out var uri))
+        {
+            string path = uri.AbsolutePath.TrimEnd('/');
+            // Strip common web UI suffixes if pasted directly from browser
+            while (path.EndsWith("/login", StringComparison.OrdinalIgnoreCase) ||
+                   path.EndsWith("/dashboard", StringComparison.OrdinalIgnoreCase) ||
+                   path.EndsWith("/opds", StringComparison.OrdinalIgnoreCase) ||
+                   path.EndsWith("/swagger", StringComparison.OrdinalIgnoreCase))
+            {
+                int idx = path.LastIndexOf('/');
+                path = idx > 0 ? path.Substring(0, idx) : "";
+            }
+
+            return $"{uri.Scheme}://{uri.Authority}{path}".TrimEnd('/');
+        }
+
+        return rawUrl.TrimEnd('/');
     }
 
     private void ConfigureAuthentication(string? apiKey, string? user, string? password)
     {
         _httpClient.DefaultRequestHeaders.Accept.Clear();
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _httpClient.DefaultRequestHeaders.Remove("X-Requested-With");
+        _httpClient.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
 
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
+            string key = apiKey.Trim();
             _httpClient.DefaultRequestHeaders.Remove("X-Auth-Token");
-            _httpClient.DefaultRequestHeaders.Add("X-Auth-Token", apiKey.Trim());
+            _httpClient.DefaultRequestHeaders.Add("X-Auth-Token", key);
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", key);
         }
         else if (!string.IsNullOrWhiteSpace(user) && !string.IsNullOrWhiteSpace(password))
         {
@@ -72,22 +117,38 @@ public class KomgaClient : IDisposable
         {
             string endpoint = $"{_serverUrl}/api/v1/users/me";
             using var response = await _httpClient.GetAsync(endpoint, ct);
+
             if (response.IsSuccessStatusCode)
             {
-                AppLogger.LogInfo("[KomgaClient] Successfully authenticated with Komga server.");
-                return true;
+                string? mediaType = response.Content.Headers.ContentType?.MediaType;
+                if (mediaType == null || !mediaType.Contains("html", StringComparison.OrdinalIgnoreCase))
+                {
+                    AppLogger.LogInfo($"[KomgaClient] Successfully authenticated with Komga server at '{_serverUrl}'.");
+                    return true;
+                }
             }
 
-            // Fallback for servers without auth enabled or claim check
+            if ((int)response.StatusCode == 401 || (int)response.StatusCode == 403)
+            {
+                AppLogger.LogWarning($"[KomgaClient] Authentication rejected by Komga server at '{_serverUrl}' (HTTP {(int)response.StatusCode}). Check your API Key or Username/Password.");
+                return false;
+            }
+
+            // Fallback for servers without auth enabled
             string claimEndpoint = $"{_serverUrl}/api/v1/claim";
             using var claimResponse = await _httpClient.GetAsync(claimEndpoint, ct);
-            return claimResponse.IsSuccessStatusCode;
+            if (claimResponse.IsSuccessStatusCode)
+            {
+                string? mediaType = claimResponse.Content.Headers.ContentType?.MediaType;
+                return mediaType == null || !mediaType.Contains("html", StringComparison.OrdinalIgnoreCase);
+            }
         }
         catch (Exception ex)
         {
             AppLogger.LogWarning($"[KomgaClient] Connection test failed for '{_serverUrl}': {ex.Message}");
-            return false;
         }
+
+        return false;
     }
 
     public async Task<IReadOnlyList<KomgaLibraryDto>> GetLibrariesAsync(CancellationToken ct = default)
@@ -97,7 +158,7 @@ public class KomgaClient : IDisposable
         try
         {
             string endpoint = $"{_serverUrl}/api/v1/libraries";
-            var libraries = await _httpClient.GetFromJsonAsync<List<KomgaLibraryDto>>(endpoint, JsonOptions, ct);
+            var libraries = await GetJsonSafeAsync<List<KomgaLibraryDto>>(endpoint, ct);
             return libraries ?? new List<KomgaLibraryDto>();
         }
         catch (Exception ex)
@@ -121,11 +182,11 @@ public class KomgaClient : IDisposable
 
             // Search by filename on Komga
             string endpoint = $"{_serverUrl}/api/v1/books?search={Uri.EscapeDataString(fileName)}&size=50";
-            var page = await _httpClient.GetFromJsonAsync<KomgaPageWrapper<KomgaBookDto>>(endpoint, JsonOptions, ct);
+            var page = await GetJsonSafeAsync<KomgaPageWrapper<KomgaBookDto>>(endpoint, ct);
 
             if (page?.Content != null && page.Content.Count > 0)
             {
-                // Exact translated path match priority
+                // 1. Exact translated path match priority
                 var match = page.Content.FirstOrDefault(b =>
                     string.Equals(b.Url, translatedPath, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(Path.GetFileName(b.Url), fileName, StringComparison.OrdinalIgnoreCase));
@@ -155,7 +216,7 @@ public class KomgaClient : IDisposable
             string translatedPath = TranslatePath(seriesPath, mappings);
 
             string endpoint = $"{_serverUrl}/api/v1/series?search={Uri.EscapeDataString(searchName)}&size=20";
-            var page = await _httpClient.GetFromJsonAsync<KomgaPageWrapper<KomgaSeriesDto>>(endpoint, JsonOptions, ct);
+            var page = await GetJsonSafeAsync<KomgaPageWrapper<KomgaSeriesDto>>(endpoint, ct);
 
             if (page?.Content != null && page.Content.Count > 0)
             {
@@ -187,6 +248,10 @@ public class KomgaClient : IDisposable
                 AppLogger.LogDebug($"[KomgaClient] Triggered targeted analysis for book '{bookId}'.");
                 return true;
             }
+            else
+            {
+                AppLogger.LogWarning($"[KomgaClient] Analyze book '{bookId}' returned HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
+            }
         }
         catch (Exception ex)
         {
@@ -208,6 +273,10 @@ public class KomgaClient : IDisposable
             {
                 AppLogger.LogDebug($"[KomgaClient] Triggered targeted analysis for series '{seriesId}'.");
                 return true;
+            }
+            else
+            {
+                AppLogger.LogWarning($"[KomgaClient] Analyze series '{seriesId}' returned HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
             }
         }
         catch (Exception ex)
@@ -246,7 +315,7 @@ public class KomgaClient : IDisposable
         try
         {
             string searchEndpoint = $"{_serverUrl}/api/v1/collections?search={Uri.EscapeDataString(storyArcName)}&size=20";
-            var page = await _httpClient.GetFromJsonAsync<KomgaPageWrapper<KomgaCollectionDto>>(searchEndpoint, JsonOptions, ct);
+            var page = await GetJsonSafeAsync<KomgaPageWrapper<KomgaCollectionDto>>(searchEndpoint, ct);
 
             var existing = page?.Content?.FirstOrDefault(c => string.Equals(c.Name, storyArcName, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
@@ -296,7 +365,7 @@ public class KomgaClient : IDisposable
                 endpoint += $"&library_id={libraryId}";
             }
 
-            var page = await _httpClient.GetFromJsonAsync<KomgaPageWrapper<KomgaBookDto>>(endpoint, JsonOptions, ct);
+            var page = await GetJsonSafeAsync<KomgaPageWrapper<KomgaBookDto>>(endpoint, ct);
             return page?.Content ?? new List<KomgaBookDto>();
         }
         catch (Exception ex)
@@ -304,6 +373,26 @@ public class KomgaClient : IDisposable
             AppLogger.LogWarning($"[KomgaClient] Failed to fetch error books: {ex.Message}");
             return Array.Empty<KomgaBookDto>();
         }
+    }
+
+    private async Task<T?> GetJsonSafeAsync<T>(string endpoint, CancellationToken ct)
+    {
+        using var response = await _httpClient.GetAsync(endpoint, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            AppLogger.LogWarning($"[KomgaClient] GET '{endpoint}' returned HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
+            return default;
+        }
+
+        string? mediaType = response.Content.Headers.ContentType?.MediaType;
+        if (mediaType != null && mediaType.Contains("html", StringComparison.OrdinalIgnoreCase))
+        {
+            AppLogger.LogWarning($"[KomgaClient] GET '{endpoint}' returned HTML instead of JSON. Server may have redirected to login.");
+            return default;
+        }
+
+        var stream = await response.Content.ReadAsStreamAsync(ct);
+        return await JsonSerializer.DeserializeAsync<T>(stream, JsonOptions, ct);
     }
 
     public static string TranslatePath(string localPath, IEnumerable<KomgaPathMapping>? mappings)
