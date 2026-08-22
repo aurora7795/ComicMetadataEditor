@@ -112,6 +112,8 @@
         <MenuItem Header="🏷️ _Infer Metadata from Path / Filename" Click="InferMetadataFromFilenames_Click"/>
         <MenuItem Header="✏️ _Rename File(s) from Metadata..." Click="RenameFiles_Click"/>
         <Separator/>
+        <MenuItem Header="🌐 _Sync to Komga Server" Command="{Binding SyncToKomgaCommand}"/>
+        <Separator/>
         <MenuItem Header="Open _Logs Directory" Command="{Binding OpenLogsCommand}"/>
         <MenuItem Header="_Settings..." Click="Settings_Click"/>
       </MenuItem>
@@ -166,6 +168,13 @@
             </StackPanel>
           </Button>
 
+          <Button Command="{Binding SyncToKomgaCommand}" Padding="8,5" Background="#E5C07B" Foreground="#1E1E1E" CornerRadius="4" ToolTip.Tip="Sync modified metadata &amp; refresh Komga server" IsEnabled="{Binding !IsLoading}">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Text="🌐" VerticalAlignment="Center"/>
+              <TextBlock Text="Sync to Komga" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+
           <Button Command="{Binding RefreshGridCommand}" Padding="8,5" Background="#3E3E42" Foreground="White" CornerRadius="4" ToolTip.Tip="Refresh Grid (F5)" IsEnabled="{Binding !IsLoading}">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Text="🔄" VerticalAlignment="Center"/>
@@ -201,12 +210,12 @@
               <RadioButton GroupName="ComicFilters" Content="{Binding UntaggedFilterLabel}" 
                            IsChecked="{Binding IsFilterUntagged}"
                            Padding="8,4" FontSize="11" CornerRadius="3"
-                           Background="#333337" Foreground="#E5A00D"/>
+                           Background="#333337" Foreground="#E5C07B"/>
                            
               <RadioButton GroupName="ComicFilters" Content="{Binding ModifiedFilterLabel}" 
                            IsChecked="{Binding IsFilterModified}"
                            Padding="8,4" FontSize="11" CornerRadius="3"
-                           Background="#333337" Foreground="#4EC9B0"/>
+                           Background="#333337" Foreground="#61AFEF"/>
             </StackPanel>
 
             <!-- Quick Filter / Search Box -->
@@ -221,10 +230,13 @@
           </Grid>
         </Border>
 
+        <!-- Comic DataGrid Table -->
         <DataGrid Grid.Row="1" Name="ComicsGrid" ItemsSource="{Binding DisplayedComics}" SelectedItem="{Binding ActiveComic}" 
-                  SelectionMode="Extended" AutoGenerateColumns="False" CanUserResizeColumns="True" 
-                  SelectionChanged="DataGrid_SelectionChanged" GridLinesVisibility="All" Background="#1E1E1E"
-                  BorderBrush="#3F3F46" BorderThickness="1">
+                  SelectionMode="Extended" CanUserSortColumns="True"
+                  Background="#1E1E1E" AutoGenerateColumns="False" 
+                  BorderBrush="#3F3F46" BorderThickness="1"
+                  GridLinesVisibility="All" HeadersVisibility="Column"
+                  SelectionChanged="DataGrid_SelectionChanged">
           <DataGrid.ContextMenu>
             <ContextMenu>
               <MenuItem Header="🔍 Auto-Tag Metadata (ComicVine)..." Click="ScrapeMetadata_Click"/>
@@ -233,6 +245,8 @@
               <Separator/>
               <MenuItem Header="🏷️ Infer Metadata from Path / Filename" Click="InferMetadataFromFilenames_Click"/>
               <MenuItem Header="✏️ Rename File(s) from Metadata..." Click="RenameFiles_Click"/>
+              <Separator/>
+              <MenuItem Header="🌐 Sync Selected with Komga" Command="{Binding SyncToKomgaCommand}"/>
             </ContextMenu>
           </DataGrid.ContextMenu>
           <DataGrid.Styles>

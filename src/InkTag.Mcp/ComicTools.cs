@@ -404,4 +404,136 @@ public static class ComicTools
             })
         }, new JsonSerializerOptions { WriteIndented = true });
     }
+
+    [McpServerTool, Description("Check Komga media server connection status, authentication, and list all library roots.")]
+    public static async Task<string> CheckKomgaServer(
+        [Description("Optional Komga server URL override (e.g. http://localhost:25600)")] string? serverUrl = null,
+        [Description("Optional Komga API key override")] string? apiKey = null)
+    {
+        string url = !string.IsNullOrWhiteSpace(serverUrl) 
+            ? serverUrl 
+            : _settingsService.GetEffectiveKomgaServerUrl();
+        string key = !string.IsNullOrWhiteSpace(apiKey) 
+            ? apiKey 
+            : _settingsService.GetEffectiveKomgaApiKey();
+
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                connected = false,
+                error = "Komga server URL is not configured. Set KOMGA_SERVER_URL environment variable or configure in InkTag settings."
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        using var client = new InkTag.Core.Komga.KomgaClient(url, key, _settingsService.GetEffectiveKomgaUser(), _settingsService.GetEffectiveKomgaPassword());
+        bool connected = await client.TestConnectionAsync();
+        var libraries = connected ? await client.GetLibrariesAsync() : Array.Empty<InkTag.Core.Komga.KomgaLibraryDto>();
+
+        return JsonSerializer.Serialize(new
+        {
+            connected,
+            serverUrl = url,
+            libraryCount = libraries.Count,
+            libraries = libraries.Select(l => new
+            {
+                id = l.Id,
+                name = l.Name,
+                root = l.Root,
+                scanInterval = l.ScanInterval
+            })
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    [McpServerTool, Description("Trigger targeted cache invalidation and analysis on Komga for a specific file or folder, with optional StoryArc collection sync.")]
+    public static async Task<string> SyncKomgaBookOrSeries(
+        [Description("Local file path or folder path to synchronize with Komga")] string path,
+        [Description("Optional StoryArc name to sync into Komga Collections")] string? storyArc = null)
+    {
+        ValidatePathAccess(path);
+
+        var syncService = new InkTag.Core.Komga.KomgaSyncService(_settingsService);
+        if (!syncService.IsConfigured)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                success = false,
+                error = "Komga server is not configured."
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        if (File.Exists(path))
+        {
+            var info = _editor.ReadMetadata(path);
+            if (!string.IsNullOrWhiteSpace(storyArc))
+            {
+                info.StoryArc = storyArc;
+            }
+
+            var report = await syncService.SyncComicFileAsync(path, info);
+            return JsonSerializer.Serialize(new
+            {
+                success = report.IsSuccess,
+                booksAnalyzed = report.BooksAnalyzed,
+                seriesAnalyzed = report.SeriesAnalyzed,
+                collectionsSynced = report.CollectionsSynced,
+                messages = report.SuccessMessages,
+                failures = report.Failures.Select(f => new { path = f.Target, error = f.Error })
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        else if (Directory.Exists(path))
+        {
+            var exts = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".cbz", ".cbr", ".cb7", ".zip", ".rar" };
+            var files = Directory.EnumerateFiles(path, "*.*", SearchOption.TopDirectoryOnly)
+                .Where(f => exts.Contains(Path.GetExtension(f)))
+                .Select(f => (FilePath: f, Info: _editor.ReadMetadata(f)))
+                .ToList();
+
+            var report = await syncService.SyncMultipleComicsAsync(files);
+            return JsonSerializer.Serialize(new
+            {
+                success = report.IsSuccess,
+                totalFiles = files.Count,
+                booksAnalyzed = report.BooksAnalyzed,
+                seriesAnalyzed = report.SeriesAnalyzed,
+                collectionsSynced = report.CollectionsSynced,
+                messages = report.SuccessMessages,
+                failures = report.Failures.Select(f => new { path = f.Target, error = f.Error })
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        throw new FileNotFoundException($"Path not found: '{path}'");
+    }
+
+    [McpServerTool, Description("Audit Komga library for unreadable, unsupported, or error books requiring repair or metadata tagging.")]
+    public static async Task<string> AuditKomgaLibrary(
+        [Description("Optional Komga library ID to filter audit")] string? libraryId = null)
+    {
+        using var client = new InkTag.Core.Komga.KomgaClient(_settingsService);
+        if (!client.IsConfigured)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                success = false,
+                error = "Komga server is not configured."
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        var errorBooks = await client.GetUntaggedOrErrorBooksAsync(libraryId);
+        return JsonSerializer.Serialize(new
+        {
+            success = true,
+            errorCount = errorBooks.Count,
+            books = errorBooks.Select(b => new
+            {
+                id = b.Id,
+                name = b.Name,
+                seriesId = b.SeriesId,
+                seriesTitle = b.SeriesTitle,
+                url = b.Url,
+                mediaStatus = b.Media?.Status,
+                mediaComment = b.Media?.Comment
+            })
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
 }

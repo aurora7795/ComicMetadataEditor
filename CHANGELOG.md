@@ -9,8 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- **MacOS Development Dock Icon**: Dynamically apply high-res application icon to the macOS Dock via Cocoa `NSApplication` runtime when launched via `dotnet run` (unbundled CLI processes).
+### Added
+- **Komga Media Server REST API Integration**: Direct REST API integration with self-hosted Komga servers (`KomgaClient`, `KomgaSyncService`).
+- **Targeted Sub-Second Cache Invalidation**: Automatic and manual targeted book/series analysis (`POST /api/v1/books/{id}/analyze`, `POST /api/v1/series/{id}/analyze`) updating web and mobile readers instantly without full-library rescans.
+- **StoryArc to Komga Collection Sync**: Automatic creation and synchronization of Komga Collections from `<StoryArc>` tags.
+- **Smart Path Translation**: Relative hierarchy resolution across Komga library roots with support for optional local-to-server path prefix mapping (`KomgaPathMappings`).
+- **Komga Desktop GUI Controls**: Added dedicated Komga server configuration in Settings with live connectivity testing, "Sync to Komga" toolbar button, menu items, and DataGrid context menu integration.
+- **Komga MCP Server Tools**: Exposed `CheckKomgaServer`, `SyncKomgaBookOrSeries`, and `AuditKomgaLibrary` for AI agent remote server management.
 
 ---
 

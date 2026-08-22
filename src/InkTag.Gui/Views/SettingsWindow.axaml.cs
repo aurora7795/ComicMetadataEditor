@@ -28,6 +28,61 @@ public partial class SettingsWindow : Window
         VisualThresholdTextBox.Text = ((int)(settings.VisualMatchConfidenceThreshold * 100)).ToString();
         DebugLoggingCheckBox.IsChecked = settings.EnableDebugLogging;
         ClearLegacyZipCommentsCheckBox.IsChecked = settings.ClearLegacyZipCommentsOnUpgrade;
+
+        // Komga
+        KomgaUrlTextBox.Text = settings.KomgaServerUrl;
+        KomgaApiKeyTextBox.Text = settings.KomgaApiKey;
+        KomgaUserTextBox.Text = settings.KomgaUser;
+        KomgaPasswordTextBox.Text = settings.KomgaPassword;
+        KomgaAutoSyncCheckBox.IsChecked = settings.KomgaAutoSyncOnSave;
+        KomgaStoryArcsCheckBox.IsChecked = settings.KomgaSyncStoryArcsToCollections;
+
+        if (settings.KomgaPathMappings.Count > 0)
+        {
+            KomgaLocalPrefixTextBox.Text = settings.KomgaPathMappings[0].LocalPrefix;
+            KomgaServerPrefixTextBox.Text = settings.KomgaPathMappings[0].ServerPrefix;
+        }
+    }
+
+    private async void TestKomga_Click(object? sender, RoutedEventArgs e)
+    {
+        string url = KomgaUrlTextBox.Text?.Trim() ?? "";
+        if (string.IsNullOrEmpty(url))
+        {
+            KomgaStatusTextBlock.Text = "❌ Please enter a Komga Server URL (e.g. http://localhost:25600).";
+            KomgaStatusTextBlock.Foreground = Avalonia.Media.Brushes.Red;
+            return;
+        }
+
+        KomgaStatusTextBlock.Text = "⏳ Testing connection with Komga...";
+        KomgaStatusTextBlock.Foreground = Avalonia.Media.Brushes.Yellow;
+
+        try
+        {
+            using var client = new InkTag.Core.Komga.KomgaClient(
+                url,
+                KomgaApiKeyTextBox.Text?.Trim(),
+                KomgaUserTextBox.Text?.Trim(),
+                KomgaPasswordTextBox.Text?.Trim());
+
+            bool success = await client.TestConnectionAsync();
+            if (success)
+            {
+                var libraries = await client.GetLibrariesAsync();
+                KomgaStatusTextBlock.Text = $"✅ Connection successful! Discovered {libraries.Count} Komga libraries.";
+                KomgaStatusTextBlock.Foreground = Avalonia.Media.Brushes.LightGreen;
+            }
+            else
+            {
+                KomgaStatusTextBlock.Text = "❌ Server reached but authentication failed. Check API Key or Credentials.";
+                KomgaStatusTextBlock.Foreground = Avalonia.Media.Brushes.OrangeRed;
+            }
+        }
+        catch (Exception ex)
+        {
+            KomgaStatusTextBlock.Text = $"❌ Connection failed: {ex.Message}";
+            KomgaStatusTextBlock.Foreground = Avalonia.Media.Brushes.OrangeRed;
+        }
     }
 
     private async void TestApiKey_Click(object? sender, RoutedEventArgs e)
@@ -80,6 +135,26 @@ public partial class SettingsWindow : Window
         if (double.TryParse(VisualThresholdTextBox.Text, out double thresh))
         {
             settings.VisualMatchConfidenceThreshold = Math.Clamp(thresh > 1 ? thresh / 100.0 : thresh, 0.50, 1.0);
+        }
+
+        // Save Komga
+        settings.KomgaServerUrl = KomgaUrlTextBox.Text?.Trim() ?? "";
+        settings.KomgaApiKey = KomgaApiKeyTextBox.Text?.Trim() ?? "";
+        settings.KomgaUser = KomgaUserTextBox.Text?.Trim() ?? "";
+        settings.KomgaPassword = KomgaPasswordTextBox.Text?.Trim() ?? "";
+        settings.KomgaAutoSyncOnSave = KomgaAutoSyncCheckBox.IsChecked == true;
+        settings.KomgaSyncStoryArcsToCollections = KomgaStoryArcsCheckBox.IsChecked == true;
+
+        string localPrefix = KomgaLocalPrefixTextBox.Text?.Trim() ?? "";
+        string serverPrefix = KomgaServerPrefixTextBox.Text?.Trim() ?? "";
+        settings.KomgaPathMappings.Clear();
+        if (!string.IsNullOrEmpty(localPrefix) && !string.IsNullOrEmpty(serverPrefix))
+        {
+            settings.KomgaPathMappings.Add(new InkTag.Core.Komga.KomgaPathMapping
+            {
+                LocalPrefix = localPrefix,
+                ServerPrefix = serverPrefix
+            });
         }
 
         _settingsService.SaveSettings(settings);

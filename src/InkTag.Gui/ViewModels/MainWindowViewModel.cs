@@ -594,9 +594,85 @@ public partial class MainWindowViewModel : ViewModelBase
             else
             {
                 ProgressText = "All modifications saved successfully.";
+
+                // Check for Komga auto-sync on save
+                var settingsService = new InkTag.Core.Configuration.AppSettingsService();
+                if (settingsService.Settings.KomgaAutoSyncOnSave && dirtyItems.Count > 0)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        var syncList = dirtyItems.Select(c => (c.FilePath, c.ToModel())).ToList();
+                        var syncService = new InkTag.Core.Komga.KomgaSyncService(settingsService);
+                        if (syncService.IsConfigured)
+                        {
+                            var report = await syncService.SyncMultipleComicsAsync(syncList);
+                            if (report.IsSuccess && (report.BooksAnalyzed > 0 || report.SeriesAnalyzed > 0))
+                            {
+                                Dispatcher.UIThread.Post(() =>
+                                {
+                                    ProgressText = $"Saved & auto-synced with Komga (Refreshed {report.BooksAnalyzed} books).";
+                                });
+                            }
+                        }
+                    });
+                }
             }
 
             OnPropertyChanged(nameof(CanSave));
+        }
+    }
+
+    [RelayCommand]
+    public async Task SyncToKomgaAsync()
+    {
+        var items = (_selectedComics.Any() ? _selectedComics : DisplayedComics.ToList());
+        if (!items.Any())
+        {
+            ProgressText = "No comics selected or available to sync with Komga.";
+            return;
+        }
+
+        var settingsService = new InkTag.Core.Configuration.AppSettingsService();
+        var syncService = new InkTag.Core.Komga.KomgaSyncService(settingsService);
+        if (!syncService.IsConfigured)
+        {
+            ProgressText = "Komga server is not configured. Go to Settings > Komga Integration to connect.";
+            return;
+        }
+
+        IsSaving = true;
+        ProgressValue = 0;
+        ProgressText = $"Syncing {items.Count} comic(s) with Komga server...";
+
+        var syncList = items.Select(c => (c.FilePath, c.ToModel())).ToList();
+        var progress = new Progress<double>(p =>
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                ProgressValue = p * 100;
+            });
+        });
+
+        try
+        {
+            var report = await Task.Run(() => syncService.SyncMultipleComicsAsync(syncList, progress));
+            if (report.IsSuccess)
+            {
+                ProgressText = $"Komga Sync: Refreshed {report.BooksAnalyzed} books, {report.SeriesAnalyzed} series, and {report.CollectionsSynced} collections.";
+            }
+            else
+            {
+                ProgressText = $"Komga Sync completed with {report.Failures.Count} warnings/failures.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ProgressText = $"Komga Sync failed: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+            ProgressValue = 100;
         }
     }
 
