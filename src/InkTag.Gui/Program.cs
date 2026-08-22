@@ -13,12 +13,21 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        AppLogger.Initialize();
-        var settingsService = new InkTag.Core.Configuration.AppSettingsService();
-        AppLogger.IsDebugEnabled = settingsService.Settings.EnableDebugLogging;
+        try
+        {
+            AppLogger.Initialize();
+            var settingsService = new InkTag.Core.Configuration.AppSettingsService();
+            AppLogger.IsDebugEnabled = settingsService.Settings.EnableDebugLogging;
 
-        VelopackApp.Build().Run();
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            VelopackApp.Build().Run();
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError($"Fatal GUI startup exception: {ex}");
+            Console.Error.WriteLine($"Fatal GUI startup exception: {ex}");
+            throw;
+        }
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

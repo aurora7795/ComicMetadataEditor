@@ -11,6 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.12.2] - 2026-08-22
+
+### Added
+- **Informative Bulk Scrape Cover Match Badges & Tooltips**:
+  - Added dedicated status badges in the **Cover Match** column for non-visual states (`Text Only`, `No Local Cover`, `No Remote Cover`) alongside perceptual dHash percentages (e.g. `94%`).
+  - Added comprehensive explanatory tooltips for both the **Confidence** column (structured breakdown of series title, issue #, year validity, and visual score) and **Cover Match** column.
+
+### Changed
+- **Volume Lifespan Year Scoring**:
+  - Scraper confidence calculation now recognizes that issue publication years within a series volume's lifespan (e.g. *The Avengers #63 (1969)* in *The Avengers (1963)* volume) are valid, preventing false-negative 30% mismatch penalties and restoring confidence to 95%+.
+- **On-Demand Targeted Cover Hashing**:
+  - Bulk queue processing now dynamically downloads thumbnails and computes dHash fingerprints on-demand for candidate issues being matched, ensuring comics beyond issue #50 receive complete visual cover comparison scores.
+
+### Fixed
+- **API Key Prompt Settings Navigation**:
+  - Opening Settings from the "API Key Required" prompt dialog now immediately switches to the **🔍 Scraping** tab and automatically focuses the ComicVine API key input field.
+
+---
+
 ## [0.12.1] - 2026-08-22
 
 ### Added

@@ -28,6 +28,8 @@ public class BulkScrapeItemViewModel : ObservableObject
     private static readonly IBrush BrushBlue = new SolidColorBrush(Color.Parse("#0078D4"));
     private static readonly IBrush BrushNavy = new SolidColorBrush(Color.Parse("#0E639C"));
     private static readonly IBrush BrushSkyBlue = new SolidColorBrush(Color.Parse("#2B88D8"));
+    private static readonly IBrush BrushDarkSlate = new SolidColorBrush(Color.Parse("#2D3748"));
+    private static readonly IBrush BrushMutedText = new SolidColorBrush(Color.Parse("#CCCCCC"));
 
     static BulkScrapeItemViewModel()
     {
@@ -173,6 +175,10 @@ public class BulkScrapeItemViewModel : ObservableObject
             OnPropertyChanged(nameof(HasVisualScore));
             OnPropertyChanged(nameof(VisualMatchText));
             OnPropertyChanged(nameof(VisualBadgeBackground));
+            OnPropertyChanged(nameof(VisualMatchLabel));
+            OnPropertyChanged(nameof(VisualMatchTooltip));
+            OnPropertyChanged(nameof(ConfidenceTooltip));
+            OnPropertyChanged(nameof(VisualBadgeForeground));
             OnPropertyChanged(nameof(ConfidenceBadge));
             OnPropertyChanged(nameof(ConfidencePercentage));
             OnPropertyChanged(nameof(ConfidenceScore));
@@ -213,6 +219,52 @@ public class BulkScrapeItemViewModel : ObservableObject
     public string ConfidencePercentage => MatchedCandidate != null ? $"{MatchConfidence:P0}" : "—";
     public string ConfidenceBadge => MatchedCandidate != null ? $"{MatchConfidence:P0} Conf." : "—";
 
+    public string ConfidenceTooltip
+    {
+        get
+        {
+            if (MatchedCandidate == null) return "No match found";
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Match Confidence: {MatchConfidence:P0}");
+            sb.AppendLine("────────────────────────");
+
+            bool seriesMatched = !string.IsNullOrEmpty(Item.ParsedQuery.Series) &&
+                                 !string.IsNullOrEmpty(MatchedCandidate.SeriesTitle);
+            string seriesIcon = seriesMatched ? "✓" : "○";
+            sb.AppendLine($"{seriesIcon} Series: '{MatchedCandidate.SeriesTitle}'");
+
+            bool issueMatched = !string.IsNullOrEmpty(Item.ParsedQuery.IssueNumber) &&
+                                !string.IsNullOrEmpty(MatchedCandidate.IssueNumber) &&
+                                ComicVineProvider.NormalizeIssueNumber(Item.ParsedQuery.IssueNumber) == ComicVineProvider.NormalizeIssueNumber(MatchedCandidate.IssueNumber);
+            string issueIcon = issueMatched ? "✓" : "○";
+            sb.AppendLine($"{issueIcon} Issue: #{MatchedCandidate.IssueNumber}");
+
+            if (Item.ParsedQuery.Year.HasValue)
+            {
+                if (MatchedCandidate.VolumeStartYear.HasValue)
+                {
+                    sb.AppendLine($"✓ Year: {Item.ParsedQuery.Year.Value} (Volume Start: {MatchedCandidate.VolumeStartYear.Value})");
+                }
+                else if (!string.IsNullOrEmpty(MatchedCandidate.CoverDate))
+                {
+                    sb.AppendLine($"✓ Cover Date: {MatchedCandidate.CoverDate}");
+                }
+            }
+
+            if (HasVisualScore)
+            {
+                sb.AppendLine($"✓ Cover Visual Match: {MatchedCandidate.VisualSimilarity!.Value:P0}");
+            }
+            else
+            {
+                sb.AppendLine($"○ Cover Visual Match: {VisualMatchLabel}");
+            }
+
+            return sb.ToString().TrimEnd();
+        }
+    }
+
     public IBrush ConfidenceColor
     {
         get
@@ -227,6 +279,42 @@ public class BulkScrapeItemViewModel : ObservableObject
     public bool HasVisualScore => MatchedCandidate?.VisualSimilarity.HasValue == true && MatchedCandidate.VisualSimilarity.Value > 0.01;
     public string VisualScorePercentage => HasVisualScore ? $"{MatchedCandidate!.VisualSimilarity!.Value:P0}" : "—";
 
+    public string VisualMatchLabel
+    {
+        get
+        {
+            if (HasVisualScore) return $"{MatchedCandidate!.VisualSimilarity!.Value:P0}";
+            if (Item.LocalCoverBytes == null || Item.LocalCoverBytes.Length == 0 || Item.LocalCoverHash == 0) return "No Local Cover";
+            if (MatchedCandidate != null && string.IsNullOrEmpty(MatchedCandidate.SmallCoverUrl) && string.IsNullOrEmpty(MatchedCandidate.CoverUrl)) return "No Remote Cover";
+            if (MatchedCandidate != null) return "Text Only";
+            return "—";
+        }
+    }
+
+    public string VisualMatchTooltip
+    {
+        get
+        {
+            if (HasVisualScore)
+            {
+                return $"Cover perceptual dHash visual match: {MatchedCandidate!.VisualSimilarity!.Value:P0}";
+            }
+            if (Item.LocalCoverBytes == null || Item.LocalCoverBytes.Length == 0 || Item.LocalCoverHash == 0)
+            {
+                return "Local comic archive does not contain a readable cover image or extraction failed.";
+            }
+            if (MatchedCandidate != null && string.IsNullOrEmpty(MatchedCandidate.SmallCoverUrl) && string.IsNullOrEmpty(MatchedCandidate.CoverUrl))
+            {
+                return "ComicVine does not have a cover thumbnail image for this issue.";
+            }
+            if (MatchedCandidate != null)
+            {
+                return "Matched by series title and issue number. Visual cover hash comparison was not performed.";
+            }
+            return "No candidate matched.";
+        }
+    }
+
     public string VisualSimilarityBadge => (MatchedCandidate?.VisualSimilarity.HasValue == true && MatchedCandidate.VisualSimilarity.Value > 0)
         ? $"{MatchedCandidate.VisualSimilarity.Value:P0} Visual"
         : "—";
@@ -237,15 +325,29 @@ public class BulkScrapeItemViewModel : ObservableObject
     {
         get
         {
-            if (MatchedCandidate == null || !MatchedCandidate.VisualSimilarity.HasValue || MatchedCandidate.VisualSimilarity.Value <= 0.01)
+            if (HasVisualScore)
             {
-                return BrushDarkGray;
+                double sim = MatchedCandidate!.VisualSimilarity!.Value;
+                if (sim >= 0.85) return BrushGreen;
+                if (sim >= 0.65) return BrushAmber;
+                return BrushRed;
             }
 
-            double sim = MatchedCandidate.VisualSimilarity.Value;
-            if (sim >= 0.85) return BrushGreen;
-            if (sim >= 0.65) return BrushAmber;
-            return BrushRed;
+            if (MatchedCandidate != null)
+            {
+                return BrushDarkSlate;
+            }
+
+            return BrushDarkGray;
+        }
+    }
+
+    public IBrush VisualBadgeForeground
+    {
+        get
+        {
+            if (HasVisualScore) return Brushes.White;
+            return BrushMutedText;
         }
     }
 

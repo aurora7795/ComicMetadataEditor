@@ -395,6 +395,10 @@ public class ComicVineProvider : IMetadataScraperProvider
         {
             candidateYear = date.Year;
         }
+        else if (result.VolumeStartYear.HasValue)
+        {
+            candidateYear = result.VolumeStartYear.Value;
+        }
 
         bool hasSevereYearMismatch = false;
 
@@ -410,11 +414,21 @@ public class ComicVineProvider : IMetadataScraperProvider
             {
                 textScore += 0.15; // Adjacent year (publication/cover date difference)
             }
+            else if (result.VolumeStartYear.HasValue && query.Year.Value >= result.VolumeStartYear.Value && query.Year.Value <= result.VolumeStartYear.Value + 60)
+            {
+                // The query year is within the valid publication lifespan of the matched series volume (e.g. Avengers 1963 run in 1969)
+                textScore += 0.05;
+            }
             else
             {
                 hasSevereYearMismatch = true;
                 textScore -= 0.40; // Severe mismatch penalty for different comic runs/decades
             }
+        }
+        else if (!query.Year.HasValue && textScore >= 0.89)
+        {
+            // If year was not specified in the file/query, grant slight bonus if series and issue matched cleanly
+            textScore += 0.05;
         }
 
         textScore = Math.Clamp(textScore, 0.0, 1.0);

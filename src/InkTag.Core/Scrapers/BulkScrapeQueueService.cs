@@ -272,6 +272,21 @@ public class BulkScrapeQueueService
                             item.Status = BulkScrapeItemStatus.ComparingVisuals;
                             item.StatusMessage = "Comparing cover with series volume...";
 
+                            // On-demand cover hashing: Ensure candidates matching this specific issue have cover hashes computed
+                            if (item.LocalCoverHash != 0 && !string.IsNullOrWhiteSpace(item.ParsedQuery.IssueNumber))
+                            {
+                                string cleanTargetNum = ComicVineProvider.NormalizeIssueNumber(item.ParsedQuery.IssueNumber);
+                                var unhashedMatches = candidatePool
+                                    .Where(c => ComicVineProvider.NormalizeIssueNumber(c.IssueNumber) == cleanTargetNum && (!c.CoverHash.HasValue || c.CoverHash.Value == 0))
+                                    .Take(5)
+                                    .ToList();
+
+                                if (unhashedMatches.Count > 0)
+                                {
+                                    await PopulateCoverHashesForCandidatesAsync(unhashedMatches, ct);
+                                }
+                            }
+
                             var ranked = RankCandidatesAgainstLocalItem(item, candidatePool, options);
                             if (ranked.Count > 0)
                             {
@@ -386,6 +401,10 @@ public class BulkScrapeQueueService
             if (matchingVolume != null)
             {
                 var volumeIssues = (await _scraperService.FetchSeriesIssuesAsync(matchingVolume.VolumeId, 1, 100, null, ct)).ToList();
+                foreach (var vIssue in volumeIssues)
+                {
+                    vIssue.VolumeStartYear = matchingVolume.StartYear;
+                }
                 await PopulateCoverHashesForCandidatesAsync(volumeIssues.Take(50), ct);
                 return volumeIssues;
             }

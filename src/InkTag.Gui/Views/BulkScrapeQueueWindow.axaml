@@ -203,7 +203,8 @@
             <DataGridTemplateColumn Header="Confidence" Width="100">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
-                  <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
+                  <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2"
+                              ToolTip.Tip="{Binding ConfidenceTooltip}">
                     <TextBlock Text="{Binding ConfidencePercentage}" FontSize="11" FontWeight="SemiBold"
                                Foreground="{Binding ConfidenceColor}" HorizontalAlignment="Center"/>
                     <ProgressBar Value="{Binding ConfidenceScore}" Minimum="0" Maximum="1" Height="3" Width="60"
@@ -215,12 +216,14 @@
             </DataGridTemplateColumn>
 
             <!-- Visual Similarity Badge -->
-            <DataGridTemplateColumn Header="Cover Match" Width="95">
+            <DataGridTemplateColumn Header="Cover Match" Width="110">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
                   <Border Background="{Binding VisualBadgeBackground}" CornerRadius="3" Padding="6,2"
-                          HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding HasVisualScore}">
-                    <TextBlock Text="{Binding VisualScorePercentage}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
+                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                          ToolTip.Tip="{Binding VisualMatchTooltip}">
+                    <TextBlock Text="{Binding VisualMatchLabel}" FontSize="10" FontWeight="SemiBold"
+                               Foreground="{Binding VisualBadgeForeground}" HorizontalAlignment="Center"/>
                   </Border>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
