@@ -156,21 +156,23 @@ public static class AppLogger
             }
             else if (OperatingSystem.IsMacOS())
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                var psi = new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = "open",
+                    FileName = "/usr/bin/open",
                     Arguments = File.Exists(logFile) ? $"-R \"{logFile}\"" : $"\"{dir}\"",
-                    UseShellExecute = true
-                });
+                    UseShellExecute = false
+                };
+                System.Diagnostics.Process.Start(psi);
             }
             else // Linux & Unix
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                var psi = new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = "xdg-open",
                     Arguments = $"\"{dir}\"",
-                    UseShellExecute = true
-                });
+                    UseShellExecute = false
+                };
+                System.Diagnostics.Process.Start(psi);
             }
         }
         catch (Exception ex)

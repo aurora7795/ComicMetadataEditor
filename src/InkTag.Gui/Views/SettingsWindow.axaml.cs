@@ -151,36 +151,7 @@ public partial class SettingsWindow : Window
 
     private void OpenLogsFolder_Click(object? sender, RoutedEventArgs e)
     {
-        try
-        {
-            string logsDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "Library/Application Support/InkTag/logs" :
-                RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "AppData/Roaming/InkTag/logs" :
-                ".config/InkTag/logs");
-
-            if (!Directory.Exists(logsDir))
-            {
-                Directory.CreateDirectory(logsDir);
-            }
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                Process.Start("open", logsDir);
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Process.Start("explorer.exe", logsDir);
-            }
-            else
-            {
-                Process.Start("xdg-open", logsDir);
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Failed to open logs folder: {ex.Message}");
-        }
+        InkTag.Core.Logging.AppLogger.OpenLogFolder();
     }
 
     private void ResetDefaults_Click(object? sender, RoutedEventArgs e)

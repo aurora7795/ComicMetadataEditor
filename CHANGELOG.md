@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **MacOS Application Settings Menu**: Added `Settings...` (`Cmd+,`) to the macOS Application menu (`InkTag Desktop`) and `Tools` NativeMenu.
 - **Komga URL & Auth Redirect Resilience**: Automatically normalize server base URLs (stripping `/login`, `/dashboard`), pass `X-Requested-With` headers to prevent HTML redirect loops, and handle API authentication errors gracefully.
+- **MacOS Logs Directory Revealer**: Fixed Finder log folder opening on macOS by invoking `/usr/bin/open` with direct file reveal (`-R`) arguments.
 
 ---
 
