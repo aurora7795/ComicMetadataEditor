@@ -412,6 +412,14 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel vm) await vm.CheckForUpdatesCommand.ExecuteAsync(null);
     }
     private void NativeAbout_Click(object? sender, EventArgs e) => OpenAbout_Click(sender, new RoutedEventArgs());
+    private void NativeSettings_Click(object? sender, EventArgs e) => Settings_Click(sender, new RoutedEventArgs());
+    private void NativeScrapeMetadata_Click(object? sender, EventArgs e) => ScrapeMetadata_Click(sender, new RoutedEventArgs());
+    private void NativeBulkScrapeQueue_Click(object? sender, EventArgs e) => BulkScrapeQueue_Click(sender, new RoutedEventArgs());
+    private void NativeRenameFiles_Click(object? sender, EventArgs e) => RenameFiles_Click(sender, new RoutedEventArgs());
+    private async void NativeSyncToKomga_Click(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm) await vm.SyncToKomgaCommand.ExecuteAsync(null);
+    }
     private void NativeToggleDebugLogging_Click(object? sender, EventArgs e) => ToggleDebugLogging_Click(sender, new RoutedEventArgs());
 
     private void ToggleDebugLogging_Click(object? sender, RoutedEventArgs e)

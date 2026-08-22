@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Komga Desktop GUI Controls**: Added dedicated Komga server configuration in Settings with live connectivity testing, "Sync to Komga" toolbar button, menu items, and DataGrid context menu integration.
 - **Komga MCP Server Tools**: Exposed `CheckKomgaServer`, `SyncKomgaBookOrSeries`, and `AuditKomgaLibrary` for AI agent remote server management.
 
+### Fixed
+- **MacOS Application Settings Menu**: Added `Settings...` (`Cmd+,`) to the macOS Application menu (`InkTag Desktop`) and `Tools` NativeMenu.
+
 ---
 
 ## [0.11.0] - 2026-08-21

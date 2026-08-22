@@ -29,4 +29,13 @@ public partial class App : Application
             aboutWindow.ShowDialog(desktop.MainWindow);
         }
     }
+
+    private void Settings_Click(object? sender, System.EventArgs e)
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
+        {
+            var settingsWindow = new Views.SettingsWindow();
+            settingsWindow.ShowDialog(desktop.MainWindow);
+        }
+    }
 }

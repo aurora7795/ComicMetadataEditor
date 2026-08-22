@@ -6,6 +6,8 @@
   <NativeMenu.Menu>
     <NativeMenu>
       <NativeMenuItem Header="About InkTag Desktop" Click="About_Click" />
+      <NativeMenuItemSeparator/>
+      <NativeMenuItem Header="Settings..." Gesture="{OnPlatform 'Ctrl+,', macOS='Cmd+,'}" Click="Settings_Click" />
     </NativeMenu>
   </NativeMenu.Menu>
   <Application.Styles>

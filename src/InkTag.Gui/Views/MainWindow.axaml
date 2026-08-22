@@ -48,8 +48,16 @@
       </NativeMenuItem>
       <NativeMenuItem Header="Tools">
         <NativeMenu>
+          <NativeMenuItem Header="Auto-Tag Metadata (ComicVine)..." Click="NativeScrapeMetadata_Click"/>
+          <NativeMenuItem Header="Series Search Wizard..." Click="NativeSeriesSearchWizard_Click"/>
+          <NativeMenuItem Header="Bulk Auto-Tag Queue..." Click="NativeBulkScrapeQueue_Click"/>
           <NativeMenuItem Header="Infer Metadata from Path / Filename" Click="NativeInferMetadataFromFilenames_Click"/>
+          <NativeMenuItem Header="Rename File(s) from Metadata..." Click="NativeRenameFiles_Click"/>
+          <NativeMenuItemSeparator/>
+          <NativeMenuItem Header="Sync to Komga Server" Click="NativeSyncToKomga_Click"/>
+          <NativeMenuItemSeparator/>
           <NativeMenuItem Header="Open Logs Directory" Click="NativeOpenLogs_Click"/>
+          <NativeMenuItem Header="Settings..." Gesture="{OnPlatform 'Ctrl+,', macOS='Cmd+,'}" Click="NativeSettings_Click"/>
         </NativeMenu>
       </NativeMenuItem>
       <NativeMenuItem Header="Help">
