@@ -36,7 +36,9 @@ public class SeriesItemViewModel : ObservableObject
     public string SeriesTitle => Result.SeriesTitle;
     public string Publisher => string.IsNullOrEmpty(Result.Publisher) ? "Unknown Publisher" : Result.Publisher;
     public string StartYear => Result.StartYear.HasValue ? Result.StartYear.Value.ToString() : "Unknown Year";
-    public string IssueCount => Result.CountOfIssues.HasValue ? $"{Result.CountOfIssues.Value} Issues" : "Issues unknown";
+    public string IssueCount => Result.CountOfIssues.HasValue 
+        ? (Result.CountOfIssues.Value == 1 ? "1 Issue" : $"{Result.CountOfIssues.Value} Issues") 
+        : "Issues unknown";
     public string PublisherAndYear => $"{Publisher} • {StartYear} • {IssueCount}";
     public string CoverUrl => !string.IsNullOrEmpty(Result.SmallCoverUrl) ? Result.SmallCoverUrl : Result.CoverUrl;
     public string Description => Result.Description;

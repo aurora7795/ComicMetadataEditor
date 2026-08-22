@@ -157,8 +157,10 @@ public partial class SeriesSearchWizardWindow : Window
         _selectedSeries = series;
         _currentPage = 1;
 
-        SelectedSeriesTitleText.Text = series.SeriesTitle;
-        SelectedSeriesSubtitleText.Text = $"{series.Publisher} • Start Year: {series.StartYear?.ToString() ?? "Unknown"} • {series.CountOfIssues?.ToString() ?? "?"} total issues";
+        string totalIssuesStr = series.CountOfIssues.HasValue
+            ? (series.CountOfIssues.Value == 1 ? "1 total issue" : $"{series.CountOfIssues.Value} total issues")
+            : "? total issues";
+        SelectedSeriesSubtitleText.Text = $"{series.Publisher} • Start Year: {series.StartYear?.ToString() ?? "Unknown"} • {totalIssuesStr}";
 
         SetStep(2);
         await LoadSeriesIssuesAsync();
