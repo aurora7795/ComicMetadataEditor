@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.11.1] - 2026-08-22
+
 ### Added
 - **Standardized Tagging Notes Attribution**: Automatically generate standard attribution notes in the `<Notes>` metadata field when scraping from ComicVine (`Tagged with InkTag <version> using info from Comic Vine on YYYY-MM-DD HH:MM:SS. [Issue ID <id>] [Volume ID <volId>]`). Smartly preserves user custom comments and previous notes, with a toggle in **Settings > Scraping**.
 - **Interactive DataGrid Column Resizing**: Enabled user column width resizing on the main spreadsheet (`CanUserResizeColumns="True"`) and widened compact date columns (`Month`, `Day`, `Year`) to prevent header clipping.
@@ -17,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Diagnostics & Log Utilities**: Added direct "Open Logs Directory" action and "Reset to Defaults" button in the Advanced settings tab.
 - **Komga Media Server REST API Integration**: Direct REST API integration with self-hosted Komga servers (`KomgaClient`, `KomgaSyncService`).
 - **Targeted Sub-Second Cache Invalidation**: Automatic and manual targeted book/series analysis (`POST /api/v1/books/{id}/analyze`, `POST /api/v1/series/{id}/analyze`) updating web and mobile readers instantly without full-library rescans.
-- **StoryArc to Komga Collection Sync**: Automatic creation and synchronization of Komga Collections from `<StoryArc>` tags.
+- **StoryArc & SeriesGroup to Komga Collection Sync**: Automatic creation and synchronization of Komga Collections from `<StoryArc>` and `<SeriesGroup>` tags.
 - **Smart Path Translation**: Relative hierarchy resolution across Komga library roots with support for optional local-to-server path prefix mapping (`KomgaPathMappings`).
 - **Komga Desktop GUI Controls**: Added dedicated Komga server configuration in Settings with live connectivity testing, "Sync to Komga" toolbar button, menu items, and DataGrid context menu integration.
 - **Komga MCP Server Tools**: Exposed `CheckKomgaServer`, `SyncKomgaBookOrSeries`, and `AuditKomgaLibrary` for AI agent remote server management.
