@@ -157,7 +157,19 @@
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:BulkScrapeItemViewModel">
                   <StackPanel VerticalAlignment="Center" Margin="8,0">
-                    <TextBlock Text="{Binding Filename}" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Text="{Binding Filename}" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                      <Border IsVisible="{Binding IsCbr}"
+                              Background="#3D2800"
+                              BorderBrush="#B87700"
+                              BorderThickness="1"
+                              CornerRadius="3"
+                              Padding="5,1"
+                              VerticalAlignment="Center"
+                              ToolTip.Tip="{Binding FormatConversionTooltip}">
+                        <TextBlock Text="{Binding FormatBadgeText}" FontSize="9.5" FontWeight="Bold" Foreground="#FFAA00" VerticalAlignment="Center"/>
+                      </Border>
+                    </StackPanel>
                     <TextBlock Text="{Binding ParsedQueryText}" FontSize="11" Foreground="#569CD6" Margin="0,2,0,0"/>
                   </StackPanel>
                 </DataTemplate>

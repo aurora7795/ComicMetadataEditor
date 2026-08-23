@@ -437,4 +437,29 @@ public class BulkScrapeTests
         Assert.Equal("No Local Cover", vm.VisualMatchLabel);
         Assert.Contains("Local comic archive does not contain a readable cover", vm.VisualMatchTooltip);
     }
+
+    [Fact]
+    public void BulkScrapeItemViewModel_DetectsCbrFormatAndProvidesConversionBadge()
+    {
+        var cbrItem = new BulkScrapeQueueItem
+        {
+            FilePath = "/comics/Transformers 12.cbr",
+            ParsedQuery = new ComicSearchQuery { Series = "Transformers", IssueNumber = "12" }
+        };
+
+        var cbzItem = new BulkScrapeQueueItem
+        {
+            FilePath = "/comics/Transformers 12.cbz",
+            ParsedQuery = new ComicSearchQuery { Series = "Transformers", IssueNumber = "12" }
+        };
+
+        var cbrVm = new InkTag.Gui.ViewModels.BulkScrapeItemViewModel(cbrItem);
+        var cbzVm = new InkTag.Gui.ViewModels.BulkScrapeItemViewModel(cbzItem);
+
+        Assert.True(cbrVm.IsCbr);
+        Assert.Equal("CBR ➔ CBZ", cbrVm.FormatBadgeText);
+        Assert.Contains("CBZ", cbrVm.FormatConversionTooltip);
+
+        Assert.False(cbzVm.IsCbr);
+    }
 }

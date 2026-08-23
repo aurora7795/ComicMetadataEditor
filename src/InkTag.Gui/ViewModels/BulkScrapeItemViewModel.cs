@@ -66,6 +66,11 @@ public class BulkScrapeItemViewModel : ObservableObject
 
     public string Filename => Item.Filename;
     public string FilePath => Item.FilePath;
+    public bool IsCbr => !string.IsNullOrEmpty(Item.FilePath) &&
+                         Path.GetExtension(Item.FilePath).Equals(".cbr", StringComparison.OrdinalIgnoreCase);
+    public string FormatBadgeText => "CBR ➔ CBZ";
+    public string FormatConversionTooltip => "CBR (RAR) comic archive. Will be automatically repacked into modern, open-standard CBZ (ZIP) format upon saving.";
+
     public string ParsedSeries => Item.ParsedQuery.Series;
     public string ParsedIssue => Item.ParsedQuery.IssueNumber;
     public int? ParsedYear => Item.ParsedQuery.Year;
@@ -394,6 +399,9 @@ public class BulkScrapeItemViewModel : ObservableObject
         StatusMessage = Item.StatusMessage;
         MatchedCandidate = Item.MatchedCandidate;
         IsSelected = Item.IsSelected;
+        OnPropertyChanged(nameof(IsCbr));
+        OnPropertyChanged(nameof(Filename));
+        OnPropertyChanged(nameof(FilePath));
 
         if (LocalThumbnail == null && Item.LocalCoverBytes != null && Item.LocalCoverBytes.Length > 0)
         {

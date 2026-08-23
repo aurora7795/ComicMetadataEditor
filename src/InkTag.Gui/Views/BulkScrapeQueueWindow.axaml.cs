@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using InkTag.Core;
 using InkTag.Core.Configuration;
+using InkTag.Core.Renaming;
 using InkTag.Core.Scrapers;
 using InkTag.Gui.ViewModels;
 
@@ -86,6 +89,67 @@ public partial class BulkScrapeQueueWindow : Window
             {
                 Close();
                 return;
+            }
+
+            var targetItems = vm.Items
+                .Where(i => i.IsSelected && (i.Status == BulkScrapeItemStatus.Matched || i.Status == BulkScrapeItemStatus.LowConfidence) && i.MatchedCandidate != null)
+                .ToList();
+
+            if (targetItems.Count == 0) return;
+
+            var cbrItems = targetItems.Where(i => i.IsCbr).ToList();
+            bool shouldConfirmCbr = cbrItems.Count > 0 && vm.SettingsService.Settings.ConfirmCbrToCbzConversion;
+            bool shouldConfirmRename = vm.AlsoRenameFiles;
+
+            if (shouldConfirmCbr || shouldConfirmRename)
+            {
+                string chosenTemplate = (vm.SelectedRenameTemplateIndex >= 0 && vm.SelectedRenameTemplateIndex < vm.RenameTemplates.Count)
+                    ? vm.RenameTemplates[vm.SelectedRenameTemplateIndex]
+                    : ComicFileRenamer.DefaultTemplate;
+
+                var confirmItems = targetItems.Select(item =>
+                {
+                    string targetName = item.Filename;
+                    bool isRenamed = false;
+                    if (vm.AlsoRenameFiles && item.MatchedCandidate != null)
+                    {
+                        var simulatedComic = new ComicInfo
+                        {
+                            Series = item.MatchedCandidate.SeriesTitle,
+                            Number = item.MatchedCandidate.IssueNumber,
+                            Title = item.MatchedCandidate.IssueTitle,
+                            Year = item.MatchedCandidate.VolumeStartYear ?? item.Item.ParsedQuery.Year
+                        };
+                        targetName = ComicFileRenamer.GenerateFilename(simulatedComic, item.FilePath, chosenTemplate, preserveScanInfo: false);
+                        isRenamed = !string.Equals(item.Filename, targetName, StringComparison.Ordinal);
+                    }
+                    else if (item.IsCbr)
+                    {
+                        targetName = Path.ChangeExtension(item.Filename, ".cbz");
+                    }
+
+                    return new BulkApplyConfirmItem
+                    {
+                        OriginalFilename = item.Filename,
+                        TargetFilename = targetName,
+                        IsCbrConversion = item.IsCbr,
+                        IsRenamed = isRenamed
+                    };
+                }).ToList();
+
+                var confirmDialog = new BulkApplyConfirmWindow(confirmItems, cbrItems.Count, shouldConfirmRename, chosenTemplate);
+                await confirmDialog.ShowDialog(this);
+
+                if (!confirmDialog.Confirmed)
+                {
+                    return;
+                }
+
+                if (confirmDialog.DoNotAskAgainCbr)
+                {
+                    vm.SettingsService.Settings.ConfirmCbrToCbzConversion = false;
+                    vm.SettingsService.SaveSettings();
+                }
             }
 
             int savedCount = await vm.ApplyMatchedAsync();

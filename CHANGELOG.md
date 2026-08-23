@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Bulk Auto-Tag CBR ➔ CBZ Indicators & Badges**: Displayed dynamic amber `CBR ➔ CBZ` badges in the `Archive File / Detected Query` column of the Bulk Scrape queue with explanatory conversion tooltips.
+- **Bulk Auto-Tag Pre-Save Confirmation Dialog**: Added `BulkApplyConfirmWindow` which prompts the user before applying bulk metadata changes whenever CBR repacking or automated file renaming (`AlsoRenameFiles`) is enabled, showing a live summary of all converted and renamed files.
+
 ---
 
 ## [0.12.3] - 2026-08-24

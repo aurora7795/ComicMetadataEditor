@@ -16,6 +16,7 @@ public class BulkScrapeQueueViewModel : ObservableObject
 {
     private readonly BulkScrapeQueueService _queueService;
     private readonly AppSettingsService _settingsService;
+    public AppSettingsService SettingsService => _settingsService;
     private CancellationTokenSource? _cts;
 
     public ObservableCollection<BulkScrapeItemViewModel> Items { get; } = new();

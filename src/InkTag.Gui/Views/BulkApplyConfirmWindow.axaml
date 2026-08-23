@@ -1,0 +1,91 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:InkTag.Gui.Views"
+        x:Class="InkTag.Gui.Views.BulkApplyConfirmWindow"
+        Title="Confirm Save &amp; Repackaging - InkTag"
+        Width="640" Height="460"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="{DynamicResource AppBackgroundBrush}">
+
+  <Grid RowDefinitions="Auto, *, Auto, Auto" Margin="22">
+    
+    <!-- Header & Summary Notices -->
+    <StackPanel Grid.Row="0" Spacing="10" Margin="0,0,0,12">
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <TextBlock Text="⚡" FontSize="26" VerticalAlignment="Center"/>
+        <StackPanel Spacing="3">
+          <TextBlock Text="Confirm Bulk Metadata Application" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+          <TextBlock Text="Review the archive changes and renaming actions below before proceeding:" FontSize="12" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- Dynamic Notice Chips -->
+      <StackPanel Spacing="6" Margin="0,4,0,0">
+        <!-- CBR Conversion Notice Banner -->
+        <Border x:Name="CbrNoticeBanner" Background="#2B1D00" BorderBrush="#B87700" BorderThickness="1" CornerRadius="4" Padding="10,7" IsVisible="False">
+          <Grid ColumnDefinitions="Auto, *">
+            <TextBlock Grid.Column="0" Text="🔄" FontSize="15" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <TextBlock Grid.Column="1" x:Name="CbrNoticeText" Text="CBR archives will be automatically converted to open-standard CBZ (ZIP) files."
+                       Foreground="#FFAA00" FontSize="11.5" TextWrapping="Wrap" VerticalAlignment="Center"/>
+          </Grid>
+        </Border>
+
+        <!-- Rename Files Notice Banner -->
+        <Border x:Name="RenameNoticeBanner" Background="#0C2A44" BorderBrush="#0078D4" BorderThickness="1" CornerRadius="4" Padding="10,7" IsVisible="False">
+          <Grid ColumnDefinitions="Auto, *">
+            <TextBlock Grid.Column="0" Text="🏷️" FontSize="15" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <TextBlock Grid.Column="1" x:Name="RenameNoticeText" Text="Files will be renamed according to the chosen template."
+                       Foreground="#569CD6" FontSize="11.5" TextWrapping="Wrap" VerticalAlignment="Center"/>
+          </Grid>
+        </Border>
+      </StackPanel>
+    </StackPanel>
+
+    <!-- File Changes List -->
+    <Border Grid.Row="1" Background="{DynamicResource AppSidebarBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,4,0,12">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <ItemsControl x:Name="FileListItemsControl">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="views:BulkApplyConfirmItem">
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10,7" Margin="3,3">
+                <Grid ColumnDefinitions="*, Auto">
+                  <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding OriginalFilename}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasNewName}">
+                      <TextBlock Text="➔" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}"/>
+                      <TextBlock Text="{Binding TargetFilename}" FontSize="11.5" Foreground="#4EC9B0" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                  </StackPanel>
+
+                  <!-- Badges Stack -->
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="10,0,0,0">
+                    <Border IsVisible="{Binding IsCbrConversion}" Background="#3D2800" BorderBrush="#B87700" BorderThickness="1" CornerRadius="3" Padding="6,2">
+                      <TextBlock Text="CBR ➔ CBZ" FontSize="10" FontWeight="Bold" Foreground="#FFAA00"/>
+                    </Border>
+                    <Border IsVisible="{Binding IsRenamed}" Background="#0C2A44" BorderBrush="#0078D4" BorderThickness="1" CornerRadius="3" Padding="6,2">
+                      <TextBlock Text="Renaming" FontSize="10" FontWeight="Bold" Foreground="#569CD6"/>
+                    </Border>
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Border>
+
+    <!-- Preference Checkbox (for CBR conversions) -->
+    <CheckBox Grid.Row="2" x:Name="DoNotAskAgainCheckBox"
+              Content="Do not ask again for CBR format conversions (configurable in Settings)"
+              FontSize="11.5" Foreground="{DynamicResource AppTextMutedBrush}"
+              Margin="0,0,0,12" IsVisible="False"/>
+
+    <!-- Action Buttons -->
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+      <Button x:Name="ProceedButton" Content="💾 Proceed with Save" Click="Proceed_Click" Padding="18,8" Background="{DynamicResource AppAccentBrush}" Foreground="{DynamicResource AppAccentForegroundBrush}" FontWeight="SemiBold" CornerRadius="4"/>
+      <Button Content="Cancel" Click="Cancel_Click" Padding="16,8" Background="{DynamicResource AppButtonBackgroundBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" CornerRadius="4"/>
+    </StackPanel>
+
+  </Grid>
+</Window>
