@@ -10,7 +10,7 @@ using Xunit;
 
 namespace InkTag.Tests;
 
-[Collection("BackupTests")]
+[Collection("ProcessStateTests")]
 public class BatchRollbackAndProvenanceTests : IDisposable
 {
     private readonly string _testBackupDir;

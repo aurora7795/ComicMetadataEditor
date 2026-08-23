@@ -16,7 +16,7 @@ public static class ComicTools
     private static readonly InkTag.Core.Configuration.AppSettingsService _settingsService = new();
 
     public static bool? ReadOnlyOverride { get; set; }
-
+    public static List<string>? AllowedRootsOverride { get; set; }
     public static bool IsReadOnlyMode => ReadOnlyOverride ?? CheckReadOnlyEnvironment();
 
     private static bool CheckReadOnlyEnvironment()
@@ -47,15 +47,23 @@ public static class ComicTools
 
         string fullPath = Path.GetFullPath(path);
         
-        var allowedRoots = new List<string>(_settingsService.Settings.AllowedRootPaths ?? new List<string>());
-        string? envRoots = Environment.GetEnvironmentVariable("INKTAG_ALLOWED_ROOT_PATHS");
-        if (!string.IsNullOrWhiteSpace(envRoots))
+        List<string> allowedRoots;
+        if (AllowedRootsOverride != null)
         {
-            char[] separators = OperatingSystem.IsWindows()
-                ? new[] { ';', ',' }
-                : new[] { ';', ':', ',' };
-            var parsedEnvRoots = envRoots.Split(separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            allowedRoots.AddRange(parsedEnvRoots);
+            allowedRoots = new List<string>(AllowedRootsOverride);
+        }
+        else
+        {
+            allowedRoots = new List<string>(_settingsService.Settings.AllowedRootPaths ?? new List<string>());
+            string? envRoots = Environment.GetEnvironmentVariable("INKTAG_ALLOWED_ROOT_PATHS");
+            if (!string.IsNullOrWhiteSpace(envRoots))
+            {
+                char[] separators = OperatingSystem.IsWindows()
+                    ? new[] { ';', ',' }
+                    : new[] { ';', ':', ',' };
+                var parsedEnvRoots = envRoots.Split(separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                allowedRoots.AddRange(parsedEnvRoots);
+            }
         }
 
         // If no explicit allowed roots configured, default to user profile, current directory, and temp directory

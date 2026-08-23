@@ -9,7 +9,7 @@ using Xunit;
 
 namespace InkTag.Tests;
 
-[Collection("BackupTests")]
+[Collection("ProcessStateTests")]
 public class McpSecurityAndBackupTests : IDisposable
 {
     private readonly string _testBackupDir;
@@ -20,11 +20,13 @@ public class McpSecurityAndBackupTests : IDisposable
         Directory.CreateDirectory(_testBackupDir);
         MetadataBackupService.SetGlobalCustomBackupDirectory(_testBackupDir);
         ComicTools.ReadOnlyOverride = null;
+        ComicTools.AllowedRootsOverride = null;
     }
 
     public void Dispose()
     {
         ComicTools.ReadOnlyOverride = null;
+        ComicTools.AllowedRootsOverride = null;
         MetadataBackupService.SetGlobalCustomBackupDirectory(null);
         if (Directory.Exists(_testBackupDir))
         {

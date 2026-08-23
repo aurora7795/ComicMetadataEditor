@@ -7,6 +7,7 @@ using Xunit;
 
 namespace InkTag.Tests;
 
+[Collection("ProcessStateTests")]
 public class McpToolsTests
 {
     private string CreateTestCbz(string comicInfoXml = "<ComicInfo><Title>MCP Test</Title></ComicInfo>")
