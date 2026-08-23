@@ -212,12 +212,14 @@ public class BulkScrapeItemViewModel : ObservableObject
     public Bitmap? RemoteThumbnail => MatchedThumbnail;
 
     public bool HasMatch => MatchedCandidate != null;
+    private static string FormatPercent(double value) => $"{(int)Math.Round(value * 100)}%";
+
     public double VisualSimilarity => MatchedCandidate?.VisualSimilarity ?? 0.0;
     public double MatchConfidence => MatchedCandidate?.MatchConfidence ?? 0.0;
 
     public double ConfidenceScore => MatchConfidence;
-    public string ConfidencePercentage => MatchedCandidate != null ? $"{MatchConfidence:P0}" : "—";
-    public string ConfidenceBadge => MatchedCandidate != null ? $"{MatchConfidence:P0} Conf." : "—";
+    public string ConfidencePercentage => MatchedCandidate != null ? FormatPercent(MatchConfidence) : "—";
+    public string ConfidenceBadge => MatchedCandidate != null ? $"{FormatPercent(MatchConfidence)} Conf." : "—";
 
     public string ConfidenceTooltip
     {
@@ -226,7 +228,7 @@ public class BulkScrapeItemViewModel : ObservableObject
             if (MatchedCandidate == null) return "No match found";
 
             var sb = new System.Text.StringBuilder();
-            sb.AppendLine($"Match Confidence: {MatchConfidence:P0}");
+            sb.AppendLine($"Match Confidence: {FormatPercent(MatchConfidence)}");
             sb.AppendLine("────────────────────────");
 
             bool seriesMatched = !string.IsNullOrEmpty(Item.ParsedQuery.Series) &&
@@ -254,7 +256,7 @@ public class BulkScrapeItemViewModel : ObservableObject
 
             if (HasVisualScore)
             {
-                sb.AppendLine($"✓ Cover Visual Match: {MatchedCandidate.VisualSimilarity!.Value:P0}");
+                sb.AppendLine($"✓ Cover Visual Match: {FormatPercent(MatchedCandidate.VisualSimilarity!.Value)}");
             }
             else
             {
@@ -277,13 +279,13 @@ public class BulkScrapeItemViewModel : ObservableObject
     }
 
     public bool HasVisualScore => MatchedCandidate?.VisualSimilarity.HasValue == true && MatchedCandidate.VisualSimilarity.Value > 0.01;
-    public string VisualScorePercentage => HasVisualScore ? $"{MatchedCandidate!.VisualSimilarity!.Value:P0}" : "—";
+    public string VisualScorePercentage => HasVisualScore ? FormatPercent(MatchedCandidate!.VisualSimilarity!.Value) : "—";
 
     public string VisualMatchLabel
     {
         get
         {
-            if (HasVisualScore) return $"{MatchedCandidate!.VisualSimilarity!.Value:P0}";
+            if (HasVisualScore) return FormatPercent(MatchedCandidate!.VisualSimilarity!.Value);
             if (Item.LocalCoverBytes == null || Item.LocalCoverBytes.Length == 0 || Item.LocalCoverHash == 0) return "No Local Cover";
             if (MatchedCandidate != null && string.IsNullOrEmpty(MatchedCandidate.SmallCoverUrl) && string.IsNullOrEmpty(MatchedCandidate.CoverUrl)) return "No Remote Cover";
             if (MatchedCandidate != null) return "Text Only";
@@ -297,7 +299,7 @@ public class BulkScrapeItemViewModel : ObservableObject
         {
             if (HasVisualScore)
             {
-                return $"Cover perceptual dHash visual match: {MatchedCandidate!.VisualSimilarity!.Value:P0}";
+                return $"Cover perceptual dHash visual match: {FormatPercent(MatchedCandidate!.VisualSimilarity!.Value)}";
             }
             if (Item.LocalCoverBytes == null || Item.LocalCoverBytes.Length == 0 || Item.LocalCoverHash == 0)
             {
@@ -316,7 +318,7 @@ public class BulkScrapeItemViewModel : ObservableObject
     }
 
     public string VisualSimilarityBadge => (MatchedCandidate?.VisualSimilarity.HasValue == true && MatchedCandidate.VisualSimilarity.Value > 0)
-        ? $"{MatchedCandidate.VisualSimilarity.Value:P0} Visual"
+        ? $"{FormatPercent(MatchedCandidate.VisualSimilarity.Value)} Visual"
         : "—";
 
     public string VisualMatchText => VisualSimilarityBadge;

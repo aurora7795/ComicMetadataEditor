@@ -297,14 +297,14 @@ public class BulkScrapeQueueService
                                 if (top.VisualSimilarity >= options.VisualSimilarityThreshold || top.MatchConfidence >= options.ConfidenceThreshold)
                                 {
                                     item.Status = BulkScrapeItemStatus.Matched;
-                                    item.StatusMessage = $"Matched: {top.SeriesTitle} #{top.IssueNumber} (Visual: {top.VisualSimilarity:P0})";
+                                    item.StatusMessage = $"Matched: {top.SeriesTitle} #{top.IssueNumber} (Visual: {(int)Math.Round((top.VisualSimilarity ?? 0) * 100)}%)";
                                     item.IsSelected = true;
                                     matchedViaVolume = true;
                                 }
                                 else
                                 {
                                     item.Status = BulkScrapeItemStatus.LowConfidence;
-                                    item.StatusMessage = $"Review needed (Confidence: {top.MatchConfidence:P0}, Visual: {top.VisualSimilarity:P0})";
+                                    item.StatusMessage = $"Review needed (Confidence: {(int)Math.Round(top.MatchConfidence * 100)}%, Visual: {(int)Math.Round((top.VisualSimilarity ?? 0) * 100)}%)";
                                     item.IsSelected = false; // Auto-uncheck review needed items
                                 }
                             }
@@ -336,13 +336,13 @@ public class BulkScrapeQueueService
                             if (top.VisualSimilarity >= options.VisualSimilarityThreshold || top.MatchConfidence >= options.ConfidenceThreshold)
                             {
                                 item.Status = BulkScrapeItemStatus.Matched;
-                                item.StatusMessage = $"Matched: {top.SeriesTitle} #{top.IssueNumber} (Visual: {top.VisualSimilarity:P0})";
+                                item.StatusMessage = $"Matched: {top.SeriesTitle} #{top.IssueNumber} (Visual: {(int)Math.Round((top.VisualSimilarity ?? 0) * 100)}%)";
                                 item.IsSelected = true;
                             }
                             else
                             {
                                 item.Status = BulkScrapeItemStatus.LowConfidence;
-                                item.StatusMessage = $"Review needed (Confidence: {top.MatchConfidence:P0}, Visual: {top.VisualSimilarity:P0})";
+                                item.StatusMessage = $"Review needed (Confidence: {(int)Math.Round(top.MatchConfidence * 100)}%, Visual: {(int)Math.Round((top.VisualSimilarity ?? 0) * 100)}%)";
                                 item.IsSelected = false; // Auto-uncheck review needed items
                             }
                         }

@@ -325,7 +325,7 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
     {
         if (vm.VisualSimilarity.HasValue && vm.VisualSimilarity.Value > 0)
         {
-            VisualSimilarityText = $"👁 {vm.VisualSimilarity.Value:P0} Cover Match";
+            VisualSimilarityText = $"👁 {(int)Math.Round(vm.VisualSimilarity.Value * 100)}% Cover Match";
         }
         else
         {

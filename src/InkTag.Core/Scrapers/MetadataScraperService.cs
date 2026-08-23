@@ -171,13 +171,13 @@ public class MetadataScraperService
             ApplyMetadata(existingComic, fetchedMetadata, _settingsService.Settings.DefaultMergeMode);
 
             string visualNote = topMatch.VisualSimilarity.HasValue && topMatch.VisualSimilarity.Value >= 0.70 
-                ? $" [Cover Match: {topMatch.VisualSimilarity.Value:P0}]" 
+                ? $" [Cover Match: {(int)Math.Round(topMatch.VisualSimilarity.Value * 100)}%]" 
                 : "";
 
             return new ScrapeResult
             {
                 Success = true,
-                Message = $"Successfully scraped metadata from '{topMatch.SeriesTitle} #{topMatch.IssueNumber}'{visualNote} (Confidence: {topMatch.MatchConfidence:P0}).",
+                Message = $"Successfully scraped metadata from '{topMatch.SeriesTitle} #{topMatch.IssueNumber}'{visualNote} (Confidence: {(int)Math.Round(topMatch.MatchConfidence * 100)}%).",
                 TargetComic = existingComic,
                 SelectedCandidate = topMatch,
                 Candidates = candidates
@@ -187,7 +187,7 @@ public class MetadataScraperService
         return new ScrapeResult
         {
             Success = false,
-            Message = $"Low confidence match ({topMatch.MatchConfidence:P0} < threshold {threshold:P0}). Manual candidate selection required.",
+            Message = $"Low confidence match ({(int)Math.Round(topMatch.MatchConfidence * 100)}% < threshold {(int)Math.Round(threshold * 100)}%). Manual candidate selection required.",
             TargetComic = existingComic,
             Candidates = candidates,
             RequiredUserSelection = true

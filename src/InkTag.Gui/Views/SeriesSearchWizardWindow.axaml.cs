@@ -319,7 +319,7 @@ public partial class SeriesSearchWizardWindow : Window
         if (IssuesListBox.SelectedItem is CandidateItemViewModel vm)
         {
             SelectedResult = vm.Result;
-            string matchNote = vm.VisualSimilarity.HasValue && vm.VisualSimilarity.Value > 0 ? $" [Cover Match: {vm.VisualSimilarity.Value:P0}]" : "";
+            string matchNote = vm.VisualSimilarity.HasValue && vm.VisualSimilarity.Value > 0 ? $" [Cover Match: {(int)Math.Round(vm.VisualSimilarity.Value * 100)}%]" : "";
             SelectedIssueSummaryText.Text = $"Selected: {vm.Result.SeriesTitle} #{vm.Result.IssueNumber} ({vm.Result.IssueTitle}){matchNote}";
             CompareApplyButton.IsEnabled = true;
             QuickApplyButton.IsEnabled = true;

@@ -82,10 +82,10 @@ public class CandidateItemViewModel : ObservableObject
             OnPropertyChanged(nameof(MatchConfidenceText));
         }
     }
-    public string MatchConfidenceText => $"{MatchConfidence:P0}";
+    public string MatchConfidenceText => $"{(int)Math.Round(MatchConfidence * 100)}%";
     public string CoverUrl => !string.IsNullOrEmpty(Result.SmallCoverUrl) ? Result.SmallCoverUrl : Result.CoverUrl;
 
-    public string VisualSimilarityBadge => VisualSimilarity.HasValue && VisualSimilarity.Value > 0 ? $"👁 {VisualSimilarity.Value:P0} Cover Match" : "";
+    public string VisualSimilarityBadge => VisualSimilarity.HasValue && VisualSimilarity.Value > 0 ? $"👁 {(int)Math.Round(VisualSimilarity.Value * 100)}% Cover Match" : "";
     public bool HasVisualMatchBadge => VisualSimilarity.HasValue && VisualSimilarity.Value >= 0.70;
 
     public event Action<CandidateItemViewModel>? OnCoverHashComputed;
