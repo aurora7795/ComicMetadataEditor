@@ -70,38 +70,44 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 * **Signature**: `public bool HasMetadata(string filePath, CancellationToken cancellationToken = default)`
 * **Description**: Fast check to verify whether an archive contains an embedded `ComicInfo.xml` entry without fully parsing and loading the document.
 
-#### `ReadMetadata` / `ReadMetadataAsJson`
+#### `ReadMetadata` / `ReadMetadataAsync` / `ReadMetadataAsJson`
 * **Signature**: `public ComicInfo ReadMetadata(string filePath, CancellationToken cancellationToken = default)`
 * **Signature**: `public ComicInfo ReadMetadata(string filePath, out bool hasEmbeddedXml, CancellationToken cancellationToken = default)`
 * **Signature**: `public ComicInfo ReadMetadata(string filePath, out bool hasEmbeddedXml, out bool usedSequentialFallback, CancellationToken cancellationToken = default)`
+* **Signature**: `public Task<ComicInfo> ReadMetadataAsync(string filePath, CancellationToken cancellationToken = default)`
 * **Signature**: `public string ReadMetadataAsJson(string filePath)`
-* **Description**: Parses `ComicInfo.xml` directly in-memory with zero temporary disk extraction.
+* **Description**: Parses `ComicInfo.xml` directly in-memory with zero temporary disk extraction via `ComicArchiveHandler`.
   1. *Fast-Path (.cbz)*: Reads the Central Directory using .NET's built-in `System.IO.Compression.ZipArchive` for 1-seek metadata access.
   2. *Sequential Forward Fallback*: If backward seeks fail on virtual mounts (e.g. Linux GVFS FTP / FUSE), wraps the stream in a `NonSeekableStream` with `CancellationToken` checks, reading local headers forward from byte 0.
   3. *Fallback & .cbr (RAR)*: Reads via SharpCompress `ArchiveFactory.OpenArchive(stream, new ReaderOptions { LookForHeader = true })` to safely recover metadata across high-latency network shares.
 
-#### `EditMetadata` / `EditMetadataFromJson`
+#### `EditMetadata` / `EditMetadataAsync` / `EditMetadataFromJson`
 * **Signature**: `public void EditMetadata(string filePath, Action<ComicInfo> editAction, string? batchJobId = null, string? changeReason = null, string? coverDHash = null, string? matchedThumbnailUrl = null, double? matchConfidence = null, double? visualSimilarity = null)`
+* **Signature**: `public Task EditMetadataAsync(string filePath, Action<ComicInfo> editAction, string? batchJobId = null, string? changeReason = null, string? coverDHash = null, string? matchedThumbnailUrl = null, double? matchConfidence = null, double? visualSimilarity = null, CancellationToken cancellationToken = default)`
 * **Signature**: `public void EditMetadataFromJson(string filePath, string jsonPatch, string? batchJobId = null, string? changeReason = null)`
-* **Description**: Takes an automated pre-write metadata backup snapshot via `MetadataBackupService`, unpacks the archive into a temporary folder, deserializes existing metadata or creates a new instance, applies edits (via lambda or dynamic JSON patch), serializes back to XML, compresses to `.tmp`, validates, and performs an atomic backup swap.
+* **Description**: Takes an automated pre-write metadata backup snapshot via `MetadataBackupService`, unpacks the archive into a temporary folder, deserializes existing metadata or creates a new instance, applies edits (via lambda or dynamic JSON patch), serializes back to XML using cached `XmlSerializer`, compresses to `.tmp`, validates, and performs an atomic backup swap via `ArchiveSwapService`.
 
-#### `BulkEditMetadata` / `BulkEditMetadataFromJson`
-* **Signature**: `public BulkEditReport BulkEditMetadata(string directoryPath, Action<ComicInfo> editAction, string? batchJobId = null)`
-* **Signature**: `public BulkEditReport BulkEditMetadataFromJson(string directoryPath, string jsonPatch, string? batchJobId = null)`
-* **Description**: Executes metadata edits on all `.cbz`/`.cbr` archives in a directory under a shared `batchJobId`, creating pre-write snapshots for each file and returning a `BulkEditReport`.
+#### `BulkEditMetadata` / `BulkEditMetadataAsync` / `BulkEditMetadataFromJson`
+* **Signature**: `public BulkEditReport BulkEditMetadata(string directoryPath, Action<ComicInfo> editAction, bool recursive = false)`
+* **Signature**: `public Task<BulkEditReport> BulkEditMetadataAsync(string directoryPath, Action<ComicInfo> editAction, bool recursive = false, IProgress<BulkEditProgress>? progress = null, CancellationToken cancellationToken = default)`
+* **Signature**: `public BulkEditReport BulkEditMetadataFromJson(string directoryPath, string jsonPatch, bool recursive = false)`
+* **Description**: Executes metadata edits on all `.cbz`/`.cbr` archives in a directory using lazy `Directory.EnumerateFiles` streaming to minimize memory footprint. Reports real-time item-by-item progress and supports `CancellationToken` cancellation.
 
 #### `GetMetadataDiff`
 * **Signature**: `public List<MetadataDiffItem> GetMetadataDiff(string filePath, string jsonPatch)`
 * **Description**: Previews property-level before/after diffs between the archive's current metadata and a proposed JSON patch.
 
 #### `ApplyJsonPatch`
-* **Signature**: `public static void ApplyJsonPatch(ComicInfo comicInfo, string jsonPatch)`
-* **Description**: Mutates a `ComicInfo` instance in-place by parsing property key-values from a JSON patch string.
+* **Signature**: `public static List<string> ApplyJsonPatch(ComicInfo comicInfo, string jsonPatch)`
+* **Description**: Mutates a `ComicInfo` instance in-place by parsing property key-values from a JSON patch string. Returns warnings for unrecognized properties.
 
-#### `ExtractCoverImage` / `ExtractCoverImageBytes`
+#### `ExtractCoverImage` / `ExtractCoverImageBytes` / `ExtractCoverImageBytesAsync` / `GetCoverHash`
 * **Signature**: `public string? ExtractCoverImage(string comicFilePath, string outputFilePath)`
 * **Signature**: `public byte[]? ExtractCoverImageBytes(string filePath)`
-* **Description**: Extracts front cover art or first page image from a `.cbz` or `.cbr` archive in-memory via stream decoding.
+* **Signature**: `public Task<byte[]?> ExtractCoverImageBytesAsync(string filePath, CancellationToken cancellationToken = default)`
+* **Signature**: `public ulong GetCoverHash(string filePath)`
+* **Signature**: `public Task<ulong> GetCoverHashAsync(string filePath, CancellationToken cancellationToken = default)`
+* **Description**: Extracts front cover art or first page image from a `.cbz` or `.cbr` archive in-memory via stream decoding, or computes 64-bit perceptual dHash.
 
 #### `IsSupportedComicFile`
 * **Signature**: `public static bool IsSupportedComicFile(string? filePath)`
@@ -113,7 +119,19 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 
 ---
 
-## 3. Supplementary Core Services
+## 3. Domain Exception Hierarchy (`InkTag.Core.Exceptions`)
+
+All operational and data integrity errors are structured under `InkTag.Core.Exceptions`:
+
+* **`InkTagException`**: Base exception for all InkTag domain operational errors.
+* **`ComicArchiveException`**: Base exception for archive operations, carrying `FilePath`.
+* **`ComicArchiveCorruptException`**: Thrown when an archive is corrupted, truncated, empty, or fails integrity validation.
+* **`MetadataXmlSanitizationException`**: Thrown when ComicInfo XML cannot be sanitized or parsed, carrying `XmlContentSnippet`.
+* **`UnsafeArchiveEntryException`**: Thrown when zip-slip path traversal (`../`) is detected during extraction, carrying `EntryName`.
+
+---
+
+## 4. Supplementary Core Services
 
 ### `MetadataBackupService.cs` (Disaster Recovery & Rollback Engine)
 * **Namespace**: `InkTag.Core.Backup`
@@ -167,7 +185,7 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 
 ---
 
-## 4. Interfaces (`InkTag.Mcp` & `InkTag.Cli`)
+## 5. Interfaces (`InkTag.Mcp` & `InkTag.Cli`)
 
 ### Model Context Protocol (`InkTag.Mcp`) Tools (14 Tools)
 * **`read_comic_metadata`**: Reads metadata XML as JSON object (`path`).

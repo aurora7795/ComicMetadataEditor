@@ -286,7 +286,29 @@
           </DataGrid.Styles>
           <DataGrid.Columns>
             <DataGridCheckBoxColumn Header="Untagged" Binding="{Binding IsUntagged}" IsReadOnly="True" Width="85"/>
-            <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" IsReadOnly="True" Width="200"/>
+            <DataGridTemplateColumn Header="File Name" Width="235" SortMemberPath="FileName">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:ComicItemViewModel">
+                  <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="6,0">
+                    <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding FileName}" MaxWidth="155"/>
+                    <Border IsVisible="{Binding IsCbr}"
+                            Background="{Binding FormatBadgeBackground}"
+                            BorderBrush="{Binding FormatBadgeBorder}"
+                            BorderThickness="1"
+                            CornerRadius="3"
+                            Padding="5,1"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="{Binding FormatConversionTooltip}">
+                      <TextBlock Text="{Binding FormatBadgeText}"
+                                 FontSize="9.5"
+                                 FontWeight="SemiBold"
+                                 Foreground="{Binding FormatBadgeForeground}"
+                                 VerticalAlignment="Center"/>
+                    </Border>
+                  </StackPanel>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
             <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="180"/>
             <DataGridTextColumn Header="Series" Binding="{Binding Series}" Width="160"/>
             <DataGridTextColumn Header="Issue #" Binding="{Binding Number}" Width="80"/>
@@ -379,6 +401,25 @@
                 <StackPanel Spacing="5" IsVisible="{Binding ActiveComic, Converter={x:Static ObjectConverters.IsNotNull}}">
                   <TextBlock Text="File Name" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11"/>
                   <TextBox Text="{Binding ActiveComic.FileName}" IsReadOnly="True" Background="{DynamicResource AppInputBackgroundBrush}" BorderThickness="1"/>
+                  
+                  <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,2" IsVisible="{Binding ActiveComic.IsCbr}">
+                    <Border Background="{Binding ActiveComic.FormatBadgeBackground}"
+                            BorderBrush="{Binding ActiveComic.FormatBadgeBorder}"
+                            BorderThickness="1"
+                            CornerRadius="3"
+                            Padding="5,1"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="{Binding ActiveComic.FormatConversionTooltip}">
+                      <TextBlock Text="{Binding ActiveComic.FormatBadgeText}"
+                                 FontSize="10"
+                                 FontWeight="SemiBold"
+                                 Foreground="{Binding ActiveComic.FormatBadgeForeground}"/>
+                    </Border>
+                    <TextBlock Text="Converts to .cbz on save"
+                               Foreground="{DynamicResource AppTextMutedBrush}"
+                               FontSize="11"
+                               VerticalAlignment="Center"/>
+                  </StackPanel>
                   
                   <TextBlock Text="Title" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11" Margin="0,5,0,0"/>
                   <TextBox Text="{Binding ActiveComic.Title}" Background="{DynamicResource AppInputBackgroundBrush}"/>

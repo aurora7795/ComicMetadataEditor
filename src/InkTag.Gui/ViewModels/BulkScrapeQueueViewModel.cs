@@ -27,6 +27,9 @@ public class BulkScrapeQueueViewModel : ObservableObject
         set => SetProperty(ref _selectedItem, value);
     }
 
+    private bool _isSearching;
+    private bool _isSaving;
+
     private bool _isRunning;
     public bool IsRunning
     {
@@ -71,7 +74,8 @@ public class BulkScrapeQueueViewModel : ObservableObject
         get
         {
             if (IsAllDone) return "✓ Done (Close Window)";
-            if (IsRunning) return "Saving...";
+            if (_isSaving) return "Saving to Archives...";
+            if (_isSearching) return "Searching & Matching...";
             return "💾 Apply Matched to Comic Archives";
         }
     }
@@ -237,6 +241,7 @@ public class BulkScrapeQueueViewModel : ObservableObject
             return;
         }
 
+        _isSearching = true;
         IsRunning = true;
         _cts = new CancellationTokenSource();
         ProgressPercentage = 0;
@@ -298,6 +303,7 @@ public class BulkScrapeQueueViewModel : ObservableObject
         }
         finally
         {
+            _isSearching = false;
             IsRunning = false;
             foreach (var itemVm in Items)
             {
@@ -317,6 +323,7 @@ public class BulkScrapeQueueViewModel : ObservableObject
     {
         if (IsRunning) return 0;
 
+        _isSaving = true;
         IsRunning = true;
         _cts = new CancellationTokenSource();
         ProgressPercentage = 0;
@@ -376,6 +383,7 @@ public class BulkScrapeQueueViewModel : ObservableObject
         }
         finally
         {
+            _isSaving = false;
             IsRunning = false;
             foreach (var itemVm in Items)
             {

@@ -29,6 +29,7 @@ public class AppSettings
     public List<string> AllowedRootPaths { get; set; } = new();
     public bool ClearLegacyZipCommentsOnUpgrade { get; set; } = true;
     public bool WriteTaggingAttributionToNotes { get; set; } = true;
+    public bool ConfirmCbrToCbzConversion { get; set; } = true;
 
     // Komga Server Settings
     public string KomgaServerUrl { get; set; } = string.Empty;

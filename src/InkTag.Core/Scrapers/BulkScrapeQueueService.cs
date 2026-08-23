@@ -457,6 +457,16 @@ public class BulkScrapeQueueService
                     matchConfidence: item.MatchedCandidate?.MatchConfidence,
                     visualSimilarity: item.MatchedCandidate?.VisualSimilarity);
 
+                // Update item path if a CBR was converted to CBZ during repackaging
+                if (Path.GetExtension(item.FilePath).Equals(".cbr", StringComparison.OrdinalIgnoreCase))
+                {
+                    string targetCbz = Path.ChangeExtension(item.FilePath, ".cbz");
+                    if (File.Exists(targetCbz))
+                    {
+                        item.FilePath = targetCbz;
+                    }
+                }
+
                 if (renameFiles)
                 {
                     try

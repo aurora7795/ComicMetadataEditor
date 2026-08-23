@@ -1,0 +1,49 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="InkTag.Gui.Views.CbrConversionConfirmWindow"
+        Title="CBR ➔ CBZ Format Conversion"
+        Width="540" Height="380"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="{DynamicResource AppBackgroundBrush}">
+
+  <Grid RowDefinitions="Auto, *, Auto, Auto" Margin="22">
+    <!-- Header -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="16" Margin="0,0,0,12">
+      <TextBlock Text="🔄" FontSize="32" VerticalAlignment="Top" Margin="0,2,0,0"/>
+      <StackPanel Spacing="6">
+        <TextBlock Text="CBR ➔ CBZ Format Conversion" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+        <TextBlock Text="CBR (RAR) archives cannot be safely recompressed; saving will convert the following archive(s) to modern, open-standard CBZ (ZIP) format on disk:"
+                   TextWrapping="Wrap" FontSize="12.5" Foreground="{DynamicResource AppTextSecondaryBrush}" LineHeight="17" MaxWidth="440"/>
+      </StackPanel>
+    </StackPanel>
+
+    <!-- File List Container -->
+    <Border Grid.Row="1" Background="{DynamicResource AppSidebarBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,4,0,12">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <ItemsControl x:Name="FileListItemsControl">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="4,3">
+                <TextBlock Text="📄" FontSize="12" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding}" FontSize="12" Foreground="{DynamicResource AppTextPrimaryBrush}" TextTrimming="CharacterEllipsis" MaxWidth="460" VerticalAlignment="Center"/>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Border>
+
+    <!-- Preference Checkbox -->
+    <CheckBox Grid.Row="2" x:Name="DoNotAskAgainCheckBox"
+              Content="Do not ask again (can be re-enabled in Settings)"
+              FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}"
+              Margin="0,0,0,12"/>
+
+    <!-- Action Buttons -->
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+      <Button Content="Proceed with Save" Click="Proceed_Click" Padding="16,7" Background="{DynamicResource AppAccentBrush}" Foreground="{DynamicResource AppAccentForegroundBrush}" FontWeight="SemiBold"/>
+      <Button Content="Cancel" Click="Cancel_Click" Padding="16,7" Background="{DynamicResource AppButtonBackgroundBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+    </StackPanel>
+  </Grid>
+</Window>

@@ -26,6 +26,12 @@ public partial class MainWindow : Window
         DataContext = vm;
 
         vm.SaveFinishedWithErrors += OnSaveFinishedWithErrors;
+        vm.ConfirmCbrConversionRequested = async fileNames =>
+        {
+            var dialog = new CbrConversionConfirmWindow(fileNames);
+            var result = await dialog.ShowDialog<bool>(this);
+            return (result, dialog.DoNotAskAgain);
+        };
         vm.PropertyChanged += Vm_PropertyChanged;
 
         UpdateInspectorColumnWidth(vm.IsInspectorVisible);
@@ -277,9 +283,40 @@ public partial class MainWindow : Window
             if (queueWindow.WasApplied)
             {
                 // Reload comic metadata in the main grid
-                if (!string.IsNullOrEmpty(vm.SelectedDirectory))
+                if (!string.IsNullOrEmpty(vm.SelectedDirectory) && Directory.Exists(vm.SelectedDirectory))
                 {
                     await vm.LoadDirectoryCommand.ExecuteAsync(null);
+                }
+                else
+                {
+                    var editor = new MetadataEditor();
+                    foreach (var comic in vm.Comics)
+                    {
+                        string checkPath = comic.FilePath;
+                        if (comic.IsCbr && !File.Exists(checkPath))
+                        {
+                            string cbzPath = Path.ChangeExtension(checkPath, ".cbz");
+                            if (File.Exists(cbzPath))
+                            {
+                                comic.UpdateFilePath(cbzPath);
+                                checkPath = cbzPath;
+                            }
+                        }
+
+                        if (File.Exists(checkPath))
+                        {
+                            try
+                            {
+                                var read = editor.ReadMetadata(checkPath);
+                                comic.LoadFromModel(read);
+                                comic.HasEmbeddedXml = true;
+                                comic.IsDirty = false;
+                            }
+                            catch { }
+                        }
+                    }
+                    vm.UpdateCounts();
+                    vm.ApplyFilter();
                 }
             }
         }

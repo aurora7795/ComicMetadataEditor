@@ -52,7 +52,7 @@ public class ComicScannerService
                 var editor = new MetadataEditor();
 
                 var enumSw = System.Diagnostics.Stopwatch.StartNew();
-                var files = Directory.GetFiles(directoryPath, "*.*", searchOption)
+                var files = Directory.EnumerateFiles(directoryPath, "*.*", searchOption)
                     .Where(MetadataEditor.IsSupportedComicFile)
                     .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
                     .ToList();

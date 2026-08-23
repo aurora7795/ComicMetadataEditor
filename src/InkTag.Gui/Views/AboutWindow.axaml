@@ -12,7 +12,7 @@
       <StackPanel Spacing="6" VerticalAlignment="Top">
         <TextBlock Text="InkTag Desktop" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
         <StackPanel Orientation="Horizontal" Spacing="8">
-          <TextBlock x:Name="VersionTextBlock" Text="Version 0.12.2" FontSize="13" Foreground="#4EC9B0" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <TextBlock x:Name="VersionTextBlock" Text="Version 0.12.3" FontSize="13" Foreground="#4EC9B0" FontWeight="SemiBold" VerticalAlignment="Center"/>
           <TextBlock Text="•" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11" VerticalAlignment="Center"/>
           <Button Content="GitHub Repository" Click="OpenGitHubRepoClick" Classes="linkButton" FontSize="12" VerticalAlignment="Center"/>
         </StackPanel>

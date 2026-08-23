@@ -8,7 +8,7 @@ This page details the testing strategy and validation checklists for verifying t
 
 ### 1. Unit & Integration Test Suite (`InkTag.Tests`)
 * **Target Project**: `tests/InkTag.Tests/InkTag.Tests.csproj`
-* **Test Classes & Coverage (177 Tests)**:
+* **Test Classes & Coverage (184 Tests)**:
   * **`McpSecurityAndBackupTests` & `BatchRollbackAndProvenanceTests`**:
     * Automated pre-write `ComicInfo.xml` snapshot creation upon mutating tool invocation.
     * Strict read-only mode (`INKTAG_MCP_READ_ONLY=true` / `--read-only`) preventing all file modifications.
@@ -46,6 +46,8 @@ This page details the testing strategy and validation checklists for verifying t
     * In-memory fast-path: verifying direct in-memory `ZipArchive` metadata and cover extraction without temp disk files.
     * Network share concurrency: `OpenReadOptimized` allowing concurrent reads during external open file locks.
     * Parallel directory scanning: index-preserved alphabetical sorting, real-time `IProgress` callbacks, and clean cancellation.
+    * Asynchronous API execution: `ReadMetadataAsync`, `EditMetadataAsync`, `BulkEditMetadataAsync`, `CancellationToken` cancellation, and progress reporting.
+    * Custom domain exceptions: verifying `InkTagException`, `ComicArchiveException`, `ComicArchiveCorruptException`, and `MetadataXmlSanitizationException` inheritance and diagnostic context.
   * **`ScraperTests`**:
     * `PerceptualHashService`: 64-bit dHash generation and Hamming distance computation.
     * `ComicFilenameParser`: Smart extraction of series, volume, decimal issues, years, and 2-level ancestor directory traversal.

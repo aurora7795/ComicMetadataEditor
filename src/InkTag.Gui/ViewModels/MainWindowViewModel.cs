@@ -207,6 +207,9 @@ public partial class MainWindowViewModel : ViewModelBase
     // Event raised when save completes with errors, to open error window
     public event Action? SaveFinishedWithErrors;
 
+    // Callback invoked when CBR files are about to be saved and require user confirmation
+    public Func<IEnumerable<string>, Task<(bool Proceed, bool DoNotAskAgain)>>? ConfirmCbrConversionRequested;
+
     public MainWindowViewModel()
     {
         Comics.CollectionChanged += OnComicsCollectionChanged;
@@ -549,6 +552,28 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        var settingsService = new InkTag.Core.Configuration.AppSettingsService();
+        var cbrItems = dirtyItems.Where(c => c.IsCbr).ToList();
+        int cbrCount = cbrItems.Count;
+
+        // Prompt confirmation if CBR conversions are present and preference is enabled
+        if (cbrCount > 0 && settingsService.Settings.ConfirmCbrToCbzConversion && ConfirmCbrConversionRequested != null)
+        {
+            var (proceed, doNotAskAgain) = await ConfirmCbrConversionRequested(cbrItems.Select(c => c.FileName));
+            if (!proceed)
+            {
+                ProgressText = "Save cancelled.";
+                return;
+            }
+
+            if (doNotAskAgain)
+            {
+                var settings = settingsService.Settings;
+                settings.ConfirmCbrToCbzConversion = false;
+                settingsService.SaveSettings(settings);
+            }
+        }
+
         IsSaving = true;
         ProgressValue = 0;
         SaveFailures.Clear();
@@ -572,12 +597,14 @@ public partial class MainWindowViewModel : ViewModelBase
                     var currentCompleted = completed;
                     var currentPath = item.FileName;
                     string originalPath = item.FilePath;
-                    bool isCbr = Path.GetExtension(originalPath).Equals(".cbr", StringComparison.OrdinalIgnoreCase);
+                    bool isCbr = item.IsCbr;
 
                     Dispatcher.UIThread.Post(() =>
                     {
                         ProgressValue = (double)currentCompleted / total * 100;
-                        ProgressText = $"Saving ({currentCompleted}/{total}): {currentPath}";
+                        ProgressText = isCbr
+                            ? $"Saving ({currentCompleted}/{total}): {currentPath} (CBR ➔ CBZ)..."
+                            : $"Saving ({currentCompleted}/{total}): {currentPath}...";
                     });
 
                     try
@@ -628,10 +655,11 @@ public partial class MainWindowViewModel : ViewModelBase
             }
             else
             {
-                ProgressText = "All modifications saved successfully.";
+                ProgressText = cbrCount > 0
+                    ? $"Saved {total} comic(s) successfully ({cbrCount} converted to .cbz)."
+                    : "All modifications saved successfully.";
 
                 // Check for Komga auto-sync on save
-                var settingsService = new InkTag.Core.Configuration.AppSettingsService();
                 if (settingsService.Settings.KomgaAutoSyncOnSave && dirtyItems.Count > 0)
                 {
                     _ = Task.Run(async () =>

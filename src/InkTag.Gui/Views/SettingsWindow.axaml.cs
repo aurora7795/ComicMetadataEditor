@@ -87,6 +87,7 @@ public partial class SettingsWindow : Window
             ? settings.BulkScrapeRenameTemplate 
             : "{Series} #{Number:3} ({Year})";
         ClearLegacyZipCommentsCheckBox.IsChecked = settings.ClearLegacyZipCommentsOnUpgrade;
+        ConfirmCbrConversionCheckBox.IsChecked = settings.ConfirmCbrToCbzConversion;
 
         // Scraping Tab
         ApiKeyTextBox.Text = settings.ComicVineApiKey;
@@ -101,12 +102,8 @@ public partial class SettingsWindow : Window
         KomgaPasswordTextBox.Text = settings.KomgaPassword;
         KomgaAutoSyncCheckBox.IsChecked = settings.KomgaAutoSyncOnSave;
         KomgaStoryArcsCheckBox.IsChecked = settings.KomgaSyncStoryArcsToCollections;
-
-        if (settings.KomgaPathMappings.Count > 0)
-        {
-            KomgaLocalPrefixTextBox.Text = settings.KomgaPathMappings[0].LocalPrefix;
-            KomgaServerPrefixTextBox.Text = settings.KomgaPathMappings[0].ServerPrefix;
-        }
+        KomgaLocalPrefixTextBox.Text = settings.KomgaPathMappings.Count > 0 ? settings.KomgaPathMappings[0].LocalPrefix : "";
+        KomgaServerPrefixTextBox.Text = settings.KomgaPathMappings.Count > 0 ? settings.KomgaPathMappings[0].ServerPrefix : "";
 
         // Diagnostics Tab
         DebugLoggingCheckBox.IsChecked = settings.EnableDebugLogging;
@@ -117,32 +114,36 @@ public partial class SettingsWindow : Window
         string url = KomgaUrlTextBox.Text?.Trim() ?? "";
         if (string.IsNullOrEmpty(url))
         {
-            KomgaStatusTextBlock.Text = "❌ Please enter a Komga Server URL (e.g. http://localhost:25600).";
+            KomgaStatusTextBlock.Text = "❌ Please enter a Komga server URL.";
             KomgaStatusTextBlock.Foreground = Avalonia.Media.Brushes.Red;
             return;
         }
 
-        KomgaStatusTextBlock.Text = "⏳ Testing connection with Komga...";
+        KomgaStatusTextBlock.Text = "⏳ Testing Komga connection...";
         KomgaStatusTextBlock.Foreground = Avalonia.Media.Brushes.Yellow;
 
         try
         {
-            using var client = new InkTag.Core.Komga.KomgaClient(
-                url,
-                KomgaApiKeyTextBox.Text?.Trim(),
-                KomgaUserTextBox.Text?.Trim(),
-                KomgaPasswordTextBox.Text?.Trim());
-
-            bool success = await client.TestConnectionAsync();
-            if (success)
+            var tempSettings = new AppSettings
             {
-                var libraries = await client.GetLibrariesAsync();
-                KomgaStatusTextBlock.Text = $"✅ Connection successful! Discovered {libraries.Count} Komga libraries.";
+                KomgaServerUrl = url,
+                KomgaApiKey = KomgaApiKeyTextBox.Text?.Trim() ?? "",
+                KomgaUser = KomgaUserTextBox.Text?.Trim() ?? "",
+                KomgaPassword = KomgaPasswordTextBox.Text?.Trim() ?? ""
+            };
+            var tempService = new AppSettingsService();
+            tempService.SaveSettings(tempSettings);
+
+            var client = new InkTag.Core.Komga.KomgaClient(tempService);
+            bool ok = await client.TestConnectionAsync();
+            if (ok)
+            {
+                KomgaStatusTextBlock.Text = "✅ Komga connection successful!";
                 KomgaStatusTextBlock.Foreground = Avalonia.Media.Brushes.LightGreen;
             }
             else
             {
-                KomgaStatusTextBlock.Text = "❌ Server reached but authentication failed. Check API Key or Credentials.";
+                KomgaStatusTextBlock.Text = "❌ Komga connection failed. Check URL and credentials.";
                 KomgaStatusTextBlock.Foreground = Avalonia.Media.Brushes.OrangeRed;
             }
         }
@@ -204,6 +205,7 @@ public partial class SettingsWindow : Window
         BulkAutoRenameCheckBox.IsChecked = defaults.BulkScrapeAutoRenameFiles;
         RenameTemplateTextBox.Text = defaults.BulkScrapeRenameTemplate;
         ClearLegacyZipCommentsCheckBox.IsChecked = defaults.ClearLegacyZipCommentsOnUpgrade;
+        ConfirmCbrConversionCheckBox.IsChecked = defaults.ConfirmCbrToCbzConversion;
 
         // General
         ThemeModeComboBox.SelectedIndex = (int)defaults.ThemeMode;
@@ -211,6 +213,7 @@ public partial class SettingsWindow : Window
         BulkAutoRenameCheckBox.IsChecked = defaults.BulkScrapeAutoRenameFiles;
         RenameTemplateTextBox.Text = defaults.BulkScrapeRenameTemplate;
         ClearLegacyZipCommentsCheckBox.IsChecked = defaults.ClearLegacyZipCommentsOnUpgrade;
+        ConfirmCbrConversionCheckBox.IsChecked = defaults.ConfirmCbrToCbzConversion;
 
         // Scraping
         ApiKeyTextBox.Text = defaults.ComicVineApiKey;
@@ -247,6 +250,7 @@ public partial class SettingsWindow : Window
             ? RenameTemplateTextBox.Text.Trim() 
             : "{Series} #{Number:3} ({Year})";
         settings.ClearLegacyZipCommentsOnUpgrade = ClearLegacyZipCommentsCheckBox.IsChecked == true;
+        settings.ConfirmCbrToCbzConversion = ConfirmCbrConversionCheckBox.IsChecked == true;
 
         // Scraping
         settings.ComicVineApiKey = ApiKeyTextBox.Text?.Trim() ?? "";

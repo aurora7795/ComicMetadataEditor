@@ -45,12 +45,12 @@ public class ArchiveCoverService
             }
         }
 
-        return await Task.Run<(Bitmap?, ulong)>(() =>
+        return await Task.Run<(Bitmap?, ulong)>(async () =>
         {
             try
             {
                 var editor = new InkTag.Core.MetadataEditor();
-                byte[]? bytes = editor.ExtractCoverImageBytes(archivePath);
+                byte[]? bytes = await editor.ExtractCoverImageBytesAsync(archivePath, cancellationToken).ConfigureAwait(false);
                 if (bytes == null || bytes.Length == 0)
                 {
                     return (null, 0);

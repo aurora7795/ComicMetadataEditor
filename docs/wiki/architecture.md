@@ -8,7 +8,8 @@ This page outlines the high-level architecture of the InkTag solution.
 
 The solution is organized into standard `src/` and `tests/` layers:
 1. **`InkTag.Core` (Domain & Services Library)**:
-   * Provides domain models (`ComicInfo`), schema validation (`ComicInfo.xsd`), dynamic JSON patching, in-memory streaming, and atomic archive repackaging (`MetadataEditor`).
+   * Provides domain models (`ComicInfo`), schema validation (`ComicInfo.xsd`), dynamic JSON patching, in-memory streaming, and atomic archive repackaging (`MetadataEditor` façade delegating to `ComicArchiveHandler`, `ArchiveSwapService`, and `ComicInfoXmlSanitizer`).
+   * Provides domain error classifications under `InkTag.Core.Exceptions` (`InkTagException`, `ComicArchiveException`, `ComicArchiveCorruptException`, `MetadataXmlSanitizationException`, `UnsafeArchiveEntryException`).
    * Provides supplementary domain services:
      * **`MetadataBackupService`**: Automated pre-write snapshots, atomic multi-file transaction rollbacks (`BatchJobId`), forensic provenance audit trails, and automatic retention management in isolated AppData (`~/.local/share/InkTag/backups/`).
      * **`ComicFilenameParser`**: Smart filename and 2-level ancestor directory metadata inference.
@@ -20,7 +21,7 @@ The solution is organized into standard `src/` and `tests/` layers:
 2. **`InkTag.Cli` (Agentic CLI Utility)**: Allows scanning folders, structured `--json` execution, reading, updating, renaming, scraping, cover extraction, and schema exporting from the command line.
 3. **`InkTag.Mcp` (MCP Server)**: Exposes 14 Model Context Protocol stdio tools for AI agents (Claude Desktop, Cursor, Antigravity) with strict read-only mode, safe-by-default dry runs, and forensic backup restoration. Published as a single-file executable (`PublishSingleFile=true`) and bundled inside application packages.
 4. **`InkTag.Gui` (InkTag Desktop)**: Multi-platform visual spreadsheet and bulk-edit panel built with Avalonia UI. Features dynamic Light/Dark/System theme switching, bounded parallel scanning, Series Search Wizard, Bulk Auto-Tag queue with visual breakdown tooltips, Komga synchronization, and Velopack auto-updating.
-5. **`InkTag.Tests` (Test Suite)**: Comprehensive xUnit test suite (177 unit & integration tests).
+5. **`InkTag.Tests` (Test Suite)**: Comprehensive xUnit test suite (184 unit & integration tests).
 
 ```mermaid
 graph TD

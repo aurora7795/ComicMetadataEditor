@@ -11,6 +11,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.12.3] - 2026-08-24
+
+### Added
+- **CBR ➔ CBZ Conversion Transparency & Pre-Save Notices**:
+  - **Dynamic In-Grid Format Badges**: Added responsive format pill badges in the DataGrid `File Name` column displaying a subtle gray `CBR` badge on unmodified CBR files that dynamically transitions to an amber `CBR ➔ CBZ` conversion badge when modified (`IsDirty`).
+  - **Comprehensive Explanatory Tooltips**: Added informative tooltips explaining why CBR (RAR) files are repacked into modern, open-standard CBZ (ZIP) files upon saving.
+  - **Inspector Details Notice**: Displays the format badge and conversion reminder in the File Information sidebar panel.
+  - **Pre-Save Confirmation Dialog**: Added `CbrConversionConfirmWindow` modal displaying a list of all affected CBR files prior to saving, with a "Do not ask again" preference checkbox.
+  - **Configuration Setting**: Added `ConfirmCbrToCbzConversion` setting to `AppSettings` and the Settings GUI window under General preferences.
+- **Core Refactoring & Modernization (Code Review Implementation)**:
+  - **Modularized Core Services**: Extracted `ComicInfoXmlSanitizer` (XML sanitization, coercion, and validation), `ArchiveSwapService` (atomic swap, rollback safety, integrity validation), and `ComicArchiveHandler` (multi-tiered ZIP seek, non-seekable streams, SharpCompress fallback). `MetadataEditor` acts as a unified façade maintaining 100% backward compatibility.
+  - **Custom Domain Exception Hierarchy**: Added `InkTagException` base class and specialized domain exceptions (`ComicArchiveException`, `ComicArchiveCorruptException`, `MetadataXmlSanitizationException`, `UnsafeArchiveEntryException`) under `InkTag.Core.Exceptions`.
+  - **Native Async API Overloads**: Implemented `ReadMetadataAsync`, `EditMetadataAsync`, `BulkEditMetadataAsync`, `ExtractCoverImageBytesAsync`, and `GetCoverHashAsync` with `CancellationToken` propagation and progress reporting.
+  - **Comprehensive XML Documentation**: Added standard `/// <summary>` docstrings across all public schema properties in [`ComicInfo.cs`](file:///home/aurora7795/AntiGravProjects/InkTag/src/InkTag.Core/ComicInfo.cs).
+
+### Changed
+- **Save Status Bar Progress Reporting**: `MainWindowViewModel.SaveAllAsync` now explicitly reports CBR ➔ CBZ conversion counts during batch saves (e.g. `Saving (1/3): Issue.cbr (CBR ➔ CBZ)...`) and in the final completion message.
+- **Cached `XmlSerializer` Instances**: `ComicInfoXmlSanitizer` now caches static `XmlSerializer` instances, eliminating runtime dictionary lookups and heap allocations per read/write cycle.
+- **Lazy Directory File Enumeration**: Replaced `Directory.GetFiles` with `Directory.EnumerateFiles` across `MetadataEditor`, `AgentOperations`, and `ComicScannerService` to stream file paths lazily and eliminate large upfront array allocations when processing massive comic libraries.
+- **Asynchronous GUI & MCP Adoption**: Updated `ArchiveCoverService` and `ComicScannerService` to consume non-blocking async methods.
+
+### Fixed
+- **Bulk Auto-Tag Queue Button Label**: Fixed misleading `"Saving..."` label on the bottom action button while the queue is actively searching and matching covers on ComicVine. It now clearly displays `"Searching & Matching..."` during the search phase and `"Saving to Archives..."` during the write phase.
+- **Top Control Bar Overflow in Bulk Queue**: Resolved control clipping where the Cancel button overflowed the top card by adopting a responsive 3-column layout and compact spacing.
+- **ViewModel Path-Change False-Dirty Trigger**: Fixed a bug where updating a comic's path (`.cbr` $\rightarrow$ `.cbz` or file renaming) triggered property change notifications that erroneously marked `IsDirty = true`.
+- **Bulk Scrape CBR $\rightarrow$ CBZ Path Synchronization**: Ensured `BulkScrapeQueueService` immediately updates item paths to `.cbz` after conversion so subsequent file renaming and in-place main grid reloads reference the correct file.
+
+---
+
 ## [0.12.2] - 2026-08-22
 
 ### Added

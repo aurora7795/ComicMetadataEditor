@@ -72,6 +72,15 @@
                 </StackPanel>
               </Border>
 
+              <!-- Archive Formats & CBR Conversion Card -->
+              <Border Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Archive Formats &amp; CBR Conversion" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                  <TextBlock Text="CBR (RAR) archives are automatically converted to standard CBZ (ZIP) format when saved." FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextWrapping="Wrap"/>
+                  <CheckBox Name="ConfirmCbrConversionCheckBox" Content="Show confirmation notice before converting CBR archives to CBZ on save" IsChecked="True" Margin="0,2,0,0"/>
+                </StackPanel>
+              </Border>
+
             </StackPanel>
           </ScrollViewer>
         </TabItem>

@@ -380,6 +380,45 @@ public partial class ComicItemViewModel : ObservableValidator
         }
     }
 
+    /// <summary>
+    /// Returns true if the backing file is a CBR (RAR) archive.
+    /// </summary>
+    public bool IsCbr => Path.GetExtension(FilePath).Equals(".cbr", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Returns true if this is a CBR archive with staged/unsaved changes that will be converted to CBZ on save.
+    /// </summary>
+    public bool WillConvertToCbzOnSave => IsCbr && IsDirty;
+
+    /// <summary>
+    /// Badge text indicating archive format and conversion state.
+    /// </summary>
+    public string FormatBadgeText => WillConvertToCbzOnSave ? "CBR ➔ CBZ" : IsCbr ? "CBR" : "CBZ";
+
+    /// <summary>
+    /// Background brush hex for the format badge.
+    /// </summary>
+    public string FormatBadgeBackground => WillConvertToCbzOnSave ? "#854D0E" : "#374151";
+
+    /// <summary>
+    /// Foreground text color hex for the format badge.
+    /// </summary>
+    public string FormatBadgeForeground => WillConvertToCbzOnSave ? "#FEF08A" : "#D1D5DB";
+
+    /// <summary>
+    /// Border stroke color hex for the format badge.
+    /// </summary>
+    public string FormatBadgeBorder => WillConvertToCbzOnSave ? "#EAB308" : "#4B5563";
+
+    /// <summary>
+    /// Descriptive tooltip for format badge and conversion behavior.
+    /// </summary>
+    public string FormatConversionTooltip => WillConvertToCbzOnSave
+        ? "CBR (RAR) format cannot be recompressed directly; saving will automatically convert this archive to modern CBZ (ZIP) format."
+        : IsCbr
+            ? "CBR (RAR) archive. Any saved metadata edits will automatically convert this file to CBZ format."
+            : "CBZ (ZIP) comic archive.";
+
     public async Task LoadCoverAsync(ArchiveCoverService coverService, CancellationToken cancellationToken)
     {
         if (CoverImage != null && CoverHash != 0) return;
@@ -401,12 +440,33 @@ public partial class ComicItemViewModel : ObservableValidator
             OnPropertyChanged(nameof(IsUntagged));
         }
 
+        if (e.PropertyName == nameof(IsDirty) || e.PropertyName == nameof(FilePath))
+        {
+            OnPropertyChanged(nameof(IsCbr));
+            OnPropertyChanged(nameof(WillConvertToCbzOnSave));
+            OnPropertyChanged(nameof(FormatBadgeText));
+            OnPropertyChanged(nameof(FormatBadgeBackground));
+            OnPropertyChanged(nameof(FormatBadgeForeground));
+            OnPropertyChanged(nameof(FormatBadgeBorder));
+            OnPropertyChanged(nameof(FormatConversionTooltip));
+        }
+
         if (!_isInitializing && 
             e.PropertyName != nameof(IsDirty) && 
+            e.PropertyName != nameof(FilePath) &&
+            e.PropertyName != nameof(FileName) &&
             e.PropertyName != nameof(CoverImage) && 
+            e.PropertyName != nameof(CoverHash) &&
             e.PropertyName != nameof(HasErrors) &&
             e.PropertyName != nameof(HasEssentialMetadata) &&
-            e.PropertyName != nameof(IsUntagged))
+            e.PropertyName != nameof(IsUntagged) &&
+            e.PropertyName != nameof(IsCbr) &&
+            e.PropertyName != nameof(WillConvertToCbzOnSave) &&
+            e.PropertyName != nameof(FormatBadgeText) &&
+            e.PropertyName != nameof(FormatBadgeBackground) &&
+            e.PropertyName != nameof(FormatBadgeForeground) &&
+            e.PropertyName != nameof(FormatBadgeBorder) &&
+            e.PropertyName != nameof(FormatConversionTooltip))
         {
             IsDirty = true;
         }

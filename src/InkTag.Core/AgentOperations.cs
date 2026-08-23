@@ -62,7 +62,7 @@ public static class AgentOperations
         }
 
         var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var files = Directory.GetFiles(directoryPath, "*.*", searchOption)
+        var files = Directory.EnumerateFiles(directoryPath, "*.*", searchOption)
             .Where(MetadataEditor.IsSupportedComicFile)
             .ToList();
 
@@ -161,7 +161,7 @@ public static class AgentOperations
 
             if (dryRun)
             {
-                var files = Directory.GetFiles(targetPath, "*.*", searchOption)
+                var files = Directory.EnumerateFiles(targetPath, "*.*", searchOption)
                     .Where(MetadataEditor.IsSupportedComicFile)
                     .ToList();
 

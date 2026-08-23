@@ -769,6 +769,204 @@ public class MetadataEditorTests
         Assert.Equal(expected, result);
     }
 
+    [Fact]
+    public async Task ReadMetadataAsync_ReadsCBZDirectlyAndCorrectly()
+    {
+        var editor = new MetadataEditor();
+        string tempCbz = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".cbz");
+        string tempXml = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".xml");
+
+        try
+        {
+            File.WriteAllText(tempXml, "<ComicInfo><Title>Async Comic</Title><Series>Async Series</Series><Number>42</Number></ComicInfo>");
+            using (var stream = File.OpenWrite(tempCbz))
+            using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+            {
+                writer.Write("ComicInfo.xml", tempXml);
+            }
+
+            var info = await editor.ReadMetadataAsync(tempCbz);
+            Assert.NotNull(info);
+            Assert.Equal("Async Comic", info.Title);
+            Assert.Equal("Async Series", info.Series);
+            Assert.Equal("42", info.Number);
+        }
+        finally
+        {
+            if (File.Exists(tempXml)) File.Delete(tempXml);
+            if (File.Exists(tempCbz)) File.Delete(tempCbz);
+        }
+    }
+
+    [Fact]
+    public async Task EditMetadataAsync_WritesAndReadsMetadataCorrectly()
+    {
+        var editor = new MetadataEditor();
+        string tempCbz = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".cbz");
+
+        try
+        {
+            using (var stream = File.OpenWrite(tempCbz))
+            using (var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate)))
+            {
+                string tempDummy = Path.GetTempFileName();
+                File.WriteAllText(tempDummy, "page dummy");
+                writer.Write("01.png", tempDummy);
+                File.Delete(tempDummy);
+            }
+
+            await editor.EditMetadataAsync(tempCbz, comic =>
+            {
+                comic.Title = "Async Edited Title";
+                comic.Series = "Async Series";
+                comic.Number = "99";
+            });
+
+            var updated = await editor.ReadMetadataAsync(tempCbz);
+            Assert.NotNull(updated);
+            Assert.Equal("Async Edited Title", updated.Title);
+            Assert.Equal("Async Series", updated.Series);
+            Assert.Equal("99", updated.Number);
+        }
+        finally
+        {
+            if (File.Exists(tempCbz)) File.Delete(tempCbz);
+        }
+    }
+
+    [Fact]
+    public async Task BulkEditMetadataAsync_UpdatesMultipleArchives_AndReportsProgress()
+    {
+        var editor = new MetadataEditor();
+        string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            for (int i = 1; i <= 3; i++)
+            {
+                string cbzPath = Path.Combine(tempDir, $"comic_{i}.cbz");
+                using var stream = File.OpenWrite(cbzPath);
+                using var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate));
+                string dummy = Path.GetTempFileName();
+                File.WriteAllText(dummy, "image dummy");
+                writer.Write("01.jpg", dummy);
+                File.Delete(dummy);
+            }
+
+            int progressCalls = 0;
+            var progress = new DirectProgress<BulkEditProgress>(p =>
+            {
+                progressCalls++;
+                Assert.True(p.Processed > 0);
+                Assert.Equal(3, p.TotalFound);
+            });
+
+            var report = await editor.BulkEditMetadataAsync(tempDir, comic =>
+            {
+                comic.Publisher = "Marvel Comics";
+            }, progress: progress);
+
+            Assert.Equal(3, report.TotalFound);
+            Assert.Equal(3, report.Successes.Count);
+            Assert.Empty(report.Failures);
+            Assert.Equal(3, progressCalls);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public async Task BulkEditMetadataAsync_HonorsCancellationToken()
+    {
+        var editor = new MetadataEditor();
+        string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            for (int i = 1; i <= 3; i++)
+            {
+                string cbzPath = Path.Combine(tempDir, $"comic_{i}.cbz");
+                using var stream = File.OpenWrite(cbzPath);
+                using var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.Deflate));
+                string dummy = Path.GetTempFileName();
+                File.WriteAllText(dummy, "image dummy");
+                writer.Write("01.jpg", dummy);
+                File.Delete(dummy);
+            }
+
+            using var cts = new System.Threading.CancellationTokenSource();
+            cts.Cancel();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            {
+                await editor.BulkEditMetadataAsync(tempDir, comic => comic.Publisher = "Cancelled", cancellationToken: cts.Token);
+            });
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void CustomDomainExceptions_InheritFromInkTagException()
+    {
+        var corruptEx = new InkTag.Core.Exceptions.ComicArchiveCorruptException("Corrupt archive", "/path/to/corrupt.cbz");
+        Assert.IsAssignableFrom<InkTag.Core.Exceptions.ComicArchiveException>(corruptEx);
+        Assert.IsAssignableFrom<InkTag.Core.Exceptions.InkTagException>(corruptEx);
+        Assert.Equal("/path/to/corrupt.cbz", corruptEx.FilePath);
+
+        var xmlEx = new InkTag.Core.Exceptions.MetadataXmlSanitizationException("Invalid XML", "<MalformedXml>");
+        Assert.IsAssignableFrom<InkTag.Core.Exceptions.InkTagException>(xmlEx);
+        Assert.Equal("<MalformedXml>", xmlEx.XmlContentSnippet);
+    }
+
+    [Fact]
+    public void ComicItemViewModel_CbrFormatBadgeAndConversionReactivity()
+    {
+        var model = new ComicInfo { Title = "Original Title", Series = "Transformers" };
+        var cbrVm = new InkTag.Gui.ViewModels.ComicItemViewModel("/comics/Transformers 01.cbr", model);
+
+        // Pristine CBR state
+        Assert.True(cbrVm.IsCbr);
+        Assert.False(cbrVm.IsDirty);
+        Assert.False(cbrVm.WillConvertToCbzOnSave);
+        Assert.Equal("CBR", cbrVm.FormatBadgeText);
+        Assert.Equal("#374151", cbrVm.FormatBadgeBackground);
+        Assert.Contains("CBR (RAR) archive", cbrVm.FormatConversionTooltip);
+
+        // Edit a metadata field -> triggers dirty & conversion state
+        cbrVm.Title = "New Title";
+        Assert.True(cbrVm.IsDirty);
+        Assert.True(cbrVm.WillConvertToCbzOnSave);
+        Assert.Equal("CBR ➔ CBZ", cbrVm.FormatBadgeText);
+        Assert.Equal("#854D0E", cbrVm.FormatBadgeBackground);
+        Assert.Contains("saving will automatically convert this archive", cbrVm.FormatConversionTooltip);
+
+        // CBZ state
+        var cbzVm = new InkTag.Gui.ViewModels.ComicItemViewModel("/comics/Transformers 01.cbz", model);
+        Assert.False(cbzVm.IsCbr);
+        Assert.False(cbzVm.WillConvertToCbzOnSave);
+        Assert.Equal("CBZ", cbzVm.FormatBadgeText);
+    }
+
+    [Fact]
+    public void AppSettings_ConfirmCbrToCbzConversion_DefaultAndSerialization()
+    {
+        var settings = new InkTag.Core.Configuration.AppSettings();
+        Assert.True(settings.ConfirmCbrToCbzConversion);
+
+        settings.ConfirmCbrToCbzConversion = false;
+        string json = JsonSerializer.Serialize(settings);
+        var roundtripped = JsonSerializer.Deserialize<InkTag.Core.Configuration.AppSettings>(json);
+        Assert.NotNull(roundtripped);
+        Assert.False(roundtripped.ConfirmCbrToCbzConversion);
+    }
+
     private class DirectProgress<T> : IProgress<T>
     {
         private readonly Action<T> _handler;
