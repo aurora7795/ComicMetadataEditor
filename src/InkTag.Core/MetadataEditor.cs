@@ -7,6 +7,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using InkTag.Core.Exceptions;
+using InkTag.Core.Logging;
+using InkTag.Core.Parsing;
 
 namespace InkTag.Core;
 
@@ -15,6 +17,17 @@ public class BulkEditReport
     public int TotalFound { get; set; }
     public List<string> Successes { get; } = new();
     public List<(string Path, Exception Exception)> Failures { get; } = new();
+}
+
+public class PageRemovalResult
+{
+    public bool Success { get; set; }
+    public string FilePath { get; set; } = string.Empty;
+    public int RemovedCount { get; set; }
+    public List<string> RemovedEntries { get; set; } = new();
+    public int OriginalPageCount { get; set; }
+    public int FinalPageCount { get; set; }
+    public string? ErrorMessage { get; set; }
 }
 
 public record MetadataDiffItem(string PropertyName, object? OldValue, object? NewValue);
@@ -293,10 +306,30 @@ public class MetadataEditor
     }
 
     /// <summary>
-    /// Extracts the front cover or first image entry from a CBZ or CBR comic archive to outputFilePath.
+    /// Gets naturally sorted image entry paths contained inside a comic archive.
     /// </summary>
-    public string? ExtractCoverImage(string comicFilePath, string outputFilePath) =>
-        ComicArchiveHandler.ExtractCoverImage(comicFilePath, outputFilePath);
+    public List<string> GetImageEntries(string filePath) =>
+        ComicArchiveHandler.GetImageEntries(filePath);
+
+    /// <summary>
+    /// Extracts a specific 0-based page image (default 0 / cover) from a CBZ or CBR comic archive to outputFilePath.
+    /// </summary>
+    public string? ExtractCoverImage(string comicFilePath, string outputFilePath, int pageIndex = 0) =>
+        ComicArchiveHandler.ExtractCoverImage(comicFilePath, outputFilePath, pageIndex);
+
+    /// <summary>
+    /// Strips the first page (index 0 / provider title page) from a comic archive.
+    /// </summary>
+    public PageRemovalResult StripFirstPage(string filePath) =>
+        ComicArchiveHandler.StripFirstPage(filePath);
+
+    /// <summary>
+    /// Removes one or more pages by 0-based page index from a CBZ or CBR comic archive.
+    /// Updates ComicInfo.xml PageCount and renumbers Pages collection elements.
+    /// Safely repacks the archive using atomic temporary swap and backup rollback.
+    /// </summary>
+    public PageRemovalResult RemoveArchivePages(string filePath, IEnumerable<int> pageIndices) =>
+        ComicArchiveHandler.RemoveArchivePages(filePath, pageIndices);
 
     /// <summary>
     /// Exports the JSON Schema for ComicInfo objects.
@@ -399,20 +432,33 @@ public class MetadataEditor
         return "string";
     }
 
-    public byte[]? ExtractCoverImageBytes(string filePath) =>
-        ComicArchiveHandler.ExtractCoverImageBytes(filePath);
+    /// <summary>
+    /// Extracts the raw image bytes for a specific 0-based page index (default 0 / cover) from a CBZ or CBR archive.
+    /// </summary>
+    public byte[]? ExtractCoverImageBytes(string filePath, int pageIndex = 0) =>
+        ComicArchiveHandler.ExtractCoverImageBytes(filePath, pageIndex);
 
-    public Task<byte[]?> ExtractCoverImageBytesAsync(string filePath, CancellationToken cancellationToken = default) =>
-        ComicArchiveHandler.ExtractCoverImageBytesAsync(filePath, cancellationToken);
+    public Task<byte[]?> ExtractCoverImageBytesAsync(string filePath, int pageIndex = 0, CancellationToken cancellationToken = default) =>
+        ComicArchiveHandler.ExtractCoverImageBytesAsync(filePath, pageIndex, cancellationToken);
 
     /// <summary>
-    /// Computes the 64-bit perceptual dHash of the comic's cover image.
+    /// Computes the 64-bit perceptual dHash of the comic's cover or specific page image.
     /// </summary>
-    public ulong GetCoverHash(string filePath) =>
-        ComicArchiveHandler.GetCoverHash(filePath);
+    public ulong GetCoverHash(string filePath, int pageIndex = 0) =>
+        ComicArchiveHandler.GetCoverHash(filePath, pageIndex);
 
-    public Task<ulong> GetCoverHashAsync(string filePath, CancellationToken cancellationToken = default) =>
-        ComicArchiveHandler.GetCoverHashAsync(filePath, cancellationToken);
+    public Task<ulong> GetCoverHashAsync(string filePath, int pageIndex = 0, CancellationToken cancellationToken = default) =>
+        ComicArchiveHandler.GetCoverHashAsync(filePath, pageIndex, cancellationToken);
+
+    /// <summary>
+    /// Extracts cover hashes and raw byte payloads for up to maxPages (default first 2 pages) in order.
+    /// Useful for evaluating candidate cover vs. provider intro pages.
+    /// </summary>
+    public List<(int PageIndex, ulong Hash, byte[] Bytes)> GetCandidateCoverHashes(string filePath, int maxPages = 2) =>
+        ComicArchiveHandler.GetCandidateCoverHashes(filePath, maxPages);
+
+    public static bool IsIgnoredSystemEntry(string? entryName) =>
+        ComicArchiveHandler.IsIgnoredSystemEntry(entryName);
 
     #endregion
 }

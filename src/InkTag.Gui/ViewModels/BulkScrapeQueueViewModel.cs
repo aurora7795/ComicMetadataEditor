@@ -284,7 +284,9 @@ public class BulkScrapeQueueViewModel : ObservableObject
             {
                 MergeMode = EffectiveMergeMode,
                 ConfidenceThreshold = _settingsService.Settings.AutoMatchConfidenceThreshold,
-                EnableSmartSeriesGrouping = true
+                EnableSmartSeriesGrouping = true,
+                EnableIntroPageFallback = true,
+                StripDetectedIntroPages = _stripDetectedIntroPages
             };
 
             await Task.Run(async () =>
@@ -318,6 +320,13 @@ public class BulkScrapeQueueViewModel : ObservableObject
     public void CancelQueue()
     {
         _cts?.Cancel();
+    }
+
+    private bool _stripDetectedIntroPages = false;
+    public bool StripDetectedIntroPages
+    {
+        get => _stripDetectedIntroPages;
+        set => SetProperty(ref _stripDetectedIntroPages, value);
     }
 
     public async Task<int> ApplyMatchedAsync()
@@ -360,6 +369,7 @@ public class BulkScrapeQueueViewModel : ObservableObject
                     EffectiveMergeMode,
                     _alsoRenameFiles,
                     chosenTemplate,
+                    stripDetectedIntroPages: _stripDetectedIntroPages,
                     progress,
                     _cts.Token);
             }, _cts.Token);

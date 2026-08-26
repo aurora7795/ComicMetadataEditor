@@ -31,6 +31,12 @@ try
         case "cover":
             HandleCoverCommand(args, positionalArgs, isJsonOutput, editor);
             break;
+        case "strip-intro":
+            HandleStripIntroCommand(args, positionalArgs, isJsonOutput, isDryRun, editor);
+            break;
+        case "remove-page":
+            HandleRemovePageCommand(args, positionalArgs, isJsonOutput, isDryRun, editor);
+            break;
         case "schema":
             HandleSchemaCommand(isJsonOutput);
             break;
@@ -238,36 +244,199 @@ static void HandleCoverCommand(string[] rawArgs, List<string> positionalArgs, bo
 {
     if (positionalArgs.Count < 2)
     {
-        throw new ArgumentException("Usage: cover <comic-file-path> [--output <image-path>]");
+        throw new ArgumentException("Usage: cover <comic-file-path> [--page <n>] [--output <image-path>]");
     }
 
     string comicPath = positionalArgs[1];
     string? outputPath = GetOptionValue(rawArgs, "--output");
+    int pageIndex = 0;
+    string? pageStr = GetOptionValue(rawArgs, "--page");
+    if (!string.IsNullOrEmpty(pageStr) && int.TryParse(pageStr, out int pIdx))
+    {
+        pageIndex = pIdx;
+    }
 
     if (string.IsNullOrEmpty(outputPath))
     {
         string dir = Path.GetDirectoryName(comicPath) ?? ".";
         string nameNoExt = Path.GetFileNameWithoutExtension(comicPath);
-        outputPath = Path.Combine(dir, $"{nameNoExt}_cover.jpg");
+        string suffix = pageIndex > 0 ? $"_page{pageIndex + 1}.jpg" : "_cover.jpg";
+        outputPath = Path.Combine(dir, $"{nameNoExt}{suffix}");
     }
 
-    string? extractedPath = editor.ExtractCoverImage(comicPath, outputPath);
+    string? extractedPath = editor.ExtractCoverImage(comicPath, outputPath, pageIndex);
 
     if (extractedPath != null && File.Exists(extractedPath))
     {
         if (isJson)
         {
-            var res = new { success = true, comicPath = comicPath, coverPath = extractedPath };
+            var res = new { success = true, comicPath = comicPath, coverPath = extractedPath, pageIndex = pageIndex };
             Console.WriteLine(JsonSerializer.Serialize(res, new JsonSerializerOptions { WriteIndented = true }));
         }
         else
         {
-            Console.WriteLine($"Extracted cover image to: {extractedPath}");
+            Console.WriteLine($"Extracted page {pageIndex + 1} image to: {extractedPath}");
         }
     }
     else
     {
-        throw new InvalidOperationException($"No cover image could be extracted from: {comicPath}");
+        throw new InvalidOperationException($"No image at page index {pageIndex} could be extracted from: {comicPath}");
+    }
+}
+
+static void HandleStripIntroCommand(string[] args, List<string> positionalArgs, bool isJson, bool isDryRun, MetadataEditor editor)
+{
+    if (positionalArgs.Count < 2)
+    {
+        throw new ArgumentException("Usage: strip-intro <file|directory> [--recursive] [--dry-run] [--json]");
+    }
+
+    string targetPath = positionalArgs[1];
+
+    if (File.Exists(targetPath))
+    {
+        if (isDryRun)
+        {
+            var entries = editor.GetImageEntries(targetPath);
+            string? firstPage = entries.Count > 0 ? entries[0] : null;
+            if (isJson)
+            {
+                var res = new { success = true, dryRun = true, file = targetPath, firstPage = firstPage, totalPages = entries.Count };
+                Console.WriteLine(JsonSerializer.Serialize(res, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            else
+            {
+                Console.WriteLine($"[DRY RUN] Would strip first page '{firstPage}' from '{Path.GetFileName(targetPath)}' ({entries.Count} -> {Math.Max(0, entries.Count - 1)} pages).");
+            }
+            return;
+        }
+
+        var result = editor.StripFirstPage(targetPath);
+        if (isJson)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        else
+        {
+            if (result.Success)
+            {
+                Console.WriteLine($"Successfully stripped first page ({string.Join(", ", result.RemovedEntries)}) from '{Path.GetFileName(result.FilePath)}' ({result.OriginalPageCount} -> {result.FinalPageCount} pages).");
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Failed to strip page: {result.ErrorMessage}");
+                Console.ResetColor();
+            }
+        }
+    }
+    else if (Directory.Exists(targetPath))
+    {
+        bool recursive = args.Any(a => a.Equals("--recursive", StringComparison.OrdinalIgnoreCase) || a.Equals("-r", StringComparison.OrdinalIgnoreCase));
+        var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        var files = Directory.GetFiles(targetPath, "*.*", searchOption).Where(MetadataEditor.IsSupportedComicFile).ToList();
+
+        var results = new List<PageRemovalResult>();
+        int strippedCount = 0;
+
+        foreach (var file in files)
+        {
+            if (isDryRun)
+            {
+                var entries = editor.GetImageEntries(file);
+                results.Add(new PageRemovalResult
+                {
+                    Success = true,
+                    FilePath = file,
+                    OriginalPageCount = entries.Count,
+                    FinalPageCount = Math.Max(0, entries.Count - 1),
+                    RemovedCount = 1,
+                    RemovedEntries = entries.Take(1).ToList()
+                });
+            }
+            else
+            {
+                var res = editor.StripFirstPage(file);
+                results.Add(res);
+                if (res.Success) strippedCount++;
+            }
+        }
+
+        if (isJson)
+        {
+            var summary = new
+            {
+                success = true,
+                dryRun = isDryRun,
+                totalFiles = files.Count,
+                strippedCount = isDryRun ? files.Count : strippedCount,
+                items = results
+            };
+            Console.WriteLine(JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        else
+        {
+            Console.WriteLine($"{(isDryRun ? "[DRY RUN] Would strip" : "Stripped")} first page across {results.Count(r => r.Success)} of {files.Count} files.");
+        }
+    }
+    else
+    {
+        throw new FileNotFoundException($"Path not found: '{targetPath}'");
+    }
+}
+
+static void HandleRemovePageCommand(string[] args, List<string> positionalArgs, bool isJson, bool isDryRun, MetadataEditor editor)
+{
+    if (positionalArgs.Count < 2)
+    {
+        throw new ArgumentException("Usage: remove-page <comic-file> --index <0-based-index> [--dry-run] [--json]");
+    }
+
+    string filePath = positionalArgs[1];
+    if (!File.Exists(filePath))
+    {
+        throw new FileNotFoundException($"Comic file not found: {filePath}");
+    }
+
+    string? idxStr = GetOptionValue(args, "--index");
+    if (string.IsNullOrEmpty(idxStr) || !int.TryParse(idxStr, out int pageIndex))
+    {
+        throw new ArgumentException("Missing or invalid required option --index <0-based-index>");
+    }
+
+    if (isDryRun)
+    {
+        var entries = editor.GetImageEntries(filePath);
+        string? targetEntry = pageIndex >= 0 && pageIndex < entries.Count ? entries[pageIndex] : null;
+        if (isJson)
+        {
+            var res = new { success = true, dryRun = true, file = filePath, pageIndex = pageIndex, targetEntry = targetEntry, totalPages = entries.Count };
+            Console.WriteLine(JsonSerializer.Serialize(res, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        else
+        {
+            Console.WriteLine($"[DRY RUN] Would remove page index {pageIndex} ('{targetEntry}') from '{Path.GetFileName(filePath)}' ({entries.Count} -> {Math.Max(0, entries.Count - 1)} pages).");
+        }
+        return;
+    }
+
+    var result = editor.RemoveArchivePages(filePath, new[] { pageIndex });
+    if (isJson)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
+    }
+    else
+    {
+        if (result.Success)
+        {
+            Console.WriteLine($"Successfully removed page {pageIndex} ({string.Join(", ", result.RemovedEntries)}) from '{Path.GetFileName(result.FilePath)}' ({result.OriginalPageCount} -> {result.FinalPageCount} pages).");
+        }
+        else
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"Failed to remove page: {result.ErrorMessage}");
+            Console.ResetColor();
+        }
     }
 }
 
@@ -301,12 +470,23 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
 {
     if (positionalArgs.Count < 2)
     {
-        throw new ArgumentException("Usage: scrape <file|directory> [--api-key KEY] [--mode fill-missing|overwrite] [--dry-run] [--json]");
+        throw new ArgumentException("Usage: scrape <file|directory> [--api-key KEY] [--mode fill-missing|overwrite] [--cover-page <n>] [--strip-intro-page] [--dry-run] [--json]");
     }
 
     string targetPath = positionalArgs[1];
     string? apiKey = GetOptionValue(args, "--api-key");
     string? modeStr = GetOptionValue(args, "--mode");
+    string? coverPageStr = GetOptionValue(args, "--cover-page");
+    int? coverPageIndex = null;
+    if (!string.IsNullOrEmpty(coverPageStr) && int.TryParse(coverPageStr, out int cpIdx))
+    {
+        coverPageIndex = cpIdx;
+    }
+
+    bool stripIntroPage = args.Any(a => a.Equals("--strip-intro-page", StringComparison.OrdinalIgnoreCase) ||
+                                        a.Equals("--strip-intro", StringComparison.OrdinalIgnoreCase));
+    bool noIntroFallback = args.Any(a => a.Equals("--no-intro-fallback", StringComparison.OrdinalIgnoreCase) ||
+                                         a.Equals("--no-intro-detection", StringComparison.OrdinalIgnoreCase));
 
     InkTag.Core.Scrapers.ScrapeMergeMode mergeMode = InkTag.Core.Scrapers.ScrapeMergeMode.FillMissingOnly;
     if (string.Equals(modeStr, "overwrite", StringComparison.OrdinalIgnoreCase))
@@ -325,11 +505,25 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
     if (File.Exists(targetPath))
     {
         var comic = editor.ReadMetadata(targetPath);
-        ulong coverHash = editor.GetCoverHash(targetPath);
-        var result = scraperService.AutoScrapeComicAsync(comic, coverHash != 0 ? coverHash : null, targetPath).GetAwaiter().GetResult();
+        ulong coverHash = editor.GetCoverHash(targetPath, coverPageIndex ?? 0);
+        var result = scraperService.AutoScrapeComicAsync(
+            comic,
+            coverHash != 0 ? coverHash : null,
+            targetPath,
+            enableIntroPageFallback: !noIntroFallback,
+            targetCoverPageIndex: coverPageIndex).GetAwaiter().GetResult();
 
         if (result.Success && !isDryRun)
         {
+            if (stripIntroPage && result.DetectedIntroPage)
+            {
+                var stripResult = editor.StripFirstPage(targetPath);
+                if (stripResult.Success)
+                {
+                    targetPath = stripResult.FilePath;
+                }
+            }
+
             editor.EditMetadata(targetPath, existing =>
             {
                 scraperService.ApplyMetadata(existing, comic, mergeMode);
@@ -347,7 +541,9 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
                 series = comic.Series,
                 number = comic.Number,
                 title = comic.Title,
-                writer = comic.Writer
+                writer = comic.Writer,
+                detectedIntroPage = result.DetectedIntroPage,
+                trueCoverPageIndex = result.TrueCoverPageIndex
             };
             Console.WriteLine(JsonSerializer.Serialize(resObj, new JsonSerializerOptions { WriteIndented = true }));
         }
@@ -370,7 +566,9 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
         {
             MergeMode = mergeMode,
             ConfidenceThreshold = settingsService.Settings.AutoMatchConfidenceThreshold,
-            EnableSmartSeriesGrouping = true
+            EnableSmartSeriesGrouping = true,
+            EnableIntroPageFallback = !noIntroFallback,
+            StripDetectedIntroPages = stripIntroPage
         };
 
         var progress = new Progress<InkTag.Core.Scrapers.BulkScrapeProgressReport>(report =>
@@ -385,7 +583,7 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
 
         if (!isDryRun)
         {
-            queueService.ApplyMatchedMetadataAsync(queue, mergeMode).GetAwaiter().GetResult();
+            queueService.ApplyMatchedMetadataAsync(queue, mergeMode, stripDetectedIntroPages: stripIntroPage).GetAwaiter().GetResult();
         }
 
         if (isJson)
@@ -405,6 +603,7 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
                     matchedIssue = i.MatchedCandidate != null ? $"{i.MatchedCandidate.SeriesTitle} #{i.MatchedCandidate.IssueNumber}" : null,
                     visualSimilarity = i.MatchedCandidate?.VisualSimilarity,
                     matchConfidence = i.MatchedCandidate?.MatchConfidence,
+                    detectedIntroPage = i.DetectedIntroPage,
                     message = i.StatusMessage
                 })
             };
@@ -484,11 +683,15 @@ static void HandleRenameCommand(string[] args, List<string> positionalArgs, bool
         }
         else
         {
-            Console.WriteLine($"[Dry Run] Bulk Rename Preview ({previews.Count} items, template: '{template}'):");
+            Console.WriteLine($"[DRY RUN] Evaluated {previews.Count} file(s) for renaming:\n");
             foreach (var p in previews)
             {
-                string status = p.HasCollision ? "[COLLISION]" : (!p.HasChange ? "[UNCHANGED]" : "[READY]");
-                Console.WriteLine($"  {status} {p.OriginalFilename} -> {p.ProposedFilename}");
+                string status = p.HasCollision ? "[COLLISION]" : (p.HasChange ? "[RENAME]" : "[SKIP]");
+                Console.WriteLine($"  {status} {Path.GetFileName(p.OriginalFilePath)} -> {Path.GetFileName(p.ProposedFilePath)}");
+                if (!string.IsNullOrEmpty(p.ErrorMessage))
+                {
+                    Console.WriteLine($"     Error: {p.ErrorMessage}");
+                }
             }
         }
         return;
@@ -532,9 +735,11 @@ static void PrintHelp(bool isJson)
             new { name = "read <file>", description = "Reads and displays ComicInfo metadata as JSON or text." },
             new { name = "update <file|dir> --patch '<json>' [--dry-run] [--recursive]", description = "Applies JSON property edits to one or all comic archives." },
             new { name = "scan <directory> [--untagged] [--missing Field1,Field2] [--recursive]", description = "Scans a directory for comic files, untagged comics, and missing metadata." },
-            new { name = "scrape <file|dir> [--api-key KEY] [--mode fill-missing|overwrite]", description = "Auto-scrapes metadata from ComicVine online database." },
+            new { name = "scrape <file|dir> [--api-key KEY] [--mode fill-missing|overwrite] [--cover-page <n>] [--strip-intro-page]", description = "Auto-scrapes metadata from ComicVine online database with intro page detection." },
             new { name = "rename <file|dir> [--template <pattern>] [--dry-run]", description = "Bulk renames files based on metadata template pattern." },
-            new { name = "cover <file> [--output <image-path>]", description = "Extracts front cover image from archive." },
+            new { name = "cover <file> [--page <n>] [--output <image-path>]", description = "Extracts front cover or specific page image from archive." },
+            new { name = "strip-intro <file|dir> [--dry-run]", description = "Strips the first page (provider/scanner title page) from archive(s)." },
+            new { name = "remove-page <file> --index <n> [--dry-run]", description = "Removes a specific page by 0-based index from archive." },
             new { name = "schema", description = "Prints JSON Schema for ComicInfo metadata objects." }
         },
         globalFlags = new[]

@@ -37,6 +37,9 @@ public class BulkScrapeQueueItem
     public ComicSearchQuery ParsedQuery { get; set; } = new();
     public byte[]? LocalCoverBytes { get; set; }
     public ulong LocalCoverHash { get; set; }
+    public bool DetectedIntroPage { get; set; }
+    public int TrueCoverPageIndex { get; set; }
+    public byte[]? TrueCoverBytes { get; set; }
     
     public BulkScrapeItemStatus Status { get; set; } = BulkScrapeItemStatus.Ready;
     public string StatusMessage { get; set; } = "Ready";
@@ -58,6 +61,8 @@ public class BulkScrapeOptions
     public double VisualSimilarityThreshold { get; set; } = 0.85;
     public bool EnableSmartSeriesGrouping { get; set; } = true;
     public bool AutoFetchFullMetadataOnMatch { get; set; } = true;
+    public bool EnableIntroPageFallback { get; set; } = true;
+    public bool StripDetectedIntroPages { get; set; } = false;
 }
 
 public class BulkScrapeProgressReport
@@ -290,21 +295,51 @@ public class BulkScrapeQueueService
                             var ranked = RankCandidatesAgainstLocalItem(item, candidatePool, options);
                             if (ranked.Count > 0)
                             {
-                                item.Candidates = ranked;
                                 var top = ranked[0];
+
+                                if (options.EnableIntroPageFallback && (top.VisualSimilarity < options.VisualSimilarityThreshold || top.MatchConfidence < options.ConfidenceThreshold))
+                                {
+                                    var page1Bytes = _metadataEditor.ExtractCoverImageBytes(item.FilePath, pageIndex: 1);
+                                    if (page1Bytes != null && page1Bytes.Length > 0)
+                                    {
+                                        ulong page1Hash = PerceptualHashService.ComputeDHash(page1Bytes);
+                                        if (page1Hash != 0)
+                                        {
+                                            var p1Ranked = RankCandidatesWithHash(item, candidatePool, page1Hash, options);
+                                            if (p1Ranked.Count > 0)
+                                            {
+                                                var topP1 = p1Ranked[0];
+                                                double p0Sim = top.VisualSimilarity ?? 0.0;
+                                                if (topP1.VisualSimilarity >= options.VisualSimilarityThreshold || (topP1.VisualSimilarity >= 0.70 && topP1.VisualSimilarity > p0Sim + 0.30))
+                                                {
+                                                    item.DetectedIntroPage = true;
+                                                    item.TrueCoverPageIndex = 1;
+                                                    item.TrueCoverBytes = page1Bytes;
+                                                    item.LocalCoverBytes = page1Bytes;
+                                                    item.LocalCoverHash = page1Hash;
+                                                    ranked = p1Ranked;
+                                                    top = topP1;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                item.Candidates = ranked;
                                 item.MatchedCandidate = top;
 
+                                string introLabel = item.DetectedIntroPage ? " (Page 2 Cover)" : "";
                                 if (top.VisualSimilarity >= options.VisualSimilarityThreshold || top.MatchConfidence >= options.ConfidenceThreshold)
                                 {
                                     item.Status = BulkScrapeItemStatus.Matched;
-                                    item.StatusMessage = $"Matched: {top.SeriesTitle} #{top.IssueNumber} (Visual: {(int)Math.Round((top.VisualSimilarity ?? 0) * 100)}%)";
+                                    item.StatusMessage = $"Matched{introLabel}: {top.SeriesTitle} #{top.IssueNumber} (Visual: {(int)Math.Round((top.VisualSimilarity ?? 0) * 100)}%)";
                                     item.IsSelected = true;
                                     matchedViaVolume = true;
                                 }
                                 else
                                 {
                                     item.Status = BulkScrapeItemStatus.LowConfidence;
-                                    item.StatusMessage = $"Review needed (Confidence: {(int)Math.Round(top.MatchConfidence * 100)}%, Visual: {(int)Math.Round((top.VisualSimilarity ?? 0) * 100)}%)";
+                                    item.StatusMessage = $"Review needed{introLabel} (Confidence: {(int)Math.Round(top.MatchConfidence * 100)}%, Visual: {(int)Math.Round((top.VisualSimilarity ?? 0) * 100)}%)";
                                     item.IsSelected = false; // Auto-uncheck review needed items
                                 }
                             }
@@ -329,21 +364,54 @@ public class BulkScrapeQueueService
                             }
 
                             var ranked = RankCandidatesAgainstLocalItem(item, candidates, options);
-                            item.Candidates = ranked;
-                            var top = ranked[0];
-                            item.MatchedCandidate = top;
+                            if (ranked.Count > 0)
+                            {
+                                var top = ranked[0];
 
-                            if (top.VisualSimilarity >= options.VisualSimilarityThreshold || top.MatchConfidence >= options.ConfidenceThreshold)
-                            {
-                                item.Status = BulkScrapeItemStatus.Matched;
-                                item.StatusMessage = $"Matched: {top.SeriesTitle} #{top.IssueNumber} (Visual: {(int)Math.Round((top.VisualSimilarity ?? 0) * 100)}%)";
-                                item.IsSelected = true;
-                            }
-                            else
-                            {
-                                item.Status = BulkScrapeItemStatus.LowConfidence;
-                                item.StatusMessage = $"Review needed (Confidence: {(int)Math.Round(top.MatchConfidence * 100)}%, Visual: {(int)Math.Round((top.VisualSimilarity ?? 0) * 100)}%)";
-                                item.IsSelected = false; // Auto-uncheck review needed items
+                                if (options.EnableIntroPageFallback && (top.VisualSimilarity < options.VisualSimilarityThreshold || top.MatchConfidence < options.ConfidenceThreshold))
+                                {
+                                    var page1Bytes = _metadataEditor.ExtractCoverImageBytes(item.FilePath, pageIndex: 1);
+                                    if (page1Bytes != null && page1Bytes.Length > 0)
+                                    {
+                                        ulong page1Hash = PerceptualHashService.ComputeDHash(page1Bytes);
+                                        if (page1Hash != 0)
+                                        {
+                                            var p1Ranked = RankCandidatesWithHash(item, candidates, page1Hash, options);
+                                            if (p1Ranked.Count > 0)
+                                            {
+                                                var topP1 = p1Ranked[0];
+                                                double p0Sim = top.VisualSimilarity ?? 0.0;
+                                                if (topP1.VisualSimilarity >= options.VisualSimilarityThreshold || (topP1.VisualSimilarity >= 0.70 && topP1.VisualSimilarity > p0Sim + 0.30))
+                                                {
+                                                    item.DetectedIntroPage = true;
+                                                    item.TrueCoverPageIndex = 1;
+                                                    item.TrueCoverBytes = page1Bytes;
+                                                    item.LocalCoverBytes = page1Bytes;
+                                                    item.LocalCoverHash = page1Hash;
+                                                    ranked = p1Ranked;
+                                                    top = topP1;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                item.Candidates = ranked;
+                                item.MatchedCandidate = top;
+
+                                string introLabel = item.DetectedIntroPage ? " (Page 2 Cover)" : "";
+                                if (top.VisualSimilarity >= options.VisualSimilarityThreshold || top.MatchConfidence >= options.ConfidenceThreshold)
+                                {
+                                    item.Status = BulkScrapeItemStatus.Matched;
+                                    item.StatusMessage = $"Matched{introLabel}: {top.SeriesTitle} #{top.IssueNumber} (Visual: {(int)Math.Round((top.VisualSimilarity ?? 0) * 100)}%)";
+                                    item.IsSelected = true;
+                                }
+                                else
+                                {
+                                    item.Status = BulkScrapeItemStatus.LowConfidence;
+                                    item.StatusMessage = $"Review needed{introLabel} (Confidence: {(int)Math.Round(top.MatchConfidence * 100)}%, Visual: {(int)Math.Round((top.VisualSimilarity ?? 0) * 100)}%)";
+                                    item.IsSelected = false; // Auto-uncheck review needed items
+                                }
                             }
                         }
                     }
@@ -418,13 +486,14 @@ public class BulkScrapeQueueService
     }
 
     /// <summary>
-    /// Applies matched metadata to selected comic files and saves back to archives, optionally auto-renaming files.
+    /// Applies matched metadata to selected comic files and saves back to archives, optionally auto-renaming files and stripping detected intro pages.
     /// </summary>
     public async Task<int> ApplyMatchedMetadataAsync(
         IEnumerable<BulkScrapeQueueItem> items,
         ScrapeMergeMode mergeMode,
         bool renameFiles = false,
         string renameTemplate = ComicFileRenamer.DefaultTemplate,
+        bool stripDetectedIntroPages = false,
         IProgress<BulkScrapeProgressReport>? progress = null,
         CancellationToken ct = default,
         string? batchJobId = null)
@@ -441,6 +510,23 @@ public class BulkScrapeQueueService
 
             try
             {
+                if (stripDetectedIntroPages && item.DetectedIntroPage)
+                {
+                    try
+                    {
+                        item.StatusMessage = "Stripping provider intro page...";
+                        var stripRes = _metadataEditor.StripFirstPage(item.FilePath);
+                        if (stripRes.Success)
+                        {
+                            item.FilePath = stripRes.FilePath;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.LogWarning($"Failed to strip intro page from '{item.FilePath}': {ex.Message}");
+                    }
+                }
+
                 var fetched = item.FetchedMetadata ?? await _scraperService.FetchMetadataAsync(item.MatchedCandidate!.IssueId, ct);
                 item.FetchedMetadata = fetched;
 
@@ -549,15 +635,24 @@ public class BulkScrapeQueueService
         IEnumerable<ComicSearchResult> candidates,
         BulkScrapeOptions options)
     {
+        return RankCandidatesWithHash(item, candidates, item.LocalCoverHash, options);
+    }
+
+    private static List<ComicSearchResult> RankCandidatesWithHash(
+        BulkScrapeQueueItem item,
+        IEnumerable<ComicSearchResult> candidates,
+        ulong coverHash,
+        BulkScrapeOptions options)
+    {
         var list = candidates.ToList();
 
         foreach (var cand in list)
         {
-            if (item.LocalCoverHash != 0 && cand.CoverHash.HasValue && cand.CoverHash.Value != 0)
+            if (coverHash != 0 && cand.CoverHash.HasValue && cand.CoverHash.Value != 0)
             {
-                cand.VisualSimilarity = PerceptualHashService.CalculateSimilarity(item.LocalCoverHash, cand.CoverHash.Value);
+                cand.VisualSimilarity = PerceptualHashService.CalculateSimilarity(coverHash, cand.CoverHash.Value);
             }
-            cand.MatchConfidence = ComicVineProvider.CalculateConfidence(cand, item.ParsedQuery, item.LocalCoverHash != 0 ? item.LocalCoverHash : null);
+            cand.MatchConfidence = ComicVineProvider.CalculateConfidence(cand, item.ParsedQuery, coverHash != 0 ? coverHash : null);
         }
 
         // Rank primarily by combined MatchConfidence, then by visual similarity

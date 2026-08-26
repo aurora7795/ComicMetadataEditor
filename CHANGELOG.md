@@ -10,8 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Provider/Scanner Title Page Detection & Fallback Matching**: Multi-tier perceptual cover hashing evaluating Page 1 when Page 0 visual similarity drops below 70% or confidence threshold, matching comic covers obscured by scanner credits or provider intro advertisements.
+- **Natural Numeric Image Entry Sorting**: High-performance zero-allocation `NaturalStringComparer` for natural numeric sorting of archive image entries (`00_intro.jpg`, `01_cover.jpg`, `page1.jpg`, `page2.jpg`, `page10.jpg`).
+- **Atomic Archive Page Stripping & Removal**: Clean removal of provider intro pages (`StripFirstPage`, `RemoveArchivePages`) with temp extraction, ZipSlip path validation, ComicInfo.xml `PageCount` decrement and `Pages` collection renumbering, archive repack, and `.bak` safety rollback.
 - **Bulk Auto-Tag CBR ➔ CBZ Indicators & Badges**: Displayed dynamic amber `CBR ➔ CBZ` badges in the `Archive File / Detected Query` column of the Bulk Scrape queue with explanatory conversion tooltips.
 - **Bulk Auto-Tag Pre-Save Confirmation Dialog**: Added `BulkApplyConfirmWindow` which prompts the user before applying bulk metadata changes whenever CBR repacking or automated file renaming (`AlsoRenameFiles`) is enabled, showing a live summary of all converted and renamed files.
+- **CLI Commands & Flags**:
+  - Added `strip-intro <file|dir> [--dry-run]` to strip provider/scanner intro pages from archives.
+  - Added `remove-page <file> --index <n> [--dry-run]` to remove specific pages by 0-based index.
+  - Added `--page <n>` option to `cover` command to extract arbitrary page images.
+  - Added `--cover-page <n>` and `--strip-intro-page` options to `scrape` command.
+- **MCP Server Tools & Enhancements**:
+  - Added `remove_comic_page` tool for AI agent page removal with dry-run support.
+  - Enhanced `extract_cover_image` with `pageIndex` parameter.
+  - Enhanced `scrape_and_apply_metadata` and `bulk_scrape_and_apply` with `detectIntroPage`, `coverPageIndex`, and `stripIntroPages` options.
+- **GUI Scraper Match Page Switcher & Stripping**:
+  - Interactive page navigation (`◀ Page X/Y ▶`) in `ScraperMatchWindow` with live visual similarity re-ranking against candidate covers.
+  - Added `[x] Remove provider intro page on apply` checkbox in `ScraperMatchWindow`.
+  - Added `Page 2 Cover` badge on bulk scrape queue items where cover was matched on page 2.
+  - Added `[x] Strip Detected Intro Pages` checkbox in `BulkScrapeQueueWindow` toolbar.
+  - Added multi-page cover bitmap and perceptual hash caching in `ArchiveCoverService`.
 
 ---
 

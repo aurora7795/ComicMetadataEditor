@@ -170,7 +170,12 @@
                         <TextBlock Text="{Binding FormatBadgeText}" FontSize="9.5" FontWeight="Bold" Foreground="#FFAA00" VerticalAlignment="Center"/>
                       </Border>
                     </StackPanel>
-                    <TextBlock Text="{Binding ParsedQueryText}" FontSize="11" Foreground="#569CD6" Margin="0,2,0,0"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
+                      <TextBlock Text="{Binding ParsedQueryText}" FontSize="11" Foreground="#569CD6"/>
+                      <Border Background="#8A5A1A" CornerRadius="3" Padding="4,1" IsVisible="{Binding HasIntroPageBadge}">
+                        <TextBlock Text="Page 2 Cover" FontSize="9" FontWeight="Bold" Foreground="#FFD8A8"/>
+                      </Border>
+                    </StackPanel>
                   </StackPanel>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
@@ -268,6 +273,10 @@
           <ComboBox Grid.Column="2" ItemsSource="{Binding RenameTemplates}" SelectedIndex="{Binding SelectedRenameTemplateIndex}"
                     IsVisible="{Binding AlsoRenameFiles}" VerticalAlignment="Center" MaxWidth="280"
                     Background="{DynamicResource AppInputBackgroundBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" BorderBrush="{DynamicResource AppInputBorderBrush}" Margin="0,0,10,0"/>
+
+          <CheckBox Grid.Column="3" Content="Strip Detected Intro Pages" IsChecked="{Binding StripDetectedIntroPages}"
+                    VerticalAlignment="Center" Margin="10,0,10,0" Foreground="#E0AF68"
+                    ToolTip.Tip="Automatically removes provider/scanner intro pages from comic archives where cover art was detected on page 2."/>
 
           <Button Name="ApplyButton" Grid.Column="4" Content="{Binding ApplyButtonText}" Click="ApplyMatched_Click"
                   IsEnabled="{Binding CanApply}" Background="{Binding ApplyButtonBackground}" Foreground="White" FontWeight="Bold" Padding="16,9" CornerRadius="4" Margin="0,0,10,0"/>

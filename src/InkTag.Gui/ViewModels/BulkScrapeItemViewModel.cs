@@ -393,6 +393,10 @@ public class BulkScrapeItemViewModel : ObservableObject
         _ => Status.ToString()
     };
 
+    public bool DetectedIntroPage => Item.DetectedIntroPage;
+    public bool HasIntroPageBadge => Item.DetectedIntroPage;
+    public string IntroPageBadge => Item.DetectedIntroPage ? "Page 2 Cover" : string.Empty;
+
     public void SyncFromItem()
     {
         Status = Item.Status;
@@ -403,7 +407,7 @@ public class BulkScrapeItemViewModel : ObservableObject
         OnPropertyChanged(nameof(Filename));
         OnPropertyChanged(nameof(FilePath));
 
-        if (LocalThumbnail == null && Item.LocalCoverBytes != null && Item.LocalCoverBytes.Length > 0)
+        if (Item.LocalCoverBytes != null && Item.LocalCoverBytes.Length > 0 && (LocalThumbnail == null || Item.DetectedIntroPage))
         {
             try
             {
@@ -415,6 +419,10 @@ public class BulkScrapeItemViewModel : ObservableObject
                 // Ignore
             }
         }
+
+        OnPropertyChanged(nameof(DetectedIntroPage));
+        OnPropertyChanged(nameof(HasIntroPageBadge));
+        OnPropertyChanged(nameof(IntroPageBadge));
     }
 
     private void LoadMatchedThumbnailAsync(ComicSearchResult candidate)

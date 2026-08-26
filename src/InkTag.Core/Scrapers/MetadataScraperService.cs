@@ -16,6 +16,9 @@ public class ScrapeResult
     public ComicSearchResult? SelectedCandidate { get; set; }
     public IEnumerable<ComicSearchResult> Candidates { get; set; } = Array.Empty<ComicSearchResult>();
     public bool RequiredUserSelection { get; set; }
+    public bool DetectedIntroPage { get; set; }
+    public int TrueCoverPageIndex { get; set; }
+    public string? IntroPageKey { get; set; }
 }
 
 public class MetadataScraperService
@@ -113,8 +116,24 @@ public class MetadataScraperService
         return await _provider.FetchSeriesIssuesAsync(volumeId, apiKey, page, pageSize, query, ct);
     }
 
-    public async Task<ScrapeResult> AutoScrapeComicAsync(ComicInfo existingComic, ulong? localCoverHash = null, string? filePath = null, CancellationToken ct = default)
+    public async Task<ScrapeResult> AutoScrapeComicAsync(
+        ComicInfo existingComic,
+        ulong? localCoverHash = null,
+        string? filePath = null,
+        bool enableIntroPageFallback = true,
+        int? targetCoverPageIndex = null,
+        CancellationToken ct = default)
     {
+        var editor = new MetadataEditor();
+        if (targetCoverPageIndex.HasValue && !string.IsNullOrEmpty(filePath))
+        {
+            localCoverHash = editor.GetCoverHash(filePath, targetCoverPageIndex.Value);
+        }
+        else if (!localCoverHash.HasValue && !string.IsNullOrEmpty(filePath))
+        {
+            localCoverHash = editor.GetCoverHash(filePath, 0);
+        }
+
         var query = ExtractQueryFromComicInfo(existingComic, filePath);
         var candidates = (await SearchCandidatesAsync(query, ct)).ToList();
 
@@ -127,6 +146,9 @@ public class MetadataScraperService
                 TargetComic = existingComic
             };
         }
+
+        bool detectedIntroPage = false;
+        int trueCoverPageIndex = targetCoverPageIndex ?? 0;
 
         // If local cover hash is available and auto-visual match is enabled, evaluate candidate cover hashes
         if (localCoverHash.HasValue && localCoverHash.Value != 0 && _settingsService.Settings.AutoApplyOnVisualMatch)
@@ -160,16 +182,63 @@ public class MetadataScraperService
                 .OrderByDescending(c => c.MatchConfidence)
                 .ThenByDescending(c => c.VisualSimilarity ?? 0.0)
                 .ToList();
+
+            var initialTop = candidates.First();
+            double threshold = _settingsService.Settings.AutoMatchConfidenceThreshold;
+
+            // Smart Intro Page Fallback: If Page 0 visual match is weak (< 70%) or below threshold, test Page 1
+            if (enableIntroPageFallback && !targetCoverPageIndex.HasValue && !string.IsNullOrEmpty(filePath) &&
+                ((initialTop.VisualSimilarity ?? 0.0) < 0.70 || initialTop.MatchConfidence < threshold))
+            {
+                ulong page1Hash = editor.GetCoverHash(filePath, pageIndex: 1);
+                if (page1Hash != 0)
+                {
+                    var page1VisualScores = new Dictionary<string, (double Sim, double Conf)>();
+                    foreach (var c in candidates.Where(c => c.CoverHash.HasValue && c.CoverHash.Value != 0))
+                    {
+                        double sim = InkTag.Core.Images.PerceptualHashService.CalculateSimilarity(page1Hash, c.CoverHash!.Value);
+                        double conf = ComicVineProvider.CalculateConfidence(c, query, page1Hash);
+                        page1VisualScores[c.IssueId] = (sim, conf);
+                    }
+
+                    if (page1VisualScores.Count > 0)
+                    {
+                        var bestPage1 = page1VisualScores.OrderByDescending(kv => kv.Value.Sim).First();
+                        double topP0Sim = initialTop.VisualSimilarity ?? 0.0;
+
+                        if (bestPage1.Value.Sim >= 0.85 || (bestPage1.Value.Sim >= 0.70 && bestPage1.Value.Sim > topP0Sim + 0.30))
+                        {
+                            detectedIntroPage = true;
+                            trueCoverPageIndex = 1;
+
+                            foreach (var c in candidates)
+                            {
+                                if (page1VisualScores.TryGetValue(c.IssueId, out var scores))
+                                {
+                                    c.VisualSimilarity = scores.Sim;
+                                    c.MatchConfidence = scores.Conf;
+                                }
+                            }
+
+                            candidates = candidates
+                                .OrderByDescending(c => c.MatchConfidence)
+                                .ThenByDescending(c => c.VisualSimilarity ?? 0.0)
+                                .ToList();
+                        }
+                    }
+                }
+            }
         }
 
         var topMatch = candidates.First();
-        double threshold = _settingsService.Settings.AutoMatchConfidenceThreshold;
+        double autoThreshold = _settingsService.Settings.AutoMatchConfidenceThreshold;
 
-        if (topMatch.MatchConfidence >= threshold)
+        if (topMatch.MatchConfidence >= autoThreshold)
         {
             var fetchedMetadata = await FetchMetadataAsync(topMatch.IssueId, ct);
             ApplyMetadata(existingComic, fetchedMetadata, _settingsService.Settings.DefaultMergeMode);
 
+            string introNote = detectedIntroPage ? " [Intro Page Detected; Matched on Page 2 Cover]" : "";
             string visualNote = topMatch.VisualSimilarity.HasValue && topMatch.VisualSimilarity.Value >= 0.70 
                 ? $" [Cover Match: {(int)Math.Round(topMatch.VisualSimilarity.Value * 100)}%]" 
                 : "";
@@ -177,20 +246,24 @@ public class MetadataScraperService
             return new ScrapeResult
             {
                 Success = true,
-                Message = $"Successfully scraped metadata from '{topMatch.SeriesTitle} #{topMatch.IssueNumber}'{visualNote} (Confidence: {(int)Math.Round(topMatch.MatchConfidence * 100)}%).",
+                Message = $"Successfully scraped metadata from '{topMatch.SeriesTitle} #{topMatch.IssueNumber}'{introNote}{visualNote} (Confidence: {(int)Math.Round(topMatch.MatchConfidence * 100)}%).",
                 TargetComic = existingComic,
                 SelectedCandidate = topMatch,
-                Candidates = candidates
+                Candidates = candidates,
+                DetectedIntroPage = detectedIntroPage,
+                TrueCoverPageIndex = trueCoverPageIndex
             };
         }
 
         return new ScrapeResult
         {
             Success = false,
-            Message = $"Low confidence match ({(int)Math.Round(topMatch.MatchConfidence * 100)}% < threshold {(int)Math.Round(threshold * 100)}%). Manual candidate selection required.",
+            Message = $"Low confidence match ({(int)Math.Round(topMatch.MatchConfidence * 100)}% < threshold {(int)Math.Round(autoThreshold * 100)}%). Manual candidate selection required.",
             TargetComic = existingComic,
             Candidates = candidates,
-            RequiredUserSelection = true
+            RequiredUserSelection = true,
+            DetectedIntroPage = detectedIntroPage,
+            TrueCoverPageIndex = trueCoverPageIndex
         };
     }
 
