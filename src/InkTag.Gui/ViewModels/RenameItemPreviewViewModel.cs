@@ -41,6 +41,17 @@ public class RenameItemPreviewViewModel : ObservableObject
         }
     }
 
+    public string StatusTooltip
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(ErrorMessage)) return ErrorMessage;
+            if (HasCollision) return "A file with the proposed name already exists in this directory.";
+            if (!HasChange) return "File name already matches the metadata pattern. No rename required.";
+            return "Ready to be renamed.";
+        }
+    }
+
     public IBrush StatusBadgeBackground
     {
         get

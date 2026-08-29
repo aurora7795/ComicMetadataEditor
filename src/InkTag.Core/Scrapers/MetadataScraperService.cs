@@ -50,7 +50,33 @@ public class MetadataScraperService
         {
             try
             {
-                var volumes = (await _provider.SearchSeriesAsync(query.Series, apiKey, ct)).ToList();
+                var searchTitles = new List<string> { query.Series };
+                if (query.Series.StartsWith("Buffy:", StringComparison.OrdinalIgnoreCase))
+                {
+                    searchTitles.Add("Buffy the Vampire Slayer: " + query.Series.Substring(6).Trim());
+                    searchTitles.Add(query.Series.Substring(6).Trim());
+                }
+                else if (query.Series.StartsWith("Buffy, Season", StringComparison.OrdinalIgnoreCase))
+                {
+                    searchTitles.Add(query.Series.Replace("Buffy, Season", "Buffy the Vampire Slayer Season", StringComparison.OrdinalIgnoreCase));
+                }
+                else if (query.Series.Contains(':'))
+                {
+                    var arcPart = query.Series.Split(':')[1].Trim();
+                    if (!string.IsNullOrWhiteSpace(arcPart)) searchTitles.Add(arcPart);
+                }
+
+                var volumes = new List<SeriesSearchResult>();
+                foreach (var title in searchTitles)
+                {
+                    var res = (await _provider.SearchSeriesAsync(title, apiKey, ct)).ToList();
+                    if (res.Count > 0)
+                    {
+                        volumes.AddRange(res);
+                        break;
+                    }
+                }
+
                 var matchingVolume = volumes
                     .Where(v => v.StartYear.HasValue && v.StartYear.Value <= query.Year.Value)
                     .OrderByDescending(v => v.StartYear ?? 0)

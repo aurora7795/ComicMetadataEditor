@@ -1,15 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using InkTag.Core;
 using InkTag.Core.Configuration;
 using InkTag.Core.Scrapers;
+using InkTag.Gui.Services;
 using InkTag.Gui.ViewModels;
 
 namespace InkTag.Gui.Views;
@@ -18,24 +22,46 @@ public partial class SeriesSearchWizardWindow : Window
 {
     private readonly MetadataScraperService _scraperService;
     private readonly ulong? _localCoverHash;
+    private readonly string? _filePath;
+    private Bitmap? _localCoverBitmap;
     private SeriesSearchResult? _selectedSeries;
-    private int _currentPage = 1;
-    private const int PageSize = 50;
+    private readonly List<CandidateItemViewModel> _allIssues = new();
+    private CancellationTokenSource? _scanCts;
+    private string _filterQuery = string.Empty;
+    private const int PageSize = 100;
+    private const int MaxScanIssues = 500;
     private bool _hasUserManuallySelected;
 
     public bool WasApplied { get; private set; }
     public ComicSearchResult? SelectedResult { get; private set; }
     public bool RequestCompareDiff { get; private set; }
+    public bool ApplySeriesToRemainingUnmatched { get; private set; }
+    public SeriesSearchResult? ChosenSeries => _selectedSeries;
 
-    public SeriesSearchWizardWindow() : this(string.Empty, null)
+    public SeriesSearchWizardWindow() : this(string.Empty, null, null, false)
     {
     }
 
-    public SeriesSearchWizardWindow(string initialSeriesQuery, ulong? localCoverHash = null, string? filePath = null)
+    public SeriesSearchWizardWindow(string initialSeriesQuery, ulong? localCoverHash = null, string? filePath = null, bool isBulkQueueMode = false)
     {
         InitializeComponent();
         _localCoverHash = localCoverHash;
+        _filePath = filePath;
         _scraperService = new MetadataScraperService(new AppSettingsService());
+
+        if (RecheckUnmatchedCheckBox != null)
+        {
+            RecheckUnmatchedCheckBox.IsVisible = isBulkQueueMode;
+        }
+
+        if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
+        {
+            if (LocalFileNameTooltipText != null)
+            {
+                LocalFileNameTooltipText.Text = Path.GetFileName(filePath);
+            }
+            _ = LoadLocalCoverAsync(filePath);
+        }
 
         string query = initialSeriesQuery;
         if (!string.IsNullOrWhiteSpace(filePath))
@@ -51,6 +77,24 @@ public partial class SeriesSearchWizardWindow : Window
         {
             SeriesTitleTextBox.Text = query;
             _ = PerformSeriesSearchAsync();
+        }
+    }
+
+    private async Task LoadLocalCoverAsync(string filePath)
+    {
+        try
+        {
+            var coverService = new ArchiveCoverService();
+            _localCoverBitmap = await coverService.LoadCoverAsync(filePath, CancellationToken.None);
+            if (_localCoverBitmap != null)
+            {
+                if (LocalCoverImageHeader != null) LocalCoverImageHeader.Source = _localCoverBitmap;
+                if (LocalCoverImageBottom != null) LocalCoverImageBottom.Source = _localCoverBitmap;
+            }
+        }
+        catch (Exception ex)
+        {
+            InkTag.Core.Logging.AppLogger.LogWarning($"[SeriesSearchWizard] Could not load local cover image: {ex.Message}");
         }
     }
 
@@ -154,8 +198,22 @@ public partial class SeriesSearchWizardWindow : Window
 
     private async Task TransitionToStep2Async(SeriesSearchResult series)
     {
+        _scanCts?.Cancel();
+        _scanCts = new CancellationTokenSource();
+        var ct = _scanCts.Token;
+
         _selectedSeries = series;
-        _currentPage = 1;
+        _hasUserManuallySelected = false;
+        _filterQuery = string.Empty;
+        if (IssueFilterTextBox != null)
+        {
+            IssueFilterTextBox.Text = string.Empty;
+        }
+
+        lock (_allIssues)
+        {
+            _allIssues.Clear();
+        }
 
         string totalIssuesStr = series.CountOfIssues.HasValue
             ? (series.CountOfIssues.Value == 1 ? "1 total issue" : $"{series.CountOfIssues.Value} total issues")
@@ -163,149 +221,217 @@ public partial class SeriesSearchWizardWindow : Window
         SelectedSeriesSubtitleText.Text = $"{series.Publisher} • Start Year: {series.StartYear?.ToString() ?? "Unknown"} • {totalIssuesStr}";
 
         SetStep(2);
-        await LoadSeriesIssuesAsync();
+        await LoadAndScanSeriesIssuesAsync(series, ct);
     }
 
-    private async Task LoadSeriesIssuesAsync()
+    private async Task LoadAndScanSeriesIssuesAsync(SeriesSearchResult series, CancellationToken ct)
     {
-        if (_selectedSeries == null) return;
-
-        Step2StatusText.Text = $"Loading issues (Page {_currentPage})...";
+        Step2StatusText.Text = "Loading issues for series...";
         Step2StatusText.IsVisible = true;
         IssuesListBox.ItemsSource = null;
         CompareApplyButton.IsEnabled = false;
         QuickApplyButton.IsEnabled = false;
         SelectedIssueSummaryText.Text = "No issue selected. Click an issue from the list above.";
-        _hasUserManuallySelected = false;
+        IssuesCountStatusText.Text = "Loading...";
 
         try
         {
-            var issues = (await _scraperService.FetchSeriesIssuesAsync(_selectedSeries.VolumeId, _currentPage, PageSize)).ToList();
-            if (issues.Any())
+            // 1. Fetch initial batch (Page 1, up to 100 issues)
+            var initialIssues = (await _scraperService.FetchSeriesIssuesAsync(series.VolumeId, 1, PageSize, null, ct)).ToList();
+            if (!initialIssues.Any())
             {
-                var viewModels = issues
-                    .OrderBy(i => GetNumericIssueNumber(i.IssueNumber))
-                    .ThenBy(i => i.IssueNumber)
-                    .Select(i =>
-                    {
-                        var vm = new CandidateItemViewModel(i, _localCoverHash);
-                        vm.OnCoverHashComputed += OnCandidateCoverHashComputed;
-                        return vm;
-                    })
-                    .ToList();
-
-                IssuesListBox.ItemsSource = viewModels;
-                Step2StatusText.IsVisible = false;
-
-                EvaluateTopVisualMatch(viewModels);
-            }
-            else
-            {
-                Step2StatusText.Text = "No issues found on this page.";
+                Step2StatusText.Text = "No issues found for this series.";
                 Step2StatusText.IsVisible = true;
+                IssuesCountStatusText.Text = "0 issues";
+                return;
             }
+
+            var initialVms = initialIssues
+                .Select(i =>
+                {
+                    var vm = new CandidateItemViewModel(i, _localCoverHash);
+                    vm.OnCoverHashComputed += OnCandidateCoverHashComputed;
+                    return vm;
+                })
+                .ToList();
+
+            lock (_allIssues)
+            {
+                _allIssues.AddRange(initialVms);
+            }
+
+            Step2StatusText.IsVisible = false;
+            IssuesCountStatusText.Text = $"{_allIssues.Count} issues loaded";
+            EvaluateAndSortIssues();
+
+            // 2. If series has more than PageSize issues, scan subsequent pages in background
+            int totalKnownIssues = series.CountOfIssues ?? 0;
+            int totalPages = totalKnownIssues > 0 
+                ? (int)Math.Ceiling((double)totalKnownIssues / PageSize) 
+                : (initialIssues.Count >= PageSize ? 5 : 1);
+            totalPages = Math.Min(totalPages, (int)Math.Ceiling((double)MaxScanIssues / PageSize));
+
+            if (totalPages > 1 && initialIssues.Count >= PageSize)
+            {
+                _ = Task.Run(async () =>
+                {
+                    for (int page = 2; page <= totalPages; page++)
+                    {
+                        if (ct.IsCancellationRequested) break;
+
+                        // Check if we already have a top-confidence visual match (>= 90%)
+                        lock (_allIssues)
+                        {
+                            if (_allIssues.Any(i => i.VisualSimilarity.HasValue && i.VisualSimilarity.Value >= 0.90))
+                            {
+                                break; // Early exit! Confident match found.
+                            }
+                        }
+
+                        try
+                        {
+                            var pageIssues = (await _scraperService.FetchSeriesIssuesAsync(series.VolumeId, page, PageSize, null, ct)).ToList();
+                            if (!pageIssues.Any() || ct.IsCancellationRequested) break;
+
+                            var pageVms = pageIssues
+                                .Select(i =>
+                                {
+                                    var vm = new CandidateItemViewModel(i, _localCoverHash);
+                                    vm.OnCoverHashComputed += OnCandidateCoverHashComputed;
+                                    return vm;
+                                })
+                                .ToList();
+
+                            lock (_allIssues)
+                            {
+                                _allIssues.AddRange(pageVms);
+                            }
+
+                            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                            {
+                                if (!ct.IsCancellationRequested)
+                                {
+                                    int count;
+                                    lock (_allIssues) { count = _allIssues.Count; }
+                                    string totalStr = series.CountOfIssues?.ToString() ?? "series";
+                                    IssuesCountStatusText.Text = $"Scanning {count} of {totalStr} issues...";
+                                    EvaluateAndSortIssues();
+                                }
+                            });
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            break;
+                        }
+                        catch (Exception ex)
+                        {
+                            InkTag.Core.Logging.AppLogger.LogWarning($"[SeriesSearchWizard] Background page fetch error: {ex.Message}");
+                            break;
+                        }
+                    }
+
+                    await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        if (!ct.IsCancellationRequested)
+                        {
+                            int finalCount;
+                            lock (_allIssues) { finalCount = _allIssues.Count; }
+                            IssuesCountStatusText.Text = $"{finalCount} issues loaded";
+                        }
+                    });
+                }, ct);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Canceled by user navigation
         }
         catch (Exception ex)
         {
             Step2StatusText.Text = $"Failed to load issues: {ex.Message}";
             Step2StatusText.IsVisible = true;
+            IssuesCountStatusText.Text = "Error";
         }
-
-        UpdatePaginationControls();
     }
 
     private void OnCandidateCoverHashComputed(CandidateItemViewModel vm)
     {
-        if (IssuesListBox.ItemsSource is IEnumerable<CandidateItemViewModel> currentItems)
-        {
-            var list = currentItems.ToList();
-            Avalonia.Threading.Dispatcher.UIThread.Post(() => EvaluateTopVisualMatch(list));
-        }
+        Avalonia.Threading.Dispatcher.UIThread.Post(() => EvaluateAndSortIssues());
     }
 
-    private void EvaluateTopVisualMatch(List<CandidateItemViewModel> list)
+    private void EvaluateAndSortIssues()
     {
-        if (!_localCoverHash.HasValue || _localCoverHash.Value == 0 || list.Count == 0) return;
+        List<CandidateItemViewModel> snapshot;
+        lock (_allIssues)
+        {
+            snapshot = _allIssues.ToList();
+        }
+
+        if (snapshot.Count == 0) return;
+
+        // Filter issues if query is entered
+        IEnumerable<CandidateItemViewModel> filtered = snapshot;
+        if (!string.IsNullOrWhiteSpace(_filterQuery))
+        {
+            string q = _filterQuery.Trim();
+            filtered = filtered.Where(i =>
+                (i.Result.IssueNumber != null && i.Result.IssueNumber.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
+                (i.Result.IssueTitle != null && i.Result.IssueTitle.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
+                (i.DisplayTitle != null && i.DisplayTitle.Contains(q, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        var filteredList = filtered.ToList();
 
         CandidateItemViewModel? topMatch = null;
         double bestSim = 0.0;
 
-        foreach (var item in list)
+        if (_localCoverHash.HasValue && _localCoverHash.Value != 0)
         {
-            if (item.VisualSimilarity.HasValue && item.VisualSimilarity.Value > bestSim)
+            // Evaluate global best similarity across all loaded issues
+            foreach (var item in snapshot)
             {
-                bestSim = item.VisualSimilarity.Value;
-                topMatch = item;
+                if (item.VisualSimilarity.HasValue && item.VisualSimilarity.Value > bestSim)
+                {
+                    bestSim = item.VisualSimilarity.Value;
+                    topMatch = item;
+                }
+            }
+
+            foreach (var item in filteredList)
+            {
+                item.IsTopVisualMatch = topMatch != null && item == topMatch && bestSim >= 0.70;
             }
         }
 
-        foreach (var item in list)
-        {
-            item.IsTopVisualMatch = topMatch != null && item == topMatch && bestSim >= 0.70;
-        }
-
-        // Order issues list so that visual matches (highest visual similarity) are placed at the top,
-        // followed by natural issue number ordering
-        var sorted = list
-            .OrderByDescending(c => c.VisualSimilarity ?? 0.0)
+        // Sort: Top visual matches (>= 70%) placed at the very top by descending confidence, followed by natural issue order
+        var sorted = filteredList
+            .OrderByDescending(c => (c.VisualSimilarity.HasValue && c.VisualSimilarity.Value >= 0.70) ? c.VisualSimilarity.Value : -1.0)
             .ThenBy(i => GetNumericIssueNumber(i.IssueNumber))
             .ThenBy(i => i.IssueNumber)
             .ToList();
 
-        if (!list.SequenceEqual(sorted))
-        {
-            var selected = IssuesListBox.SelectedItem as CandidateItemViewModel;
-            IssuesListBox.ItemsSource = sorted;
+        var selected = IssuesListBox.SelectedItem as CandidateItemViewModel;
+        IssuesListBox.ItemsSource = sorted;
 
-            if (!_hasUserManuallySelected && topMatch != null && bestSim >= 0.70)
-            {
-                IssuesListBox.SelectedItem = topMatch;
-            }
-            else if (selected != null && sorted.Contains(selected))
-            {
-                IssuesListBox.SelectedItem = selected;
-            }
-        }
-        else if (!_hasUserManuallySelected && topMatch != null && bestSim >= 0.85 && IssuesListBox.SelectedItem != topMatch)
+        if (!_hasUserManuallySelected && topMatch != null && bestSim >= 0.85 && sorted.Contains(topMatch))
         {
             IssuesListBox.SelectedItem = topMatch;
         }
-    }
-
-    private void UpdatePaginationControls()
-    {
-        PrevPageButton.IsEnabled = _currentPage > 1;
-        // If total count is known, calculate total pages
-        if (_selectedSeries?.CountOfIssues.HasValue == true && _selectedSeries.CountOfIssues.Value > 0)
+        else if (selected != null && sorted.Contains(selected))
         {
-            int totalPages = (int)Math.Ceiling((double)_selectedSeries.CountOfIssues.Value / PageSize);
-            PageIndicatorText.Text = $"Page {_currentPage} of {Math.Max(1, totalPages)}";
-            NextPageButton.IsEnabled = _currentPage < totalPages;
-        }
-        else
-        {
-            PageIndicatorText.Text = $"Page {_currentPage}";
-            NextPageButton.IsEnabled = true;
+            IssuesListBox.SelectedItem = selected;
         }
     }
 
-    private async void PrevPage_Click(object? sender, RoutedEventArgs e)
+    private void IssueFilterTextBox_TextChanged(object? sender, TextChangedEventArgs e)
     {
-        if (_currentPage > 1)
-        {
-            _currentPage--;
-            await LoadSeriesIssuesAsync();
-        }
-    }
-
-    private async void NextPage_Click(object? sender, RoutedEventArgs e)
-    {
-        _currentPage++;
-        await LoadSeriesIssuesAsync();
+        _filterQuery = IssueFilterTextBox.Text?.Trim() ?? string.Empty;
+        EvaluateAndSortIssues();
     }
 
     private void BackToStep1_Click(object? sender, RoutedEventArgs e)
     {
+        _scanCts?.Cancel();
         SetStep(1);
     }
 
@@ -319,6 +445,10 @@ public partial class SeriesSearchWizardWindow : Window
         if (IssuesListBox.SelectedItem is CandidateItemViewModel vm)
         {
             SelectedResult = vm.Result;
+            if (CandidateCoverImageBottom != null)
+            {
+                CandidateCoverImageBottom.Source = vm.Thumbnail;
+            }
             string matchNote = vm.VisualSimilarity.HasValue && vm.VisualSimilarity.Value > 0 ? $" [Cover Match: {(int)Math.Round(vm.VisualSimilarity.Value * 100)}%]" : "";
             SelectedIssueSummaryText.Text = $"Selected: {vm.Result.SeriesTitle} #{vm.Result.IssueNumber} ({vm.Result.IssueTitle}){matchNote}";
             CompareApplyButton.IsEnabled = true;
@@ -327,6 +457,10 @@ public partial class SeriesSearchWizardWindow : Window
         else
         {
             SelectedResult = null;
+            if (CandidateCoverImageBottom != null)
+            {
+                CandidateCoverImageBottom.Source = null;
+            }
             SelectedIssueSummaryText.Text = "No issue selected. Click an issue from the list above.";
             CompareApplyButton.IsEnabled = false;
             QuickApplyButton.IsEnabled = false;
@@ -337,6 +471,7 @@ public partial class SeriesSearchWizardWindow : Window
     {
         if (SelectedResult != null)
         {
+            ApplySeriesToRemainingUnmatched = RecheckUnmatchedCheckBox?.IsChecked == true;
             WasApplied = true;
             RequestCompareDiff = true;
             Close();
@@ -347,6 +482,7 @@ public partial class SeriesSearchWizardWindow : Window
     {
         if (SelectedResult != null)
         {
+            ApplySeriesToRemainingUnmatched = RecheckUnmatchedCheckBox?.IsChecked == true;
             WasApplied = true;
             RequestCompareDiff = false;
             Close();
@@ -357,6 +493,13 @@ public partial class SeriesSearchWizardWindow : Window
     {
         WasApplied = false;
         Close();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _scanCts?.Cancel();
+        _scanCts?.Dispose();
+        base.OnClosed(e);
     }
 
     private static double GetNumericIssueNumber(string issueNum)

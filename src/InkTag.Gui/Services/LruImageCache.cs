@@ -48,17 +48,11 @@ public class LruImageCache
     {
         if (string.IsNullOrEmpty(key) || bitmap == null) return;
 
-        Bitmap? toDispose = null;
-
         lock (_lock)
         {
-            if (_cache.TryGetValue(key, out var existing))
+            if (_cache.TryGetValue(key, out _))
             {
                 _lruList.Remove(key);
-                if (!ReferenceEquals(existing, bitmap))
-                {
-                    toDispose = existing;
-                }
             }
             else if (_cache.Count >= _maxCapacity)
             {
@@ -67,34 +61,21 @@ public class LruImageCache
                 {
                     string oldestKey = oldestNode.Value;
                     _lruList.RemoveFirst();
-                    if (_cache.Remove(oldestKey, out var evicted))
-                    {
-                        toDispose = evicted;
-                    }
+                    _cache.Remove(oldestKey);
                 }
             }
 
             _cache[key] = bitmap;
             _lruList.AddLast(key);
         }
-
-        toDispose?.Dispose();
     }
 
     public void Clear()
     {
-        List<Bitmap> bitmapsToDispose;
-
         lock (_lock)
         {
-            bitmapsToDispose = new List<Bitmap>(_cache.Values);
             _cache.Clear();
             _lruList.Clear();
-        }
-
-        foreach (var bmp in bitmapsToDispose)
-        {
-            bmp.Dispose();
         }
     }
 }

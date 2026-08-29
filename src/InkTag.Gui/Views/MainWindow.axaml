@@ -2,11 +2,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:InkTag.Gui.ViewModels"
         xmlns:conv="using:InkTag.Gui.Converters"
+        xmlns:controls="using:InkTag.Gui.Controls"
         x:Class="InkTag.Gui.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="InkTag Desktop"
         Icon="/Assets/inktag.ico"
         Width="1200" Height="750"
+        MinWidth="950" MinHeight="550"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource AppBackgroundBrush}">
 
@@ -140,8 +142,8 @@
 
       <!-- Tools Menu -->
       <MenuItem Header="_Tools">
-        <MenuItem Header="🔍 _Auto-Tag Metadata (ComicVine)..." Click="ScrapeMetadata_Click"/>
-        <MenuItem Header="🧙 Series _Search Wizard..." Click="SeriesSearchWizard_Click"/>
+        <MenuItem Header="🔍 _Auto-Tag Metadata (ComicVine)..." Click="ScrapeMetadata_Click" IsEnabled="{Binding CanAutoTagSingle}"/>
+        <MenuItem Header="🧙 Series _Search Wizard..." Click="SeriesSearchWizard_Click" IsEnabled="{Binding CanAutoTagSingle}"/>
         <MenuItem Header="📚 _Bulk Auto-Tag Queue..." Click="BulkScrapeQueue_Click"/>
         <MenuItem Header="🏷️ _Infer Metadata from Path / Filename" Click="InferMetadataFromFilenames_Click"/>
         <MenuItem Header="✏️ _Rename File(s) from Metadata..." Click="RenameFiles_Click"/>
@@ -188,7 +190,7 @@
 
         <!-- Right Side Controls: Scrape, Refresh & Inspector Toggle (Neutral Outline Utilities) -->
         <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8">
-          <Button Classes="outline" Click="ScrapeMetadata_Click" ToolTip.Tip="Auto-Tag metadata from ComicVine" IsEnabled="{Binding !IsLoading}">
+          <Button Classes="outline" Click="ScrapeMetadata_Click" ToolTip.Tip="{Binding AutoTagButtonTooltip}" IsEnabled="{Binding CanAutoTagSingle}">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Text="🌐" VerticalAlignment="Center"/>
               <TextBlock Text="Auto-Tag" VerticalAlignment="Center"/>
@@ -227,7 +229,12 @@
     </Border>
 
     <!-- Main Workspace Split Area -->
-    <Grid Grid.Row="2" x:Name="MainWorkspaceGrid" ColumnDefinitions="*, Auto, 350">
+    <Grid Grid.Row="2" x:Name="MainWorkspaceGrid">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" MinWidth="400"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="360" MinWidth="320" MaxWidth="750"/>
+      </Grid.ColumnDefinitions>
       
       <!-- Left Column: Spreadsheet DataGrid -->
       <Grid Grid.Column="0" Margin="10" RowDefinitions="Auto, *">
@@ -269,8 +276,8 @@
                   SelectionChanged="DataGrid_SelectionChanged">
           <DataGrid.ContextMenu>
             <ContextMenu>
-              <MenuItem Header="🔍 Auto-Tag Metadata (ComicVine)..." Click="ScrapeMetadata_Click"/>
-              <MenuItem Header="🧙 Series Search Wizard..." Click="SeriesSearchWizard_Click"/>
+              <MenuItem Header="🔍 Auto-Tag Metadata (ComicVine)..." Click="ScrapeMetadata_Click" IsEnabled="{Binding CanAutoTagSingle}"/>
+              <MenuItem Header="🧙 Series Search Wizard..." Click="SeriesSearchWizard_Click" IsEnabled="{Binding CanAutoTagSingle}"/>
               <MenuItem Header="📚 Bulk Auto-Tag Selected..." Click="BulkScrapeQueue_Click"/>
               <Separator/>
               <MenuItem Header="🏷️ Infer Metadata from Path / Filename" Click="InferMetadataFromFilenames_Click"/>
@@ -285,12 +292,12 @@
             </Style>
           </DataGrid.Styles>
           <DataGrid.Columns>
-            <DataGridCheckBoxColumn Header="Untagged" Binding="{Binding IsUntagged}" IsReadOnly="True" Width="85"/>
-            <DataGridTemplateColumn Header="File Name" Width="235" SortMemberPath="FileName">
+            <DataGridCheckBoxColumn Header="Untagged" Binding="{Binding IsUntagged}" IsReadOnly="True" Width="95" MinWidth="95"/>
+            <DataGridTemplateColumn Header="File Name" Width="240" MinWidth="160" SortMemberPath="FileName">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:ComicItemViewModel">
-                  <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="6,0">
-                    <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding FileName}" MaxWidth="155"/>
+                  <controls:HuggingBadgePanel Spacing="6" VerticalAlignment="Center" Margin="6,0">
+                    <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding FileName}"/>
                     <Border IsVisible="{Binding IsCbr}"
                             Background="{Binding FormatBadgeBackground}"
                             BorderBrush="{Binding FormatBadgeBorder}"
@@ -305,44 +312,44 @@
                                  Foreground="{Binding FormatBadgeForeground}"
                                  VerticalAlignment="Center"/>
                     </Border>
-                  </StackPanel>
+                  </controls:HuggingBadgePanel>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="180"/>
-            <DataGridTextColumn Header="Series" Binding="{Binding Series}" Width="160"/>
-            <DataGridTextColumn Header="Issue #" Binding="{Binding Number}" Width="80"/>
-            <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="75"/>
-            <DataGridTextColumn Header="Volume" Binding="{Binding Volume}" Width="80"/>
-            <DataGridTextColumn Header="Publisher" Binding="{Binding Publisher}" Width="140"/>
-            <DataGridTextColumn Header="Imprint" Binding="{Binding Imprint}" Width="120"/>
-            <DataGridTextColumn Header="Series Group" Binding="{Binding SeriesGroup}" Width="140"/>
-            <DataGridTextColumn Header="Story Arc" Binding="{Binding StoryArc}" Width="140"/>
-            <DataGridTextColumn Header="Year" Binding="{Binding Year}" Width="75"/>
-            <DataGridTextColumn Header="Month" Binding="{Binding Month}" Width="80"/>
-            <DataGridTextColumn Header="Day" Binding="{Binding Day}" Width="75"/>
-            <DataGridTextColumn Header="Genre" Binding="{Binding Genre}" Width="120"/>
-            <DataGridTextColumn Header="Tags" Binding="{Binding Tags}" Width="140"/>
-            <DataGridTextColumn Header="Writer" Binding="{Binding Writer}" Width="140"/>
-            <DataGridTextColumn Header="Penciller" Binding="{Binding Penciller}" Width="140"/>
-            <DataGridTextColumn Header="Inker" Binding="{Binding Inker}" Width="140"/>
-            <DataGridTextColumn Header="Colorist" Binding="{Binding Colorist}" Width="140"/>
-            <DataGridTextColumn Header="Letterer" Binding="{Binding Letterer}" Width="140"/>
-            <DataGridTextColumn Header="Cover Artist" Binding="{Binding CoverArtist}" Width="140"/>
-            <DataGridTextColumn Header="Editor" Binding="{Binding Editor}" Width="140"/>
-            <DataGridTextColumn Header="Summary" Binding="{Binding Summary}" Width="220"/>
-            <DataGridTextColumn Header="Notes" Binding="{Binding Notes}" Width="180"/>
-            <DataGridTextColumn Header="Format" Binding="{Binding Format}" Width="100"/>
-            <DataGridTextColumn Header="Black &amp; White" Binding="{Binding BlackAndWhite}" Width="110"/>
-            <DataGridTextColumn Header="Age Rating" Binding="{Binding AgeRating}" Width="100"/>
-            <DataGridTextColumn Header="Language ISO" Binding="{Binding LanguageISO}" Width="100"/>
-            <DataGridTextColumn Header="Page Count" Binding="{Binding PageCount}" Width="90"/>
-            <DataGridTextColumn Header="Characters" Binding="{Binding Characters}" Width="160"/>
-            <DataGridTextColumn Header="Teams" Binding="{Binding Teams}" Width="140"/>
-            <DataGridTextColumn Header="Locations" Binding="{Binding Locations}" Width="140"/>
-            <DataGridTextColumn Header="Scan Info" Binding="{Binding ScanInformation}" Width="160"/>
-            <DataGridTextColumn Header="Web Link" Binding="{Binding Web}" Width="180"/>
-            <DataGridCheckBoxColumn Header="Manga (RTL)" Binding="{Binding Manga}" Width="100"/>
+            <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="180" MinWidth="100"/>
+            <DataGridTextColumn Header="Series" Binding="{Binding Series}" Width="160" MinWidth="100"/>
+            <DataGridTextColumn Header="Issue #" Binding="{Binding Number}" Width="85" MinWidth="85"/>
+            <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="75" MinWidth="75"/>
+            <DataGridTextColumn Header="Volume" Binding="{Binding Volume}" Width="85" MinWidth="85"/>
+            <DataGridTextColumn Header="Publisher" Binding="{Binding Publisher}" Width="140" MinWidth="100"/>
+            <DataGridTextColumn Header="Imprint" Binding="{Binding Imprint}" Width="120" MinWidth="90"/>
+            <DataGridTextColumn Header="Series Group" Binding="{Binding SeriesGroup}" Width="140" MinWidth="125"/>
+            <DataGridTextColumn Header="Story Arc" Binding="{Binding StoryArc}" Width="140" MinWidth="100"/>
+            <DataGridTextColumn Header="Year" Binding="{Binding Year}" Width="75" MinWidth="75"/>
+            <DataGridTextColumn Header="Month" Binding="{Binding Month}" Width="80" MinWidth="80"/>
+            <DataGridTextColumn Header="Day" Binding="{Binding Day}" Width="75" MinWidth="75"/>
+            <DataGridTextColumn Header="Genre" Binding="{Binding Genre}" Width="120" MinWidth="85"/>
+            <DataGridTextColumn Header="Tags" Binding="{Binding Tags}" Width="140" MinWidth="80"/>
+            <DataGridTextColumn Header="Writer" Binding="{Binding Writer}" Width="140" MinWidth="85"/>
+            <DataGridTextColumn Header="Penciller" Binding="{Binding Penciller}" Width="140" MinWidth="95"/>
+            <DataGridTextColumn Header="Inker" Binding="{Binding Inker}" Width="140" MinWidth="80"/>
+            <DataGridTextColumn Header="Colorist" Binding="{Binding Colorist}" Width="140" MinWidth="90"/>
+            <DataGridTextColumn Header="Letterer" Binding="{Binding Letterer}" Width="140" MinWidth="90"/>
+            <DataGridTextColumn Header="Cover Artist" Binding="{Binding CoverArtist}" Width="140" MinWidth="120"/>
+            <DataGridTextColumn Header="Editor" Binding="{Binding Editor}" Width="140" MinWidth="80"/>
+            <DataGridTextColumn Header="Summary" Binding="{Binding Summary}" Width="220" MinWidth="100"/>
+            <DataGridTextColumn Header="Notes" Binding="{Binding Notes}" Width="180" MinWidth="80"/>
+            <DataGridTextColumn Header="Format" Binding="{Binding Format}" Width="100" MinWidth="85"/>
+            <DataGridTextColumn Header="Black &amp; White" Binding="{Binding BlackAndWhite}" Width="135" MinWidth="135"/>
+            <DataGridTextColumn Header="Age Rating" Binding="{Binding AgeRating}" Width="115" MinWidth="115"/>
+            <DataGridTextColumn Header="Language ISO" Binding="{Binding LanguageISO}" Width="125" MinWidth="125"/>
+            <DataGridTextColumn Header="Page Count" Binding="{Binding PageCount}" Width="110" MinWidth="110"/>
+            <DataGridTextColumn Header="Characters" Binding="{Binding Characters}" Width="160" MinWidth="105"/>
+            <DataGridTextColumn Header="Teams" Binding="{Binding Teams}" Width="140" MinWidth="85"/>
+            <DataGridTextColumn Header="Locations" Binding="{Binding Locations}" Width="140" MinWidth="95"/>
+            <DataGridTextColumn Header="Scan Info" Binding="{Binding ScanInformation}" Width="160" MinWidth="100"/>
+            <DataGridTextColumn Header="Web Link" Binding="{Binding Web}" Width="180" MinWidth="100"/>
+            <DataGridCheckBoxColumn Header="Manga (RTL)" Binding="{Binding Manga}" Width="115" MinWidth="115"/>
           </DataGrid.Columns>
         </DataGrid>
 
@@ -384,12 +391,12 @@
                     ToolTip.Tip="Drag to resize Inspector panel"/>
 
       <!-- Right Column: Details & Bulk Tools Sidebar -->
-      <Border Grid.Column="2" Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1,0,0,0" Padding="15" IsVisible="{Binding IsInspectorVisible}">
+      <Border Grid.Column="2" MinWidth="320" Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1,0,0,0" Padding="15,15,10,15" IsVisible="{Binding IsInspectorVisible}">
         <TabControl Theme="{StaticResource {x:Type TabControl}}">
           
           <!-- Tab 1: Single Comic Inspector -->
           <TabItem Header="Details" FontSize="13">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0" Padding="0,0,12,0">
               <StackPanel Spacing="12">
                 <Border Background="{DynamicResource AppInputBackgroundBrush}" CornerRadius="4" Padding="5" HorizontalAlignment="Center" Height="200" Width="150">
                   <Panel>
@@ -473,7 +480,7 @@
           
           <!-- Tab 2: Bulk Apply Tools -->
           <TabItem Header="Bulk Edit" FontSize="13">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0" Padding="0,0,12,0">
               <StackPanel Spacing="12">
                 <TextBlock Text="Modify selected rows in batch:" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource AppTextPrimaryBrush}" Margin="0,0,0,5"/>
 
@@ -648,45 +655,47 @@
             </ScrollViewer>
           </TabItem>
 
-          <!-- TAB 2: Multi-Item Bulk Tools -->
+          <!-- Tab 3: Multi-Item Bulk Tools -->
           <TabItem Header="Bulk Tools" FontSize="12">
-            <StackPanel Spacing="8" Margin="10">
-              <TextBlock Text="Bulk Edit Controls" FontWeight="Bold" FontSize="14" Foreground="#3592FF" Margin="0,0,0,5"/>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0" Padding="0,0,12,0">
+              <StackPanel Spacing="8" Margin="0,0,0,10">
+                <TextBlock Text="Bulk Edit Controls" FontWeight="Bold" FontSize="14" Foreground="#3592FF" Margin="0,0,0,5"/>
 
-              <CheckBox IsChecked="{Binding BulkSeriesEnabled}" Content="Set Series"/>
-              <TextBox Text="{Binding BulkSeries}" IsEnabled="{Binding BulkSeriesEnabled}" Background="{DynamicResource AppInputBackgroundBrush}"/>
+                <CheckBox IsChecked="{Binding BulkSeriesEnabled}" Content="Set Series"/>
+                <TextBox Text="{Binding BulkSeries}" IsEnabled="{Binding BulkSeriesEnabled}" Background="{DynamicResource AppInputBackgroundBrush}"/>
 
-              <CheckBox IsChecked="{Binding BulkPublisherEnabled}" Content="Set Publisher" Margin="0,5,0,0"/>
-              <TextBox Text="{Binding BulkPublisher}" IsEnabled="{Binding BulkPublisherEnabled}" Background="{DynamicResource AppInputBackgroundBrush}"/>
+                <CheckBox IsChecked="{Binding BulkPublisherEnabled}" Content="Set Publisher" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding BulkPublisher}" IsEnabled="{Binding BulkPublisherEnabled}" Background="{DynamicResource AppInputBackgroundBrush}"/>
 
-              <CheckBox IsChecked="{Binding BulkYearEnabled}" Content="Set Year" Margin="0,5,0,0"/>
-              <TextBox Text="{Binding BulkYear}" IsEnabled="{Binding BulkYearEnabled}" Background="{DynamicResource AppInputBackgroundBrush}"/>
+                <CheckBox IsChecked="{Binding BulkYearEnabled}" Content="Set Year" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding BulkYear}" IsEnabled="{Binding BulkYearEnabled}" Background="{DynamicResource AppInputBackgroundBrush}"/>
 
-              <CheckBox IsChecked="{Binding BulkGenreEnabled}" Content="Set Genre" Margin="0,5,0,0"/>
-              <TextBox Text="{Binding BulkGenre}" IsEnabled="{Binding BulkGenreEnabled}" Background="{DynamicResource AppInputBackgroundBrush}"/>
+                <CheckBox IsChecked="{Binding BulkGenreEnabled}" Content="Set Genre" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding BulkGenre}" IsEnabled="{Binding BulkGenreEnabled}" Background="{DynamicResource AppInputBackgroundBrush}"/>
 
-              <CheckBox IsChecked="{Binding BulkMangaEnabled}" Content="Set Manga Direction" Margin="0,5,0,0"/>
-              <ComboBox ItemsSource="{Binding MangaOptions}" SelectedItem="{Binding BulkManga}" IsEnabled="{Binding BulkMangaEnabled}" HorizontalAlignment="Stretch" Background="{DynamicResource AppInputBackgroundBrush}"/>
+                <CheckBox IsChecked="{Binding BulkMangaEnabled}" Content="Set Manga Direction" Margin="0,5,0,0"/>
+                <ComboBox ItemsSource="{Binding MangaOptions}" SelectedItem="{Binding BulkManga}" IsEnabled="{Binding BulkMangaEnabled}" HorizontalAlignment="Stretch" Background="{DynamicResource AppInputBackgroundBrush}"/>
 
-              <Button Content="Apply to Selected / All" Command="{Binding BulkApplyCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,15,0,0" Padding="10" Background="{DynamicResource AppAccentBrush}" Foreground="{DynamicResource AppAccentForegroundBrush}"/>
-              <TextBlock Text="Tip: Applies only to selected rows, or all rows if none are highlighted." Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                <Button Content="Apply to Selected / All" Command="{Binding BulkApplyCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,15,0,0" Padding="10" Background="{DynamicResource AppAccentBrush}" Foreground="{DynamicResource AppAccentForegroundBrush}"/>
+                <TextBlock Text="Tip: Applies only to selected rows, or all rows if none are highlighted." Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0"/>
 
-              <Separator Background="{DynamicResource AppBorderBrush}" Margin="0,10"/>
+                <Separator Background="{DynamicResource AppBorderBrush}" Margin="0,10"/>
 
-              <TextBlock Text="Find &amp; Replace" FontWeight="Bold" FontSize="14" Foreground="#3592FF"/>
+                <TextBlock Text="Find &amp; Replace" FontWeight="Bold" FontSize="14" Foreground="#3592FF"/>
 
-              <TextBlock Text="Target Column" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11"/>
-              <ComboBox ItemsSource="{Binding ReplaceColumns}" SelectedItem="{Binding SelectedReplaceColumn}" HorizontalAlignment="Stretch" Background="{DynamicResource AppInputBackgroundBrush}"/>
+                <TextBlock Text="Target Column" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11"/>
+                <ComboBox ItemsSource="{Binding ReplaceColumns}" SelectedItem="{Binding SelectedReplaceColumn}" HorizontalAlignment="Stretch" Background="{DynamicResource AppInputBackgroundBrush}"/>
 
-              <TextBlock Text="Find text" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11" Margin="0,5,0,0"/>
-              <TextBox Text="{Binding FindText}" Watermark="e.g. Vol 1" Background="{DynamicResource AppInputBackgroundBrush}"/>
+                <TextBlock Text="Find text" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding FindText}" Watermark="e.g. Vol 1" Background="{DynamicResource AppInputBackgroundBrush}"/>
 
-              <TextBlock Text="Replace with" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11" Margin="0,5,0,0"/>
-              <TextBox Text="{Binding ReplaceText}" Watermark="e.g. Volume 1" Background="{DynamicResource AppInputBackgroundBrush}"/>
+                <TextBlock Text="Replace with" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11" Margin="0,5,0,0"/>
+                <TextBox Text="{Binding ReplaceText}" Watermark="e.g. Volume 1" Background="{DynamicResource AppInputBackgroundBrush}"/>
 
-              <Button Content="Execute Replace" Command="{Binding FindReplaceCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,15,0,0" Padding="10" Background="#0E639C" Foreground="White"/>
-              <TextBlock Text="Tip: Applies only to selected rows, or all rows if none are highlighted." Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0"/>
-            </StackPanel>
+                <Button Content="Execute Replace" Command="{Binding FindReplaceCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,15,0,0" Padding="10" Background="#0E639C" Foreground="White"/>
+                <TextBlock Text="Tip: Applies only to selected rows, or all rows if none are highlighted." Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0"/>
+              </StackPanel>
+            </ScrollViewer>
           </TabItem>
           
         </TabControl>

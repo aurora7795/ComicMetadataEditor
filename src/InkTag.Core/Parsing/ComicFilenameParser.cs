@@ -16,6 +16,23 @@ public record ParsedComicFilename
 
 public static class ComicFilenameParser
 {
+    // Regex to match leading chronological release date prefix, e.g. "20040218 - ", "19990113 - ", "2007-08-15 - ", "2015_10_01 - "
+    private static readonly Regex LeadingDateRegex = new(
+        @"^(?:(?<date>(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01]))|(?<isoDate>(?:19|20)\d{2}[-_](?:0[1-9]|1[0-2])[-_](?:0[1-9]|[12]\d|3[01])))\s*[\-_.]\s*",
+        RegexOptions.Compiled);
+
+    // Regex to match Reading Order / Chronological Arc structure:
+    // e.g. "Buffy, Season 0 #1 - The Origin, Part I", "Angel, Season 5 #14 - Smile Time, Part II", "Spike, Season 5 #3 - Shadow Puppets, Part III—Two to Sew"
+    private static readonly Regex ChronoArcRegex = new(
+        @"^(?<franchise>[A-Za-z0-9\s&'-]+?),\s*Season\s*(?<season>\d+)\s*(?:#(?<seasonIssue>\d+))?\s*[-–—]\s*(?<arc>[^,]+?)(?:,\s*Part\s*(?<part>[IVXLCDM\d]+)(?:[-–—].*)?)?$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    // Regex to match explicit series issue and story subtitle:
+    // e.g. "Tales of the Slayers #2 - Broken Bottle of Djinn", "Batman #400 - Resurrection Man"
+    private static readonly Regex ExplicitStoryTitleRegex = new(
+        @"^(?<series>[A-Za-z0-9\s&'-]+?)\s*#(?<issue>\d+(?:\.\d+)?)\s*[-–—]\s*(?<storyTitle>.+)$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     // Regex to match 4-digit years enclosed in parentheses, e.g. (2003), (1988)
     private static readonly Regex YearInParensRegex = new(@"\((19\d\d|20\d\d)\)", RegexOptions.Compiled);
 
@@ -72,6 +89,21 @@ public static class ComicFilenameParser
         string issueNumber = string.Empty;
         string scanInfo = string.Empty;
 
+        // 0. Extract & strip leading chronological release date prefix (e.g. "20040218 - ", "19990113 - ", "2007-08-15 - ")
+        var dateMatch = LeadingDateRegex.Match(rawName);
+        if (dateMatch.Success)
+        {
+            string dateStr = dateMatch.Groups["date"].Success
+                ? dateMatch.Groups["date"].Value
+                : dateMatch.Groups["isoDate"].Value.Replace("-", "").Replace("_", "");
+
+            if (int.TryParse(dateStr.Substring(0, 4), out int parsedDateYear) && parsedDateYear >= 1900 && parsedDateYear <= 2100)
+            {
+                year ??= parsedDateYear;
+            }
+            rawName = rawName.Substring(dateMatch.Length).Trim();
+        }
+
         // 1. Extract 4-digit Year
         var yearMatch = YearInParensRegex.Match(rawName);
         if (yearMatch.Success && int.TryParse(yearMatch.Groups[1].Value, out int parsedYear))
@@ -113,31 +145,82 @@ public static class ComicFilenameParser
         // Replace underscores and multiple spaces
         workingName = Regex.Replace(workingName.Replace('_', ' '), @"\s+", " ").Trim();
 
-        // 5. Extract Issue Number
-        // Check "X of Y" first (e.g. "Watchmen 01 of 12")
-        var ofMatch = OfCountRegex.Match(workingName);
-        if (ofMatch.Success)
+        // 5. Extract Issue Number & Series Structure
+        // Check reading-order / chronological arc pattern first (e.g. "Angel, Season 5 #14 - Smile Time, Part II")
+        var chronoMatch = ChronoArcRegex.Match(workingName);
+        if (chronoMatch.Success)
         {
-            issueNumber = NormalizeIssue(ofMatch.Groups[1].Value);
-            workingName = workingName.Substring(0, ofMatch.Index).Trim();
-        }
-        else
-        {
-            // Check explicit issue prefix "#01", "Issue 03"
-            var explicitMatch = ExplicitIssueRegex.Match(workingName);
-            if (explicitMatch.Success)
+            string franchise = chronoMatch.Groups["franchise"].Value.Trim();
+            string season = chronoMatch.Groups["season"].Value.Trim();
+            string seasonIssue = chronoMatch.Groups["seasonIssue"].Value.Trim();
+            string arc = chronoMatch.Groups["arc"].Value.Trim();
+            string part = chronoMatch.Groups["part"].Value.Trim();
+
+            int? partNum = ParseRomanNumeral(part);
+
+            if (int.TryParse(season, out int sNum) && sNum >= 8 && !string.IsNullOrEmpty(seasonIssue))
             {
-                issueNumber = NormalizeIssue(explicitMatch.Groups[1].Value);
-                workingName = workingName.Substring(0, explicitMatch.Index).Trim();
+                // For main continuation seasons (e.g. Buffy Season 8 #6), the season is the series and #6 is the issue
+                volume = sNum;
+                issueNumber = NormalizeIssue(seasonIssue);
+                workingName = $"{franchise}, Season {season}";
+            }
+            else if (partNum.HasValue)
+            {
+                volume = null;
+                issueNumber = partNum.Value.ToString();
+                workingName = $"{franchise}: {arc}";
+            }
+            else if (!string.IsNullOrEmpty(seasonIssue))
+            {
+                volume = null;
+                issueNumber = NormalizeIssue(seasonIssue);
+                workingName = $"{franchise}: {arc}";
             }
             else
             {
-                // Check trailing number (e.g. "Blankets 03", "The Amazing Spider-Man 300", "IM015", "IM_015", "IM-015", "ASM300", "015")
-                var trailingNumMatch = Regex.Match(workingName, @"(?:[\s\-_#.]+|(?<=[A-Za-z])|^)0*(\d+(?:\.\d+)?)\s*$", RegexOptions.Compiled);
-                if (trailingNumMatch.Success)
+                volume = null;
+                issueNumber = "1";
+                workingName = $"{franchise}: {arc}";
+            }
+        }
+        else
+        {
+            var explicitStoryMatch = ExplicitStoryTitleRegex.Match(workingName);
+            if (explicitStoryMatch.Success)
+            {
+                issueNumber = NormalizeIssue(explicitStoryMatch.Groups["issue"].Value);
+                workingName = explicitStoryMatch.Groups["series"].Value.Trim();
+            }
+            else
+            {
+                // Standard issue number extraction
+                // Check "X of Y" first (e.g. "Watchmen 01 of 12")
+                var ofMatch = OfCountRegex.Match(workingName);
+                if (ofMatch.Success)
                 {
-                    issueNumber = NormalizeIssue(trailingNumMatch.Groups[1].Value);
-                    workingName = workingName.Substring(0, trailingNumMatch.Index).Trim();
+                    issueNumber = NormalizeIssue(ofMatch.Groups[1].Value);
+                    workingName = workingName.Substring(0, ofMatch.Index).Trim();
+                }
+                else
+                {
+                    // Check explicit issue prefix "#01", "Issue 03"
+                    var explicitMatch = ExplicitIssueRegex.Match(workingName);
+                    if (explicitMatch.Success)
+                    {
+                        issueNumber = NormalizeIssue(explicitMatch.Groups[1].Value);
+                        workingName = workingName.Substring(0, explicitMatch.Index).Trim();
+                    }
+                    else
+                    {
+                        // Check trailing number (e.g. "Blankets 03", "The Amazing Spider-Man 300", "IM015", "IM_015", "IM-015", "ASM300", "015")
+                        var trailingNumMatch = Regex.Match(workingName, @"(?:[\s\-_#.]+|(?<=[A-Za-z])|^)0*(\d+(?:\.\d+)?)\s*$", RegexOptions.Compiled);
+                        if (trailingNumMatch.Success)
+                        {
+                            issueNumber = NormalizeIssue(trailingNumMatch.Groups[1].Value);
+                            workingName = workingName.Substring(0, trailingNumMatch.Index).Trim();
+                        }
+                    }
                 }
             }
         }
@@ -155,14 +238,14 @@ public static class ComicFilenameParser
         }
 
         // 7. Remove any volume prefix from series name if present (e.g. "Invincible v01" -> "Invincible")
-        if (volMatch.Success)
+        if (volMatch.Success && !chronoMatch.Success)
         {
             workingName = VolumeRegex.Replace(workingName, "").Trim();
         }
 
-        // 8. Clean up series title delimiters (trailing hyphens, colons)
-        string series = Regex.Replace(workingName, @"[\s\-_:]+$", "").Trim();
-        series = Regex.Replace(series, @"^[\s\-_:]+", "").Trim();
+        // 8. Clean up series title delimiters (trailing hyphens, colons, commas)
+        string series = Regex.Replace(workingName, @"[\s\-_:,]+$", "").Trim();
+        series = Regex.Replace(series, @"^[\s\-_:,]+", "").Trim();
 
         // 9. Hierarchical Parent Directory Traversal
         // If series is missing/trivial/abbreviated, or year/volume is missing, interrogate parent and grandparent folders
@@ -412,6 +495,35 @@ public static class ComicFilenameParser
             return val.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
         return issueStr.TrimStart('0');
+    }
+
+    public static int? ParseRomanNumeral(string? roman)
+    {
+        if (string.IsNullOrWhiteSpace(roman)) return null;
+        if (int.TryParse(roman, out int num)) return num;
+
+        roman = roman.Trim().ToUpperInvariant();
+        var romanMap = new Dictionary<char, int>
+        {
+            {'I', 1}, {'V', 5}, {'X', 10}, {'L', 50}, {'C', 100}, {'D', 500}, {'M', 1000}
+        };
+
+        int total = 0;
+        int prev = 0;
+        for (int i = roman.Length - 1; i >= 0; i--)
+        {
+            if (!romanMap.TryGetValue(roman[i], out int curr)) return null;
+            if (curr < prev)
+            {
+                total -= curr;
+            }
+            else
+            {
+                total += curr;
+                prev = curr;
+            }
+        }
+        return total > 0 ? total : null;
     }
 }
 

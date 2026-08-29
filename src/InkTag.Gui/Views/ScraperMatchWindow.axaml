@@ -3,6 +3,7 @@
         x:Class="InkTag.Gui.Views.ScraperMatchWindow"
         Title="ComicVine Auto-Tag Match &amp; Diff Viewer - InkTag"
         Width="950" Height="620"
+        MinWidth="850" MinHeight="500"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppBackgroundBrush}">
 
@@ -14,17 +15,17 @@
         <Grid ColumnDefinitions="*, 100, 100, Auto, Auto">
           <StackPanel Grid.Column="0" Margin="0,0,10,0">
             <TextBlock Text="Series Title:" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}"/>
-            <TextBox Name="SeriesTextBox" Watermark="Series..." Background="{DynamicResource AppInputBackgroundBrush}"/>
+            <TextBox Name="SeriesTextBox" Watermark="Series..." Background="{DynamicResource AppInputBackgroundBrush}" KeyDown="SearchTextBox_KeyDown"/>
           </StackPanel>
 
           <StackPanel Grid.Column="1" Margin="0,0,10,0">
             <TextBlock Text="Issue #:" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}"/>
-            <TextBox Name="IssueTextBox" Watermark="Issue #..." Background="{DynamicResource AppInputBackgroundBrush}"/>
+            <TextBox Name="IssueTextBox" Watermark="Issue #..." Background="{DynamicResource AppInputBackgroundBrush}" KeyDown="SearchTextBox_KeyDown"/>
           </StackPanel>
 
           <StackPanel Grid.Column="2" Margin="0,0,10,0">
             <TextBlock Text="Year:" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}"/>
-            <TextBox Name="YearTextBox" Watermark="Year..." Background="{DynamicResource AppInputBackgroundBrush}"/>
+            <TextBox Name="YearTextBox" Watermark="Year..." Background="{DynamicResource AppInputBackgroundBrush}" KeyDown="SearchTextBox_KeyDown"/>
           </StackPanel>
 
           <Button Name="SearchButton" Grid.Column="3" Content="🔍 Search" Click="Search_Click" VerticalAlignment="Bottom" Padding="15,7" Background="{DynamicResource AppAccentBrush}" Foreground="{DynamicResource AppAccentForegroundBrush}" FontWeight="Bold"/>

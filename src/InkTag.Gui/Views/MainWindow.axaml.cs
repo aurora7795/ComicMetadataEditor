@@ -11,7 +11,9 @@ namespace InkTag.Gui.Views;
 
 public partial class MainWindow : Window
 {
-    private GridLength _savedInspectorWidth = new GridLength(350);
+    private const double MinInspectorWidth = 320;
+    private const double DefaultInspectorWidth = 360;
+    private GridLength _savedInspectorWidth = new GridLength(DefaultInspectorWidth);
 
     private ColumnDefinition? InspectorColumn => 
         MainWorkspaceGrid?.ColumnDefinitions != null && MainWorkspaceGrid.ColumnDefinitions.Count > 2 
@@ -56,7 +58,7 @@ public partial class MainWindow : Window
 
         if (!isVisible)
         {
-            if (InspectorColumn.Width.Value > 0)
+            if (InspectorColumn.Width.Value >= MinInspectorWidth)
             {
                 _savedInspectorWidth = InspectorColumn.Width;
             }
@@ -65,8 +67,9 @@ public partial class MainWindow : Window
         }
         else
         {
-            InspectorColumn.MinWidth = 250;
-            InspectorColumn.Width = _savedInspectorWidth.Value > 0 ? _savedInspectorWidth : new GridLength(350);
+            InspectorColumn.MinWidth = MinInspectorWidth;
+            InspectorColumn.MaxWidth = 750;
+            InspectorColumn.Width = _savedInspectorWidth.Value >= MinInspectorWidth ? _savedInspectorWidth : new GridLength(DefaultInspectorWidth);
         }
     }
 
@@ -141,6 +144,11 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainWindowViewModel vm)
         {
+            if (!vm.CanAutoTagSingle)
+            {
+                return;
+            }
+
             var targetItem = vm.ActiveComic ?? vm.Comics.FirstOrDefault();
             if (targetItem == null)
             {
@@ -179,6 +187,11 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainWindowViewModel vm)
         {
+            if (!vm.CanAutoTagSingle)
+            {
+                return;
+            }
+
             var targetItem = vm.ActiveComic ?? vm.Comics.FirstOrDefault();
             if (targetItem == null)
             {

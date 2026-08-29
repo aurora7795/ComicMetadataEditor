@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.13.0] - 2026-08-29
 
 ### Added
 - **Provider/Scanner Title Page Detection & Fallback Matching**: Multi-tier perceptual cover hashing evaluating Page 1 when Page 0 visual similarity drops below 70% or confidence threshold, matching comic covers obscured by scanner credits or provider intro advertisements.
@@ -30,6 +30,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `Page 2 Cover` badge on bulk scrape queue items where cover was matched on page 2.
   - Added `[x] Strip Detected Intro Pages` checkbox in `BulkScrapeQueueWindow` toolbar.
   - Added multi-page cover bitmap and perceptual hash caching in `ArchiveCoverService`.
+- **Full-Series Background Cover Matching & Unified Issue List in Series Wizard**:
+  - Automatically scans across all issues/pages in a selected series in the background (up to 500 issues per volume) with early-exit upon discovering $\ge 90\%$ visual similarity, eliminating manual pagination when matching covers for later issues in long runs.
+  - Replaces rigid page buttons in Step 2 with a unified, continuous scrollable issue list that dynamically sorts and pins high-confidence visual matches ($\ge 70\%$) at the top with the ⭐ **Top Visual Match** badge and automatically selects $\ge 85\%$ matches.
+  - Added a quick real-time filter box in Step 2 to search/filter issues by number or title across the entire series.
+  - Added live local comic cover preview thumbnails in the Step 2 header and bottom action bar with side-by-side comparison (`[Local Cover] vs [Selected Candidate]`) and hover-to-zoom tooltips.
+  - Added `[x] Rematch remaining unmatched comics in queue` checkbox in `SeriesSearchWizardWindow` when launched from the bulk auto-tag queue, automatically re-matching all remaining unmatched, low-confidence, or error queue items against the selected series volume.
+  - Added direct `🧙 Series Search Wizard...` context menu option in `BulkScrapeQueueWindow`.
+  - Added full-content hover tooltips (`ToolTip.ShowDelay="100"`) across all text fields in `BulkScrapeQueueWindow` (including Archive File Name, Detected Query, Matched Series Title, and Matched Issue Title), allowing users to immediately inspect full untruncated strings on hover.
+  - Added native support for **Chronological & Reading-Order Pack filenames** (e.g., `YYYYMMDD - Franchise, Season X #Y - Arc Title, Part Z.cbz` and `YYYY-MM-DD - Series #X - Story.cbz`):
+    - Automatically strips 8-digit ISO dates (`YYYYMMDD - ` / `YYYY-MM-DD - `) and extracts the 4-digit release year.
+    - Accurately decomposes franchise season-arc structures (e.g. `Angel, Season 5 #14 - Smile Time, Part II` $\rightarrow$ `Angel: Smile Time #2`, `Buffy, Season 0 #1 - The Origin, Part I` $\rightarrow$ `Buffy: The Origin #1`).
+    - Converts Roman numeral part designations (`Part I`, `Part II`, `Part III`, etc.) to issue numbers.
+    - Expands series volume searches in ComicVine scraper with arc aliases and franchise parent volumes.
+
+### Fixed
+- **Dynamic File Name Column Layout with Hugging Format Badges**: Replaced fixed-width truncation in the DataGrid `File Name` column with `HuggingBadgePanel`, allowing filename text to expand dynamically as the column is resized while keeping format badges (`CBR`, `CBR ➔ CBZ`) hugging the right side of the text and gracefully truncating long filenames with ellipsis only when column boundaries are reached.
+- **Bulk Scrape Queue Window Layout & Minimum Size Enforcement**: Enforced responsive minimum window dimensions (`MinWidth="1160"`, `MinHeight="580"`) and refactored the bottom actions bar layout into auto-sized control columns with an elastic spacer, preventing the `Strip Detected Intro Pages` checkbox and adjacent controls from getting compressed or bunched together on narrower window widths.
+- **Inspector ScrollBar Viewport Padding**: Added right viewport padding (`Padding="0,0,12,0"`) to `ScrollViewer` containers across the sidebar tabs (`Details`, `Bulk Edit`, `Bulk Tools`), preventing textboxes and input controls from colliding with or sitting proudly beneath the vertical scrollbar.
+- **DataGrid Column Header MinWidth Constraints**: Configured explicit `MinWidth` constraints and adjusted default widths across all 35 DataGrid columns in `MainWindow.axaml` and `BulkScrapeQueueWindow.axaml`, ensuring column headers (e.g. `Black & White`, `Age Rating`, `Language ISO`, `Page Count`, `Untagged`, `Manga (RTL)`) are never truncated on initial load or during interactive column resizing.
+- **Prevent Premature Bitmap Disposal During Cache Eviction**: Removed aggressive manual `.Dispose()` invocations on evicted image cache items in `ArchiveCoverService` and `LruImageCache`, preventing UI layout passes (`Image.MeasureOverride`) from encountering disposed unmanaged handles during browsing and resizing.
+- **Bulk Scrape Queue & Rename Error Tooltips**: Added interactive hover tooltips (`ToolTip.Tip="{Binding StatusTooltip}"`) on status badges in `BulkScrapeQueueWindow` and `RenamePreviewWindow`, surfacing the exact error or collision message when hovering over `Error` or `Collision` badges.
+- **Dynamic Single vs Bulk Auto-Tag Control Enabling**: Automatically disables the singular `Auto-Tag` toolbar button, context menu items, and Tools menu commands whenever multiple items are selected in the main comic DataGrid with a helpful tooltip redirecting to `Bulk Auto-Tag`, and re-enables singular auto-tagging when exactly 1 item is chosen.
+- **Bulk Auto-Tag Retry for Errored Items**: Fixed an issue in `BulkScrapeQueueViewModel` where clicking `Apply Matched to Comic Archives` a second time failed to attempt saving remaining errored items due to an overly restrictive status filter. Errored items with matched candidates remain selected and are now properly re-evaluated and retried on subsequent apply clicks.
 
 ---
 

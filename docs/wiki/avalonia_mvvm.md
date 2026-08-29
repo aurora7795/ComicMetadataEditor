@@ -31,6 +31,8 @@ The desktop client follows the standard MVVM design pattern:
   * `ArchiveCoverService`: Asynchronous thumbnail extractor with size-capped LRU bitmap cache.
   * `LruImageCache`: Thread-safe size-bounded (60-item) LRU bitmap cache with automatic `IDisposable.Dispose()` invocation for evicted web thumbnails in scraper/wizard ViewModels.
   * `UpdateService`: Dual-mode update manager (Velopack in-place + direct GitHub Releases API fallback) with thread-safe synchronized caching.
+* **Custom Controls**:
+  * `HuggingBadgePanel.cs`: Responsive horizontal layout panel for pairing flexible text blocks (with `CharacterEllipsis`) alongside trailing format badges (`CBR`, `CBR ➔ CBZ`), hugging the text when space is ample and preserving badges when space is constrained without fixed width limitations.
 * **Converters**:
   * `IsDirtyToBrushConverter.cs`: Highlights rows with unsaved changes using theme-aware pastel mint (`#E6F4EA`) in Light Mode and deep emerald (`#1A3828`) in Dark Mode.
 
@@ -91,9 +93,9 @@ The desktop client follows the standard MVVM design pattern:
 
 The main workspace area (`Grid.Row="2"`) uses a 3-column layout equipped with an interactive `GridSplitter`:
 
-* **Column 0** (`Width="*"`, `MinWidth="300"`): Main DataGrid area containing virtualized spreadsheet rows with all 35 `ComicInfo` metadata fields. Includes a semi-transparent loading overlay and cancel button when `IsLoading == true`.
-* **Column 1** (`Width="Auto"`): Vertical `GridSplitter` (`Width="6"`, `ResizeDirection="Columns"`). Allows interactive drag-resizing between `MinWidth="250"` and `MaxWidth="800"`.
-* **Column 2** (`x:Name="InspectorColumn"`, `Width="350"`): Collapsible details, bulk editing, and search & replace inspector panel (`Border` container).
+* **Column 0** (`Width="*"`, `MinWidth="400"`): Main DataGrid area containing virtualized spreadsheet rows with all 35 `ComicInfo` metadata fields. Includes a semi-transparent loading overlay and cancel button when `IsLoading == true`.
+* **Column 1** (`Width="Auto"`): Vertical `GridSplitter` (`Width="6"`, `ResizeDirection="Columns"`). Allows interactive drag-resizing between `MinWidth="320"` and `MaxWidth="750"`.
+* **Column 2** (`x:Name="InspectorColumn"`, `Width="360"`, `MinWidth="320"`): Collapsible details, bulk editing, and search & replace inspector panel (`Border` container).
 
 ```text
 +------------------------------------------------------------------------------------------------------------------+

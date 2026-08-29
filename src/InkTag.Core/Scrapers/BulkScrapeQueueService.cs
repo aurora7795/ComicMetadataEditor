@@ -486,6 +486,161 @@ public class BulkScrapeQueueService
     }
 
     /// <summary>
+    /// Re-evaluates and matches all un-saved or unmatched queue items against a user-selected series volume.
+    /// </summary>
+    public async Task<int> RematchUnmatchedItemsWithSeriesAsync(
+        IEnumerable<BulkScrapeQueueItem> queue,
+        string volumeId,
+        string seriesTitle,
+        int? volumeStartYear,
+        BulkScrapeOptions options,
+        IProgress<BulkScrapeProgressReport>? progress = null,
+        CancellationToken ct = default)
+    {
+        var queueList = queue as IList<BulkScrapeQueueItem> ?? queue.ToList();
+        var targetList = queueList
+            .Where(i => i.Status != BulkScrapeItemStatus.Saved && (i.Status == BulkScrapeItemStatus.Unmatched || i.Status == BulkScrapeItemStatus.LowConfidence || i.Status == BulkScrapeItemStatus.Error || i.MatchedCandidate == null))
+            .ToList();
+
+        if (targetList.Count == 0) return 0;
+
+        AppLogger.LogInfo($"[BulkScrape] Rematching {targetList.Count} items against chosen series '{seriesTitle}' (Volume {volumeId})...");
+
+        // Fetch initial batch of issues for the volume
+        var volumeIssues = (await _scraperService.FetchSeriesIssuesAsync(volumeId, 1, 100, null, ct)).ToList();
+        foreach (var vIssue in volumeIssues)
+        {
+            vIssue.VolumeStartYear = volumeStartYear;
+            if (string.IsNullOrWhiteSpace(vIssue.SeriesTitle)) vIssue.SeriesTitle = seriesTitle;
+        }
+
+        // Pre-populate hashes for top issues
+        await PopulateCoverHashesForCandidatesAsync(volumeIssues.Take(50), ct);
+
+        int matchedCount = 0;
+        for (int i = 0; i < targetList.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var item = targetList[i];
+
+            item.Status = BulkScrapeItemStatus.ComparingVisuals;
+            item.StatusMessage = $"Rematching against '{seriesTitle}'...";
+            ReportProgress(progress, queueList, i + 1, item, item.StatusMessage);
+
+            try
+            {
+                var candidatePool = volumeIssues.ToList();
+
+                // If specific issue number is needed and not present in initial 100, fetch specifically
+                if (!string.IsNullOrWhiteSpace(item.ParsedQuery.IssueNumber))
+                {
+                    string cleanTargetNum = ComicVineProvider.NormalizeIssueNumber(item.ParsedQuery.IssueNumber);
+                    if (!candidatePool.Any(iss => ComicVineProvider.NormalizeIssueNumber(iss.IssueNumber) == cleanTargetNum))
+                    {
+                        try
+                        {
+                            var specific = (await _scraperService.FetchSeriesIssuesAsync(volumeId, 1, 10, item.ParsedQuery, ct)).ToList();
+                            foreach (var s in specific)
+                            {
+                                s.VolumeStartYear = volumeStartYear;
+                                if (string.IsNullOrWhiteSpace(s.SeriesTitle)) s.SeriesTitle = seriesTitle;
+                            }
+                            await PopulateCoverHashesForCandidatesAsync(specific, ct);
+                            candidatePool.AddRange(specific);
+                        }
+                        catch { }
+                    }
+                }
+
+                // Ensure candidate covers have hashes for this issue
+                if (item.LocalCoverHash != 0 && !string.IsNullOrWhiteSpace(item.ParsedQuery.IssueNumber))
+                {
+                    string cleanTargetNum = ComicVineProvider.NormalizeIssueNumber(item.ParsedQuery.IssueNumber);
+                    var unhashed = candidatePool
+                        .Where(c => ComicVineProvider.NormalizeIssueNumber(c.IssueNumber) == cleanTargetNum && (!c.CoverHash.HasValue || c.CoverHash.Value == 0))
+                        .Take(5)
+                        .ToList();
+                    if (unhashed.Count > 0)
+                    {
+                        await PopulateCoverHashesForCandidatesAsync(unhashed, ct);
+                    }
+                }
+
+                var ranked = RankCandidatesAgainstLocalItem(item, candidatePool, options);
+                if (ranked.Count > 0)
+                {
+                    var top = ranked[0];
+
+                    if (options.EnableIntroPageFallback && (top.VisualSimilarity < options.VisualSimilarityThreshold || top.MatchConfidence < options.ConfidenceThreshold))
+                    {
+                        var page1Bytes = _metadataEditor.ExtractCoverImageBytes(item.FilePath, pageIndex: 1);
+                        if (page1Bytes != null && page1Bytes.Length > 0)
+                        {
+                            ulong page1Hash = PerceptualHashService.ComputeDHash(page1Bytes);
+                            if (page1Hash != 0)
+                            {
+                                var p1Ranked = RankCandidatesWithHash(item, candidatePool, page1Hash, options);
+                                if (p1Ranked.Count > 0)
+                                {
+                                    var topP1 = p1Ranked[0];
+                                    double p0Sim = top.VisualSimilarity ?? 0.0;
+                                    if (topP1.VisualSimilarity >= options.VisualSimilarityThreshold || (topP1.VisualSimilarity >= 0.70 && topP1.VisualSimilarity > p0Sim + 0.30))
+                                    {
+                                        item.DetectedIntroPage = true;
+                                        item.TrueCoverPageIndex = 1;
+                                        item.TrueCoverBytes = page1Bytes;
+                                        item.LocalCoverBytes = page1Bytes;
+                                        item.LocalCoverHash = page1Hash;
+                                        ranked = p1Ranked;
+                                        top = topP1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    item.Candidates = ranked;
+                    item.MatchedCandidate = top;
+
+                    if (top.MatchConfidence >= options.ConfidenceThreshold || (top.VisualSimilarity.HasValue && top.VisualSimilarity.Value >= options.VisualSimilarityThreshold))
+                    {
+                        item.Status = BulkScrapeItemStatus.Matched;
+                        string introLabel = item.DetectedIntroPage ? " [Page 2 Cover]" : "";
+                        item.StatusMessage = $"Matched: {top.SeriesTitle} #{top.IssueNumber}{introLabel} (Confidence: {(int)Math.Round(top.MatchConfidence * 100)}%)";
+                        item.IsSelected = true;
+                        matchedCount++;
+                    }
+                    else
+                    {
+                        item.Status = BulkScrapeItemStatus.LowConfidence;
+                        string introLabel = item.DetectedIntroPage ? " [Page 2 Cover]" : "";
+                        item.StatusMessage = $"Review needed{introLabel} (Confidence: {(int)Math.Round(top.MatchConfidence * 100)}%, Visual: {(int)Math.Round((top.VisualSimilarity ?? 0) * 100)}%)";
+                        item.IsSelected = false;
+                    }
+                }
+                else
+                {
+                    item.Status = BulkScrapeItemStatus.Unmatched;
+                    item.StatusMessage = $"No issue match found in series '{seriesTitle}'";
+                    item.MatchedCandidate = null;
+                    item.IsSelected = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                item.Status = BulkScrapeItemStatus.Error;
+                item.StatusMessage = $"Error: {ex.Message}";
+                item.ErrorMessage = ex.ToString();
+                item.IsSelected = false;
+            }
+
+            ReportProgress(progress, queueList, i + 1, item, item.StatusMessage);
+        }
+
+        return matchedCount;
+    }
+
+    /// <summary>
     /// Applies matched metadata to selected comic files and saves back to archives, optionally auto-renaming files and stripping detected intro pages.
     /// </summary>
     public async Task<int> ApplyMatchedMetadataAsync(

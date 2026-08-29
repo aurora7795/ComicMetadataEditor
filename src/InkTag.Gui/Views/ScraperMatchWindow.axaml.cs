@@ -64,18 +64,22 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
     public ComicSearchResult? SelectedCandidate { get; private set; }
     public ComicInfo? FetchedComic => _fetchedComic;
     public ObservableCollection<FieldDiffItem> FieldDiffs { get; } = new();
+    public bool ApplySeriesToRemainingUnmatched { get; private set; }
+    public SeriesSearchResult? ChosenSeries { get; private set; }
+    private readonly bool _isBulkQueueMode;
 
     public ScraperMatchWindow() : this(new ComicInfo())
     {
     }
 
-    public ScraperMatchWindow(ComicInfo targetComic, IEnumerable<ComicSearchResult>? initialCandidates = null, Avalonia.Media.Imaging.Bitmap? localCover = null, ulong? localCoverHash = null, string? filePath = null)
+    public ScraperMatchWindow(ComicInfo targetComic, IEnumerable<ComicSearchResult>? initialCandidates = null, Avalonia.Media.Imaging.Bitmap? localCover = null, ulong? localCoverHash = null, string? filePath = null, bool isBulkQueueMode = false)
     {
         InitializeComponent();
         DataContext = this;
         _targetComic = targetComic;
         _localCoverHash = localCoverHash;
         _filePath = filePath;
+        _isBulkQueueMode = isBulkQueueMode;
         LocalCoverImage = localCover;
         _scraperService = new MetadataScraperService(new AppSettingsService());
 
@@ -265,6 +269,15 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
         }
     }
 
+    private async void SearchTextBox_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (e.Key == Avalonia.Input.Key.Enter || e.Key == Avalonia.Input.Key.Return)
+        {
+            e.Handled = true;
+            await PerformSearchAsync();
+        }
+    }
+
     private async void Search_Click(object? sender, RoutedEventArgs e)
     {
         await PerformSearchAsync();
@@ -278,11 +291,14 @@ public partial class ScraperMatchWindow : Window, System.ComponentModel.INotifyP
         }
 
         string initialQuery = SeriesTextBox.Text?.Trim() ?? _targetComic.Series ?? "";
-        var wizard = new SeriesSearchWizardWindow(initialQuery, _localCoverHash, _filePath);
+        var wizard = new SeriesSearchWizardWindow(initialQuery, _localCoverHash, _filePath, _isBulkQueueMode);
         await wizard.ShowDialog(this);
 
         if (wizard.WasApplied && wizard.SelectedResult != null)
         {
+            ApplySeriesToRemainingUnmatched = wizard.ApplySeriesToRemainingUnmatched;
+            ChosenSeries = wizard.ChosenSeries;
+
             int? year = int.TryParse(YearTextBox.Text, out int y) ? y : _targetComic.Year;
             var targetQuery = new ComicSearchQuery
             {

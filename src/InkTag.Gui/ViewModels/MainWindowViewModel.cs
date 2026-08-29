@@ -157,12 +157,49 @@ public partial class MainWindowViewModel : ViewModelBase
             if (SetProperty(ref _activeComic, value))
             {
                 TriggerActiveComicCoverLoad();
+                OnPropertyChanged(nameof(CanAutoTagSingle));
+                OnPropertyChanged(nameof(AutoTagButtonTooltip));
             }
         }
     }
 
     [ObservableProperty]
     private bool _isLoading;
+
+    partial void OnIsLoadingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanAutoTagSingle));
+        OnPropertyChanged(nameof(AutoTagButtonTooltip));
+    }
+
+    public int SelectedComicsCount => _selectedComics.Count;
+
+    public bool CanAutoTagSingle
+    {
+        get
+        {
+            if (IsLoading) return false;
+            if (_selectedComics.Count > 1) return false;
+            if (_selectedComics.Count == 1) return true;
+            return ActiveComic != null;
+        }
+    }
+
+    public string AutoTagButtonTooltip
+    {
+        get
+        {
+            if (_selectedComics.Count > 1)
+            {
+                return $"Multiple items selected ({_selectedComics.Count}). Use 'Bulk Auto-Tag' for batch processing.";
+            }
+            if (ActiveComic != null || _selectedComics.Count == 1)
+            {
+                return "Auto-Tag metadata from ComicVine";
+            }
+            return "Select a comic to Auto-Tag metadata";
+        }
+    }
 
     [ObservableProperty]
     private bool _isSaving;
@@ -354,6 +391,9 @@ public partial class MainWindowViewModel : ViewModelBase
                 _selectedComics.Add(vm);
             }
         }
+        OnPropertyChanged(nameof(SelectedComicsCount));
+        OnPropertyChanged(nameof(CanAutoTagSingle));
+        OnPropertyChanged(nameof(AutoTagButtonTooltip));
     }
 
     [RelayCommand]

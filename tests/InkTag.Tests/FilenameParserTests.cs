@@ -21,6 +21,16 @@ public class FilenameParserTests
     [InlineData("/mnt/comics/Eden - It's an Endless World! 02 (2006).cbz", "Eden - It's an Endless World!", "2", 2006, null, "")]
     [InlineData("IM015.cbz", "IM", "15", null, null, "")]
     [InlineData("ASM300 (1988).cbz", "ASM", "300", 1988, null, "")]
+    [InlineData("19990113 - Buffy, Season 0 #1 - The Origin, Part I.cbz", "Buffy: The Origin", "1", 1999, null, "")]
+    [InlineData("19990324 - Buffy, Season 0 #3 - The Origin, Part III.cbz", "Buffy: The Origin", "3", 1999, null, "")]
+    [InlineData("20021016 - Tales of the Slayers #2 - Broken Bottle of Djinn.cbz", "Tales of the Slayers", "2", 2002, null, "")]
+    [InlineData("20030827 - Buffy, Season 0 #12 - A Stake to the Heart, Part I—Deceit.cbz", "Buffy: A Stake to the Heart", "1", 2003, null, "")]
+    [InlineData("20040114 - Tales of the Vampires #2.cbz", "Tales of the Vampires", "2", 2004, null, "")]
+    [InlineData("20040218 - Angel, Season 5 #14 - Smile Time, Part II.cbz", "Angel: Smile Time", "2", 2004, null, "")]
+    [InlineData("20070815 - Spike, Season 5 #3 - Shadow Puppets, Part III—Two to Sew.cbz", "Spike: Shadow Puppets", "3", 2007, null, "")]
+    [InlineData("20070905 - Buffy, Season 8 #6 - No Future for You, Part I.cbz", "Buffy, Season 8", "6", 2007, 8, "")]
+    [InlineData("20071121 - Angel, Season 6 #1 - After the Fall, Part I.cbz", "Angel: After the Fall", "1", 2007, null, "")]
+    [InlineData("2008-05-12 - Spider-Man #1.cbz", "Spider-Man", "1", 2008, null, "")]
     public void ComicFilenameParser_ParsesStandardConventions(
         string filename, string expectedSeries, string expectedIssue, int? expectedYear, int? expectedVolume, string expectedScanInfo)
     {

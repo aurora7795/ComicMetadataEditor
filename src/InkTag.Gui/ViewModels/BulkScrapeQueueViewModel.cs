@@ -322,6 +322,91 @@ public class BulkScrapeQueueViewModel : ObservableObject
         _cts?.Cancel();
     }
 
+    public async Task<int> RematchUnmatchedWithSeriesAsync(SeriesSearchResult series)
+    {
+        if (IsRunning || series == null) return 0;
+
+        _isSearching = true;
+        IsRunning = true;
+        _cts = new CancellationTokenSource();
+        ProgressPercentage = 0;
+        ProgressStatus = $"Rematching unmatched comics against '{series.SeriesTitle}'...";
+
+        var rawQueue = Items
+            .Where(i => i.Status != BulkScrapeItemStatus.Saved && (i.Status == BulkScrapeItemStatus.Unmatched || i.Status == BulkScrapeItemStatus.LowConfidence || i.Status == BulkScrapeItemStatus.Error || i.MatchedCandidate == null))
+            .Select(i => i.Item)
+            .ToList();
+
+        if (rawQueue.Count == 0)
+        {
+            _isSearching = false;
+            IsRunning = false;
+            ProgressStatus = "No unmatched items found to rematch.";
+            return 0;
+        }
+
+        var itemMap = Items.ToDictionary(i => i.Item);
+
+        var progress = new Progress<BulkScrapeProgressReport>(report =>
+        {
+            ProgressPercentage = report.PercentComplete;
+            ProgressStatus = report.StatusMessage;
+
+            if (report.CurrentItem != null && itemMap.TryGetValue(report.CurrentItem, out var itemVm))
+            {
+                itemVm.SyncFromItem();
+            }
+        });
+
+        var options = new BulkScrapeOptions
+        {
+            MergeMode = EffectiveMergeMode,
+            ConfidenceThreshold = _settingsService.Settings.AutoMatchConfidenceThreshold,
+            EnableSmartSeriesGrouping = true,
+            EnableIntroPageFallback = true,
+            StripDetectedIntroPages = _stripDetectedIntroPages
+        };
+
+        try
+        {
+            int matched = await Task.Run(async () =>
+            {
+                return await _queueService.RematchUnmatchedItemsWithSeriesAsync(
+                    rawQueue,
+                    series.VolumeId,
+                    series.SeriesTitle,
+                    series.StartYear,
+                    options,
+                    progress,
+                    _cts.Token);
+            }, _cts.Token);
+
+            ProgressStatus = $"Rematch complete: {matched} comic(s) matched in series '{series.SeriesTitle}'.";
+            return matched;
+        }
+        catch (OperationCanceledException)
+        {
+            ProgressStatus = "Rematch operation was cancelled.";
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            ProgressStatus = $"Rematch error: {ex.Message}";
+            return 0;
+        }
+        finally
+        {
+            _isSearching = false;
+            IsRunning = false;
+            foreach (var itemVm in Items)
+            {
+                itemVm.SyncFromItem();
+            }
+            UpdateCounts();
+            OnPropertyChanged(nameof(CanApply));
+        }
+    }
+
     private bool _stripDetectedIntroPages = false;
     public bool StripDetectedIntroPages
     {
@@ -340,10 +425,16 @@ public class BulkScrapeQueueViewModel : ObservableObject
         ProgressStatus = "Writing matched metadata to comic files...";
 
         var rawQueue = Items
-            .Where(i => i.IsSelected && (i.Status == BulkScrapeItemStatus.Matched || i.Status == BulkScrapeItemStatus.LowConfidence) && i.MatchedCandidate != null)
+            .Where(i => i.IsSelected && i.Status != BulkScrapeItemStatus.Saved && i.Status != BulkScrapeItemStatus.Excluded && i.MatchedCandidate != null)
             .Select(i => i.Item)
             .ToList();
         var itemMap = Items.ToDictionary(i => i.Item);
+
+        if (rawQueue.Count == 0)
+        {
+            ProgressStatus = "No eligible unsaved matched items selected.";
+            return 0;
+        }
 
         var progress = new Progress<BulkScrapeProgressReport>(report =>
         {

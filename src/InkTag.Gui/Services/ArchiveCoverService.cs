@@ -15,7 +15,7 @@ namespace InkTag.Gui.Services;
 /// </summary>
 public class ArchiveCoverService
 {
-    private const int MaxCacheCapacity = 50;
+    private const int MaxCacheCapacity = 200;
     private readonly object _cacheLock = new();
     private readonly Dictionary<string, Bitmap> _coverCache = new();
     private readonly Dictionary<string, ulong> _hashCache = new();
@@ -70,9 +70,8 @@ public class ArchiveCoverService
 
                 lock (_cacheLock)
                 {
-                    if (_coverCache.TryGetValue(cacheKey, out var existing))
+                    if (_coverCache.ContainsKey(cacheKey))
                     {
-                        existing.Dispose();
                         _lruOrder.Remove(cacheKey);
                     }
                     else if (_coverCache.Count >= MaxCacheCapacity)
@@ -81,10 +80,7 @@ public class ArchiveCoverService
                         if (oldestKey != null)
                         {
                             _lruOrder.RemoveFirst();
-                            if (_coverCache.Remove(oldestKey, out var evictedBitmap))
-                            {
-                                evictedBitmap.Dispose();
-                            }
+                            _coverCache.Remove(oldestKey);
                             _hashCache.Remove(oldestKey);
                         }
                     }

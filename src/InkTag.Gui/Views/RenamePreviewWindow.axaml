@@ -8,6 +8,7 @@
         x:DataType="vm:RenamePreviewViewModel"
         Title="Bulk Rename Files from Metadata - InkTag"
         Width="920" Height="620"
+        MinWidth="850" MinHeight="500"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppBackgroundBrush}">
 
@@ -55,7 +56,8 @@
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:RenameItemPreviewViewModel">
                 <Border Background="{Binding StatusBadgeBackground}" CornerRadius="3" Padding="6,2"
-                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        ToolTip.Tip="{Binding StatusTooltip}" ToolTip.ShowDelay="100">
                   <TextBlock Text="{Binding StatusText}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                 </Border>
               </DataTemplate>

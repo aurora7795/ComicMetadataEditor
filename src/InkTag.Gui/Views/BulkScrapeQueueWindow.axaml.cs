@@ -62,7 +62,8 @@ public partial class BulkScrapeQueueWindow : Window
                 itemVm.Item.Candidates.Any() ? itemVm.Item.Candidates : null,
                 itemVm.LocalThumbnail,
                 itemVm.Item.LocalCoverHash != 0 ? itemVm.Item.LocalCoverHash : null,
-                itemVm.FilePath);
+                itemVm.FilePath,
+                isBulkQueueMode: true);
 
             await dialog.ShowDialog(this);
 
@@ -76,6 +77,11 @@ public partial class BulkScrapeQueueWindow : Window
                 if (DataContext is BulkScrapeQueueViewModel vm)
                 {
                     vm.UpdateCounts();
+
+                    if (dialog.ApplySeriesToRemainingUnmatched && dialog.ChosenSeries != null)
+                    {
+                        _ = vm.RematchUnmatchedWithSeriesAsync(dialog.ChosenSeries);
+                    }
                 }
             }
         }
@@ -280,7 +286,8 @@ public partial class BulkScrapeQueueWindow : Window
                 itemVm.Item.Candidates.Any() ? itemVm.Item.Candidates : null,
                 itemVm.LocalThumbnail,
                 itemVm.Item.LocalCoverHash != 0 ? itemVm.Item.LocalCoverHash : null,
-                itemVm.FilePath);
+                itemVm.FilePath,
+                isBulkQueueMode: true);
 
             await dialog.ShowDialog(this);
 
@@ -294,6 +301,44 @@ public partial class BulkScrapeQueueWindow : Window
                 if (DataContext is BulkScrapeQueueViewModel vm)
                 {
                     vm.UpdateCounts();
+
+                    if (dialog.ApplySeriesToRemainingUnmatched && dialog.ChosenSeries != null)
+                    {
+                        _ = vm.RematchUnmatchedWithSeriesAsync(dialog.ChosenSeries);
+                    }
+                }
+            }
+        }
+    }
+
+    private async void ContextSeriesWizard_Click(object? sender, RoutedEventArgs e)
+    {
+        if (QueueDataGrid.SelectedItem is BulkScrapeItemViewModel itemVm)
+        {
+            if (!await ApiKeyRequiredWindow.EnsureApiKeyConfiguredAsync(this))
+            {
+                return;
+            }
+
+            string initialQuery = !string.IsNullOrWhiteSpace(itemVm.ParsedSeries) ? itemVm.ParsedSeries : (itemVm.Item.ExistingComic?.Series ?? "");
+            var wizard = new SeriesSearchWizardWindow(initialQuery, itemVm.Item.LocalCoverHash != 0 ? itemVm.Item.LocalCoverHash : null, itemVm.FilePath, isBulkQueueMode: true);
+            await wizard.ShowDialog(this);
+
+            if (wizard.WasApplied && wizard.SelectedResult != null)
+            {
+                itemVm.MatchedCandidate = wizard.SelectedResult;
+                itemVm.Status = BulkScrapeItemStatus.Matched;
+                itemVm.StatusMessage = $"Manually matched: {wizard.SelectedResult.SeriesTitle} #{wizard.SelectedResult.IssueNumber}";
+                itemVm.IsSelected = true;
+
+                if (DataContext is BulkScrapeQueueViewModel vm)
+                {
+                    vm.UpdateCounts();
+
+                    if (wizard.ApplySeriesToRemainingUnmatched && wizard.ChosenSeries != null)
+                    {
+                        _ = vm.RematchUnmatchedWithSeriesAsync(wizard.ChosenSeries);
+                    }
                 }
             }
         }

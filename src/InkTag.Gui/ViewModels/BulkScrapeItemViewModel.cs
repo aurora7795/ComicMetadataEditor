@@ -121,6 +121,7 @@ public class BulkScrapeItemViewModel : ObservableObject
                 Item.Status = value;
                 OnPropertyChanged(nameof(StatusBadgeBackground));
                 OnPropertyChanged(nameof(StatusText));
+                OnPropertyChanged(nameof(StatusTooltip));
             }
         }
     }
@@ -134,7 +135,36 @@ public class BulkScrapeItemViewModel : ObservableObject
             if (SetProperty(ref _statusMessage, value))
             {
                 Item.StatusMessage = value;
+                OnPropertyChanged(nameof(StatusTooltip));
             }
+        }
+    }
+
+    public string? ErrorMessage => Item.ErrorMessage;
+
+    public string StatusTooltip
+    {
+        get
+        {
+            if (Status == BulkScrapeItemStatus.Error)
+            {
+                if (!string.IsNullOrWhiteSpace(StatusMessage))
+                {
+                    return StatusMessage;
+                }
+                if (!string.IsNullOrWhiteSpace(ErrorMessage))
+                {
+                    return ErrorMessage;
+                }
+                return "An error occurred during auto-tag processing.";
+            }
+
+            if (!string.IsNullOrWhiteSpace(StatusMessage))
+            {
+                return StatusMessage;
+            }
+
+            return StatusText;
         }
     }
 
@@ -403,6 +433,8 @@ public class BulkScrapeItemViewModel : ObservableObject
         StatusMessage = Item.StatusMessage;
         MatchedCandidate = Item.MatchedCandidate;
         IsSelected = Item.IsSelected;
+        OnPropertyChanged(nameof(StatusTooltip));
+        OnPropertyChanged(nameof(ErrorMessage));
         OnPropertyChanged(nameof(IsCbr));
         OnPropertyChanged(nameof(Filename));
         OnPropertyChanged(nameof(FilePath));
