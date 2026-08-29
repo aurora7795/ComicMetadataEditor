@@ -304,19 +304,67 @@ public class IntroPageStrippingTests : IDisposable
         Assert.Equal("01_real_cover.bmp", remaining[0]);
     }
 
+    private class MockIntroScraperProvider : IMetadataScraperProvider
+    {
+        public string ProviderName => "MockProvider";
+        public bool RequiresApiKey => false;
+        public bool SupportsSeriesSearch => true;
+
+        public List<SeriesSearchResult> SeriesResults { get; set; } = new();
+        public List<ComicSearchResult> VolumeIssues { get; set; } = new();
+        public List<ComicSearchResult> SearchResults { get; set; } = new();
+        public ComicInfo FetchedMetadata { get; set; } = new() { Title = "Mock Saga #1" };
+
+        public Task<IEnumerable<ComicSearchResult>> SearchAsync(ComicSearchQuery query, string apiKey, CancellationToken ct = default)
+        {
+            return Task.FromResult<IEnumerable<ComicSearchResult>>(SearchResults);
+        }
+
+        public Task<ComicInfo> FetchComicMetadataAsync(string issueId, string apiKey, CancellationToken ct = default)
+        {
+            return Task.FromResult(FetchedMetadata);
+        }
+
+        public Task<IEnumerable<SeriesSearchResult>> SearchSeriesAsync(string seriesTitle, string apiKey, CancellationToken ct = default)
+        {
+            return Task.FromResult<IEnumerable<SeriesSearchResult>>(SeriesResults);
+        }
+
+        public Task<IEnumerable<ComicSearchResult>> FetchSeriesIssuesAsync(string volumeId, string apiKey, int page = 1, int pageSize = 50, ComicSearchQuery? query = null, CancellationToken ct = default)
+        {
+            return Task.FromResult<IEnumerable<ComicSearchResult>>(VolumeIssues);
+        }
+    }
+
     [Fact]
     public async Task MetadataScraperService_AutoScrapeComic_DetectsIntroPageFallback()
     {
-        var settingsService = new AppSettingsService();
-        var scraper = new MetadataScraperService(settingsService);
-        var editor = new MetadataEditor();
-
         // Create images
         var introImg = CreateSampleImageBytes(20, 20, 20);
         var coverImg = CreateSampleImageBytes(255, 120, 50);
 
         ulong introHash = PerceptualHashService.ComputeDHash(introImg);
         ulong coverHash = PerceptualHashService.ComputeDHash(coverImg);
+
+        var mockProvider = new MockIntroScraperProvider
+        {
+            SearchResults = new List<ComicSearchResult>
+            {
+                new ComicSearchResult
+                {
+                    IssueId = "4000-12345",
+                    SeriesTitle = "Saga",
+                    IssueNumber = "1",
+                    CoverHash = coverHash,
+                    MatchConfidence = 0.95
+                }
+            }
+        };
+
+        var settingsService = new AppSettingsService();
+        settingsService.Settings.ComicVineApiKey = "test-api-key";
+        var scraper = new MetadataScraperService(settingsService, mockProvider);
+        var editor = new MetadataEditor();
 
         var entries = new Dictionary<string, byte[]>
         {
@@ -335,8 +383,10 @@ public class IntroPageStrippingTests : IDisposable
         // When Page 0 hash is passed (the scanner intro), fallback should inspect Page 1 (actual cover)
         var result = await scraper.AutoScrapeComicAsync(comic, introHash, cbzPath, enableIntroPageFallback: true);
 
-        // Note: Without live ComicVine API key, this verifies the execution flow and fallback branches without throwing exceptions
         Assert.NotNull(result);
+        Assert.True(result.DetectedIntroPage);
+        Assert.Equal(1, result.TrueCoverPageIndex);
+        Assert.NotNull(result.SelectedCandidate);
     }
 
     [Fact]
