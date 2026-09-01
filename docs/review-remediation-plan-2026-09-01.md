@@ -3,7 +3,7 @@
 **Generated:** 2026-09-01
 **Source:** Whole-codebase review of `main` @ `79cb9f5` (v0.13.0)
 **Audience:** AI coding agent (or maintainer) implementing the fixes
-**Build baseline:** `dotnet build InkTag.slnx` (0 warnings) · `dotnet test` (207 passing at time of review)
+**Build baseline:** `dotnet build InkTag.slnx` (0 warnings) · `dotnet test` (207 passing at time of review; **211 on `main` after Phases 1–2**)
 
 ---
 
@@ -26,10 +26,10 @@ the same branch, and open a GitHub issue for every deferred item.
 | :-- | :-- | :-- | :-- |
 | H1 | High | MCP `RemoveComicPage` skips the read-only guard and defaults `dryRun=false` — ✅ **fixed in Phase 1** | `src/InkTag.Mcp/ComicTools.cs:199` |
 | H2 | High | MCP server logs to **stdout**, corrupting the JSON-RPC stdio stream — ✅ **fixed in Phase 1** | `src/InkTag.Core/Logging/AppLogger.cs:108`, `src/InkTag.Mcp/Program.cs:31` |
-| H3 | High | `HttpClient` created per candidate in the scrape hot path → socket exhaustion | `src/InkTag.Core/Scrapers/MetadataScraperService.cs:189`, `RateLimitedHttpClient.cs:22` |
+| H3 | High | `HttpClient` created per candidate in the scrape hot path → socket exhaustion — ✅ **fixed in Phase 2** | `src/InkTag.Core/Scrapers/MetadataScraperService.cs:189`, `RateLimitedHttpClient.cs:22` |
 | M1 | Med | `LruImageCache` docstring claims it disposes evicted bitmaps; it does not — and disposal was **deliberately removed in v0.13.0** ("Prevent Premature Bitmap Disposal During Cache Eviction") because it crashed layout passes. Scope is now docstring accuracy + a safe leak fix, not re-adding disposal. | `src/InkTag.Gui/Services/LruImageCache.cs:57` |
 | M2 | Med | Archive repack flattens folders + `Overwrite=true` → silent page loss | `src/InkTag.Core/ArchiveSwapService.cs:70`, `ComicArchiveHandler.cs:482` |
-| M3 | Med | Scraper disk cache never persists for one-shot CLI/MCP runs (2s debounce, no dispose) | `src/InkTag.Core/Scrapers/ScraperCacheService.cs:80`, `MetadataScraperService.cs:32` |
+| M3 | Med | Scraper disk cache never persists for one-shot CLI/MCP runs (2s debounce, no dispose) — ✅ **fixed in Phase 2** | `src/InkTag.Core/Scrapers/ScraperCacheService.cs:80`, `MetadataScraperService.cs:32` |
 | M4 | Med | Scrape applies metadata twice with two different merge modes | `src/InkTag.Mcp/ComicTools.cs:318`, `MetadataScraperService.cs:265` |
 | M5 | Med | Bulk scrape retains every cover image in memory for the whole run | `src/InkTag.Core/Scrapers/BulkScrapeQueueService.cs:38` |
 | M6 | Med | ComicVine / Komga secrets written to `settings.json` in plaintext, default perms | `src/InkTag.Core/Configuration/AppSettings.cs:166` |
@@ -52,15 +52,15 @@ the same branch, and open a GitHub issue for every deferred item.
 - Multi-tier archive reader (fast seek → `NonSeekableStream` → SharpCompress) with `CancellationToken` threaded throughout.
 - Backup / provenance model: pre-write XML snapshots, cover dHash, match confidence, field diffs, batch grouping.
 - MCP path allow-listing + read-only mode (was applied on every tool except `RemoveComicPage`; closed in Phase 1).
-- `KomgaClient` uses the correct `HttpClient` + `SocketsHttpHandler` ownership pattern.
+- `KomgaClient` uses the correct `HttpClient` + `SocketsHttpHandler` ownership pattern; Phase 2 gave the scrapers the same treatment via `InkTag.Core.Net.SharedHttpClient`.
 - dHash implementation correct (9×8 → 64 bits, hardware `PopCount`), test-covered.
 
 ---
 
 ## Staged Execution Status
 
-- [x] **Phase 1: MCP Safety & Logging Hotfix** — Branch: `fix/mcp-safety-and-logging` — **COMPLETED** (commit `2dca93a`; 209 tests passing, MCP handshake smoke-tested)
-- [ ] **Phase 2: Scraper HTTP & Lifecycle** — Branch: `refactor/scraper-http-lifecycle`
+- [x] **Phase 1: MCP Safety & Logging Hotfix** — Branch: `fix/mcp-safety-and-logging` — **COMPLETED** (commit `2dca93a`, merged `df4f02e`; MCP handshake smoke-tested)
+- [x] **Phase 2: Scraper HTTP & Lifecycle** — Branch: `refactor/scraper-http-lifecycle` — **COMPLETED** (commit `3e5843a`, merged `5816c8f`; 211 tests passing, MCP handshake re-smoke-tested)
 - [ ] **Phase 3: Scrape Merge Semantics** — Branch: `refactor/scrape-merge-semantics`
 - [ ] **Phase 4: Archive Repack Integrity** — Branch: `fix/archive-repack-structure`
 - [ ] **Phase 5: Persistence Durability** — Branch: `fix/persistence-durability`
@@ -104,38 +104,45 @@ work-stream; Phases 4 and 6 each get a dedicated review; Phases 5 and 7 are quic
 
 ---
 
-## Phase 2 — Scraper HTTP & Lifecycle
+## Phase 2 — Scraper HTTP & Lifecycle ✅ COMPLETED
 
-**Branch:** `refactor/scraper-http-lifecycle` — H3 + M3 (same files).
+**Branch:** `refactor/scraper-http-lifecycle` — H3 + M3. Commit `3e5843a`, merged `5816c8f`.
 
 ### P2-A · H3 — One shared `HttpClient`
-- [ ] New `src/InkTag.Core/Net/SharedHttpClient.cs`: a static `HttpClient` over a
-      `SocketsHttpHandler` (`PooledConnectionLifetime = TimeSpan.FromMinutes(2)`,
-      `AutomaticDecompression`), default `User-Agent`.
-- [ ] `RateLimitedHttpClient.cs:22`: `_client = httpClient ?? SharedHttpClient.Instance`; keep the
-      ctor parameter for test injection; stop allocating (and leaking) a client per instance.
-- [ ] `MetadataScraperService.cs:189`: delete `using var client = new HttpClient()` in the
-      per-candidate loop; use `SharedHttpClient.Instance`.
-- [ ] `BulkScrapeQueueService.cs:108`: default the injected client to `SharedHttpClient.Instance`;
-      never dispose a client it does not own.
+- [x] New `src/InkTag.Core/Net/SharedHttpClient.cs`: a static `HttpClient` over a
+      `SocketsHttpHandler` (`PooledConnectionLifetime` 2 min, `AutomaticDecompression`,
+      `ConnectTimeout` 15 s), default `User-Agent`. Never disposed.
+- [x] `RateLimitedHttpClient`: `_client = httpClient ?? SharedHttpClient.Instance`; ctor parameter
+      kept for test injection; no more client-per-instance leak.
+- [x] `MetadataScraperService`: the per-candidate `using var client = new HttpClient()` (up to 10
+      per comic) replaced with `SharedHttpClient.Instance` + a 10 s linked `CancellationTokenSource`.
+- [x] `BulkScrapeQueueService`: `_thumbnailHttpClient` defaults to `SharedHttpClient.Instance`; the
+      `.Timeout` / header mutation was removed (per-request `CancelAfter` already bounds it).
 
 ### P2-B · M3 — Persist the scraper cache
-- [ ] Make `ComicVineProvider` and `MetadataScraperService` `IDisposable`; `Dispose()` calls
-      `ScraperCacheService.Flush()` synchronously.
-- [ ] Wrap in `using` at call sites: CLI `HandleScrapeCommand`, and MCP `SearchExternalMetadata`,
-      `ScrapeComicMetadata`, `BulkScrapeDirectory`.
-- [ ] Test: `Set` → `Dispose` → new `ScraperCacheService` over the same temp path reads the entry
-      back within `maxAge`.
+- [x] `MetadataScraperService` and `ComicVineProvider` implement `IDisposable`; `Dispose()` flushes
+      (`ComicVineProvider` disposes `ScraperCacheService`, which flushes synchronously).
+- [x] Wrapped in `using`: CLI `HandleScrapeCommand`; MCP `SearchExternalMetadata`,
+      `ScrapeComicMetadata`, `BulkScrapeDirectory`; plus `SettingsWindow`'s test-connection and
+      clear-cache handlers.
+- [x] Test `DisposingScraperService_FlushesCacheForOneShotProcesses` — `SearchCandidatesAsync` →
+      dispose → new `ScraperCacheService` over the same temp path reads the entry back. Plus
+      `SharedHttpClient_IsSingletonWithUserAgent`.
 
 ### Verification
-- [ ] `ScraperTests` (fake handler / provider injection) stays green.
-- [ ] CHANGELOG `### Fixed`; wiki `docs/wiki/architecture.md` scraper section.
+- [x] `ScraperTests` stays green; 211 tests passing overall.
+- [x] MCP `initialize` + `tools/list` re-smoke-tested — stdout still clean, all 18 tools list.
+- [x] Docs: CHANGELOG `[Unreleased]` `### Fixed`; wiki `core_editor_api.md` (new "Scraper
+      Networking & Lifecycle" section) and `architecture.md`.
+
+**Note:** shipped without Phase 3 — the "one scraper work-stream" grouping is advisory, not a
+dependency.
 
 ---
 
 ## Phase 3 — Scrape Merge Semantics
 
-**Branch:** `refactor/scrape-merge-semantics` — M4. Do after Phase 2 (same file, larger blast radius).
+**Branch:** `refactor/scrape-merge-semantics` — M4. Ready now (Phase 2 stabilised the file; this is the larger blast radius).
 
 - [ ] `MetadataScraperService.AutoScrapeComicAsync`: stop mutating the caller's `ComicInfo`.
       Populate a new `ScrapeResult.FetchedMetadata` and leave all merging to the single
@@ -286,5 +293,7 @@ Per CLAUDE.md §1.4: `gh issue create --title "..." --body "..."`.
 | Date | Change |
 | :-- | :-- |
 | 2026-09-01 | Initial plan from the `main` @ `79cb9f5` whole-codebase review. |
-| 2026-09-01 | Phase 1 completed (`fix/mcp-safety-and-logging`, commit `2dca93a`). |
+| 2026-09-01 | Phase 1 completed (`fix/mcp-safety-and-logging`, commit `2dca93a`, merged `df4f02e`). |
 | 2026-09-01 | Revised M1 / Phase 6 P6-A: v0.13.0 already removed bitmap disposal from `LruImageCache` on purpose (crashed layout passes); scope narrowed to a docstring fix plus an optional ref-counted leak fix. |
+| 2026-09-01 | Phase 2 completed (`refactor/scraper-http-lifecycle`, commit `3e5843a`, merged `5816c8f`). |
+| 2026-09-01 | Out of band (not a review finding): merged a GUI fix so `SaveAllAsync` refreshes the untagged count / filter after a batch save (`fix/save-all-untagged-count-refresh`, commit `b0a1479`, merged `cda3368`). |
