@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **MCP `remove_comic_page` Read-Only Bypass**: `RemoveComicPage` now calls `EnsureWriteAccess()` before removing a page and defaults to `dryRun = true`, matching every other mutating MCP tool. Previously it committed by default and could delete pages / repack archives even when the server was started in strict read-only mode (`INKTAG_MCP_READ_ONLY=true` / `--read-only`).
 - **MCP stdio Protocol Stream Corruption**: `AppLogger` now writes console diagnostics to `stderr` instead of `stdout`, and `InkTag.Mcp` forces the host logging pipeline to stderr (`LogToStandardErrorThreshold`). The MCP server previously emitted initialization banners and warning/error log lines onto `stdout`, interleaving plain text into the JSON-RPC message stream. The `InkTag.Cli` `--json` output is likewise no longer polluted by Core log lines.
+- **Stale Untagged Count After Save All**: `MainWindowViewModel.SaveAllAsync` now recomputes the untagged / modified counts and re-applies the active filter once every saved item has flipped to `HasEmbeddedXml = true` / `IsDirty = false`, mirroring the refresh the bulk auto-tag apply path already performs. Previously, after auto-tagging a comic and clicking **Save All**, the `Untagged (N)` label and filter could remain stale because it relied solely on per-item `PropertyChanged` notifications.
 
 ---
 
