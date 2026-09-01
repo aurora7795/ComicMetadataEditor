@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Review Remediation Plan**: Added [`docs/review-remediation-plan-2026-09-01.md`](docs/review-remediation-plan-2026-09-01.md) — a phased, branch-mapped implementation plan for the findings of the `main` @ `79cb9f5` whole-codebase review (3 high, 8 medium, 9 low), covering MCP safety, stdio-stream purity, `HttpClient` lifecycle, archive-repack structure preservation, and on-disk persistence durability. Phase 1 is complete (see below).
+
 ### Fixed
 - **MCP `remove_comic_page` Read-Only Bypass**: `RemoveComicPage` now calls `EnsureWriteAccess()` before removing a page and defaults to `dryRun = true`, matching every other mutating MCP tool. Previously it committed by default and could delete pages / repack archives even when the server was started in strict read-only mode (`INKTAG_MCP_READ_ONLY=true` / `--read-only`).
 - **MCP stdio Protocol Stream Corruption**: `AppLogger` now writes console diagnostics to `stderr` instead of `stdout`, and `InkTag.Mcp` forces the host logging pipeline to stderr (`LogToStandardErrorThreshold`). The MCP server previously emitted initialization banners and warning/error log lines onto `stdout`, interleaving plain text into the JSON-RPC message stream. The `InkTag.Cli` `--json` output is likewise no longer polluted by Core log lines.
