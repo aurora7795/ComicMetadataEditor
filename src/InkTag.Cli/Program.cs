@@ -500,7 +500,7 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
         settingsService.Settings.ComicVineApiKey = apiKey;
     }
 
-    var scraperService = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);
+    using var scraperService = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);
 
     if (File.Exists(targetPath))
     {

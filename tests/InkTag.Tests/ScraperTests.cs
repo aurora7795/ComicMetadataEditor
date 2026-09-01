@@ -696,6 +696,50 @@ public class ScraperTests
     }
 
     [Fact]
+    public void SharedHttpClient_IsSingletonWithUserAgent()
+    {
+        var client = InkTag.Core.Net.SharedHttpClient.Instance;
+
+        Assert.NotNull(client);
+        Assert.Same(client, InkTag.Core.Net.SharedHttpClient.Instance);
+        Assert.NotEmpty(client.DefaultRequestHeaders.UserAgent);
+    }
+
+    [Fact]
+    public async Task DisposingScraperService_FlushesCacheForOneShotProcesses()
+    {
+        string tempCache = Path.Combine(Path.GetTempPath(), $"inktag_cv_dispose_{Guid.NewGuid():N}.json");
+        string tempSettings = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json");
+        string searchJson = @"{""status_code"":1,""results"":[{""id"":1,""name"":""X"",""issue_number"":""1"",""volume"":{""id"":9,""name"":""Batman""}}]}";
+
+        try
+        {
+            var settings = new AppSettingsService(tempSettings);
+            settings.Settings.ComicVineApiKey = "test-key";
+            var rateClient = new RateLimitedHttpClient(new HttpClient(new MockHttpMessageHandler { ResponseContent = searchJson }));
+            var provider = new ComicVineProvider(rateClient, new ScraperCacheService(tempCache));
+
+            using (var service = new MetadataScraperService(settings, provider))
+            {
+                await service.SearchCandidatesAsync(new ComicSearchQuery { Series = "Batman", IssueNumber = "1" });
+
+                // The cache write is debounced (2s); a one-shot process would exit before it fires.
+                Assert.False(File.Exists(tempCache));
+            } // MetadataScraperService.Dispose() -> ComicVineProvider.Dispose() -> synchronous cache flush
+
+            Assert.True(File.Exists(tempCache));
+
+            using var reloaded = new ScraperCacheService(tempCache);
+            Assert.NotNull(reloaded.Get("cv_search_Batman 1", TimeSpan.FromHours(1)));
+        }
+        finally
+        {
+            if (File.Exists(tempCache)) File.Delete(tempCache);
+            if (File.Exists(tempSettings)) File.Delete(tempSettings);
+        }
+    }
+
+    [Fact]
     public void ComicVineProvider_AllowsVolumeLifespanYearWithoutPenalty()
     {
         var candidateFromVolume1963 = new ComicSearchResult

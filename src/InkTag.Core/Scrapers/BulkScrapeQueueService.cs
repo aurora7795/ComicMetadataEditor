@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using InkTag.Core.Configuration;
 using InkTag.Core.Images;
 using InkTag.Core.Logging;
+using InkTag.Core.Net;
 using InkTag.Core.Parsing;
 using InkTag.Core.Renaming;
 
@@ -105,12 +106,11 @@ public class BulkScrapeQueueService
         _settingsService = settingsService ?? new AppSettingsService();
         _scraperService = scraperService ?? new MetadataScraperService(_settingsService);
         _metadataEditor = metadataEditor ?? new MetadataEditor();
-        _thumbnailHttpClient = httpClient ?? new HttpClient();
-        _thumbnailHttpClient.Timeout = TimeSpan.FromSeconds(6);
-        if (!_thumbnailHttpClient.DefaultRequestHeaders.Contains("User-Agent"))
-        {
-            _thumbnailHttpClient.DefaultRequestHeaders.Add("User-Agent", "InkTag/1.0 (BulkScraperQueue)");
-        }
+
+        // Use the process-wide pooled client unless a caller supplies its own (e.g. a test
+        // double). Per-thumbnail time limits are enforced in PopulateCoverHashesForCandidatesAsync
+        // with a linked CancellationTokenSource, so the shared instance is never mutated here.
+        _thumbnailHttpClient = httpClient ?? SharedHttpClient.Instance;
     }
 
     /// <summary>

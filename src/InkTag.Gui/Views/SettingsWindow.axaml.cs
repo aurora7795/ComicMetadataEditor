@@ -169,7 +169,7 @@ public partial class SettingsWindow : Window
 
         try
         {
-            var provider = new ComicVineProvider();
+            using var provider = new ComicVineProvider();
             var query = new ComicSearchQuery { Series = "Spider-Man", IssueNumber = "1" };
             await provider.SearchAsync(query, key);
 
@@ -185,7 +185,7 @@ public partial class SettingsWindow : Window
 
     private void ClearCache_Click(object? sender, RoutedEventArgs e)
     {
-        var cache = new ScraperCacheService();
+        using var cache = new ScraperCacheService();
         cache.Clear();
         CacheStatusTextBlock.Text = "🗑️ Local response cache successfully cleared.";
         CacheStatusTextBlock.Foreground = Avalonia.Media.Brushes.Cyan;

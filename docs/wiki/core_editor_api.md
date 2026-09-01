@@ -183,6 +183,12 @@ All operational and data integrity errors are structured under `InkTag.Core.Exce
   * `ProcessQueueAsync(...)`: Executes streaming parallel cover hashing, smart series volume clustering, on-demand candidate thumbnail hashing for all matched issues, and volume lifespan confidence scoring.
   * `ApplyMatchedMetadataAsync(...)`: Writes matched ComicVine metadata back to comic archives on disk with automated pre-write backup snapshotting.
 
+### Scraper Networking & Lifecycle
+* **`InkTag.Core.Net.SharedHttpClient`**: A process-wide singleton `HttpClient` over a pooled `SocketsHttpHandler` (`PooledConnectionLifetime` 2 min, `AutomaticDecompression`). All outbound scraper and cover-thumbnail traffic flows through it — `RateLimitedHttpClient`, `MetadataScraperService`, and `BulkScrapeQueueService` never allocate their own client. Per-request time limits are enforced by callers with linked `CancellationTokenSource`s. Never disposed.
+* **`RateLimitedHttpClient`**: Serializes ComicVine API calls behind a global `SemaphoreSlim` with a ~1.05s minimum interval and exponential backoff on HTTP 420 / 429. Accepts an injected `HttpClient` for tests; otherwise uses `SharedHttpClient.Instance`.
+* **`ScraperCacheService`**: Debounced (2s) JSON disk cache for ComicVine responses at `~/.cache/InkTag/scraper_cache.json` (7-day TTL, newest 500 entries persisted). `IDisposable` — `Dispose()` flushes synchronously.
+* **`MetadataScraperService` / `ComicVineProvider`**: Both `IDisposable`. Disposal flushes the scraper cache to disk, which is required for one-shot processes (the CLI `scrape` command and the `search_external_metadata` / `scrape_comic_metadata` / `bulk_scrape_directory` MCP tools) that exit before the debounce timer fires. `BulkScrapeQueueService.ProcessQueueAsync` also flushes explicitly at completion.
+
 ---
 
 ## 5. Interfaces (`InkTag.Mcp` & `InkTag.Cli`)

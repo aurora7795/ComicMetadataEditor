@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace InkTag.Core.Scrapers;
 
-public class ComicVineProvider : IMetadataScraperProvider
+public class ComicVineProvider : IMetadataScraperProvider, IDisposable
 {
     private readonly RateLimitedHttpClient _httpClient;
     private readonly ScraperCacheService? _cache;
@@ -25,6 +25,15 @@ public class ComicVineProvider : IMetadataScraperProvider
     }
 
     public void FlushCache() => _cache?.Flush();
+
+    /// <summary>
+    /// Flushes and releases the scraper cache (its debounced writer). Idempotent.
+    /// </summary>
+    public void Dispose()
+    {
+        _cache?.Dispose();
+        GC.SuppressFinalize(this);
+    }
 
     public async Task<IEnumerable<ComicSearchResult>> SearchAsync(ComicSearchQuery query, string apiKey, CancellationToken ct = default)
     {

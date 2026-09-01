@@ -14,7 +14,7 @@ The solution is organized into standard `src/` and `tests/` layers:
      * **`MetadataBackupService`**: Automated pre-write snapshots, atomic multi-file transaction rollbacks (`BatchJobId`), forensic provenance audit trails, and automatic retention management in isolated AppData (`~/.local/share/InkTag/backups/`).
      * **`ComicFilenameParser`**: Smart filename and 2-level ancestor directory metadata inference.
      * **`PerceptualHashService`**: 64-bit difference perceptual image hashing (`dHash`) and visual cover matching.
-     * **`MetadataScraperService` & `ComicVineProvider`**: ComicVine REST scraping with smart volume lifespan year scoring, caching, and rate limiting.
+     * **`MetadataScraperService` & `ComicVineProvider`**: ComicVine REST scraping with smart volume lifespan year scoring, caching, and rate limiting. Both are `IDisposable` and flush the debounced response cache on dispose; all outbound traffic uses the pooled `InkTag.Core.Net.SharedHttpClient` singleton.
      * **`BulkScrapeQueueService`**: Pipelined parallel cover extraction, on-demand candidate thumbnail hashing, and queue resolution.
      * **`ComicFileRenamer`**: Token-based file renaming engine with collision resolution.
      * **`KomgaClient` & `KomgaSyncService`**: Direct Komga media server REST API synchronization with collections management and Docker/NAS path translation.

@@ -21,7 +21,7 @@ public class ScrapeResult
     public string? IntroPageKey { get; set; }
 }
 
-public class MetadataScraperService
+public class MetadataScraperService : IDisposable
 {
     private readonly AppSettingsService _settingsService;
     private readonly IMetadataScraperProvider _provider;
@@ -33,6 +33,16 @@ public class MetadataScraperService
     }
 
     public void FlushCache() => (_provider as ComicVineProvider)?.FlushCache();
+
+    /// <summary>
+    /// Flushes the provider's scraper cache to disk. Essential for one-shot processes (CLI / MCP
+    /// tool invocations) that exit before the cache's debounced background write can fire.
+    /// </summary>
+    public void Dispose()
+    {
+        (_provider as IDisposable)?.Dispose();
+        GC.SuppressFinalize(this);
+    }
 
     public async Task<IEnumerable<ComicSearchResult>> SearchCandidatesAsync(ComicSearchQuery query, CancellationToken ct = default)
     {
@@ -186,9 +196,9 @@ public class MetadataScraperService
                 {
                     try
                     {
-                        using var client = new System.Net.Http.HttpClient();
-                        client.DefaultRequestHeaders.Add("User-Agent", "InkTag/1.0 (ComicMetadataEditor)");
-                        byte[] bytes = await client.GetByteArrayAsync(coverUrl, ct);
+                        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                        timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
+                        byte[] bytes = await InkTag.Core.Net.SharedHttpClient.Instance.GetByteArrayAsync(coverUrl, timeoutCts.Token);
                         ulong onlineHash = InkTag.Core.Images.PerceptualHashService.ComputeDHash(bytes);
                         candidate.CoverHash = onlineHash;
                         candidate.VisualSimilarity = InkTag.Core.Images.PerceptualHashService.CalculateSimilarity(localCoverHash.Value, onlineHash);
