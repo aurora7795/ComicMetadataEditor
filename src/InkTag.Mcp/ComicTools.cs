@@ -196,13 +196,18 @@ public static class ComicTools
         return $"Cover image extracted to: {extracted}";
     }
 
-    [McpServerTool, Description("Removes a specific page (or provider title/intro page at index 0) from a comic archive.")]
+    [McpServerTool, Description("Removes a specific page (or provider title/intro page at index 0) from a comic archive. Defaults to dryRun=true (preview only). Set dryRun=false to commit the removal.")]
     public static string RemoveComicPage(
         [Description("Path to comic archive (.cbz / .cbr)")] string path,
         [Description("0-based page index to remove (default 0 for first page)")] int pageIndex = 0,
-        [Description("If true, previews removal without modifying files on disk")] bool dryRun = false)
+        [Description("If true (default), previews removal without modifying files on disk. Set dryRun=false to remove the page and repack the archive.")] bool dryRun = true)
     {
         ValidatePathAccess(path);
+        if (!dryRun)
+        {
+            EnsureWriteAccess("RemoveComicPage");
+        }
+
         if (!File.Exists(path))
         {
             throw new FileNotFoundException($"Comic file not found: {path}");

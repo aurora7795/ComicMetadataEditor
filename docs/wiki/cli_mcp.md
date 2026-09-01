@@ -132,18 +132,28 @@ Retrieves forensic provenance metadata for a specific backup snapshot, including
   - `path` (string, required): Path to the comic archive.
   - `timestamp` (string, required): Snapshot timestamp.
 
+#### 15. `remove_comic_page`
+Removes a specific page (or the provider/scanner title page at index `0`) from a comic archive, decrements `ComicInfo.xml` `PageCount`, renumbers the `Pages` collection, and repacks the archive (`.cbr` inputs become `.cbz`).
+- **Parameters**:
+  - `path` (string, required): Path to comic archive (.cbz / .cbr).
+  - `pageIndex` (integer, optional): 0-based page index to remove (default `0`).
+  - `dryRun` (boolean, optional): Previews the removal without modifying files on disk (default: `true`). Set `dryRun = false` to commit; this is a mutating operation and is blocked in strict read-only mode.
+
 ---
 
 ## 🛡️ MCP Security & Safety Defenses
 
 ### 1. Strict Read-Only Mode (`INKTAG_MCP_READ_ONLY=true` / `--read-only`)
 When invoked with the `--read-only` command-line flag or when the `INKTAG_MCP_READ_ONLY=true` environment variable is set:
-- All mutating operations (`update_comic_metadata`, `rename_comic_files`, `scrape_comic_metadata`, `bulk_scrape_directory`, `restore_comic_backup`, `restore_batch_job`) are strictly disabled.
-- Any attempt by an AI agent to execute write operations immediately returns an `UnauthorizedAccessException` with descriptive guidance.
-- Read-only analysis and inspection tools remain fully accessible.
+- All mutating operations (`update_comic_metadata`, `rename_comic_files`, `scrape_comic_metadata`, `bulk_scrape_directory`, `remove_comic_page`, `restore_comic_backup`, `restore_batch_job`) are strictly disabled.
+- Every mutating tool calls `EnsureWriteAccess(...)` before touching disk; any attempt by an AI agent to execute a write operation immediately returns an `UnauthorizedAccessException` with descriptive guidance.
+- Read-only analysis and inspection tools (including any mutating tool invoked with `dryRun = true`) remain fully accessible.
 
 ### 2. Safe-by-Default Dry Runs
-All mutating MCP tools default to `dryRun = true`. AI agents must explicitly pass `dryRun = false` in tool invocations to commit changes to disk.
+All mutating MCP tools — `update_comic_metadata`, `rename_comic_files`, `scrape_comic_metadata`, `bulk_scrape_directory`, and `remove_comic_page` — default to `dryRun = true`. AI agents must explicitly pass `dryRun = false` in tool invocations to commit changes to disk.
 
 ### 3. Automated Pre-Write Disaster Recovery Backups
 Whenever a mutation occurs (`dryRun = false`), `MetadataBackupService` automatically takes an atomic snapshot of the pre-write `ComicInfo.xml`, computes source SHA-256 and cover dHash fingerprints, and records the change in `~/.local/share/InkTag/backups/manifest.json`.
+
+### 4. Protocol Stream Isolation
+The stdio transport uses **stdout** exclusively for framed JSON-RPC messages. All diagnostic output is routed to **stderr**: `AppLogger` writes to `Console.Error`, and the host logging pipeline is configured with `LogToStandardErrorThreshold = LogLevel.Trace` in `Program.cs`. No log line, banner, or startup message is ever written to stdout, so diagnostic output cannot corrupt the protocol stream.
