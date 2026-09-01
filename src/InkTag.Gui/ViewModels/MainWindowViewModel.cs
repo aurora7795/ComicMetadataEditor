@@ -721,6 +721,13 @@ public partial class MainWindowViewModel : ViewModelBase
                 }
             }
 
+            // Every saved item has now flipped to HasEmbeddedXml=true / IsDirty=false, so recompute
+            // the untagged / modified counts and re-apply the active filter. Mirrors the explicit
+            // refresh the bulk auto-tag apply path performs, and covers any item whose
+            // PropertyChanged notifications were coalesced (e.g. HasEmbeddedXml already true).
+            UpdateCounts();
+            ApplyFilter();
+
             OnPropertyChanged(nameof(CanSave));
         }
     }
