@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using InkTag.Core.Logging;
+using InkTag.Core.Net;
 
 namespace InkTag.Core.Scrapers;
 
@@ -19,7 +20,9 @@ public class RateLimitedHttpClient
 
     public RateLimitedHttpClient(HttpClient? httpClient = null)
     {
-        _client = httpClient ?? new HttpClient();
+        // Default to the process-wide pooled client; an explicit instance (e.g. a test
+        // double over a mock handler) is used as-is.
+        _client = httpClient ?? SharedHttpClient.Instance;
         if (!_client.DefaultRequestHeaders.Contains("User-Agent"))
         {
             _client.DefaultRequestHeaders.Add("User-Agent", "InkTag/1.0 (ComicMetadataEditor)");

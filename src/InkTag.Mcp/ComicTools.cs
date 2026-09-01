@@ -285,7 +285,7 @@ public static class ComicTools
             settingsService.Settings.ComicVineApiKey = apiKey;
         }
 
-        var service = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);
+        using var service = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);
         var query = new InkTag.Core.Scrapers.ComicSearchQuery
         {
             Series = series,
@@ -319,7 +319,7 @@ public static class ComicTools
             settingsService.Settings.ComicVineApiKey = apiKey;
         }
 
-        var service = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);
+        using var service = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);
         var comic = _editor.ReadMetadata(path);
         ulong coverHash = _editor.GetCoverHash(path, coverPageIndex ?? 0);
         var result = service.AutoScrapeComicAsync(
@@ -396,7 +396,7 @@ public static class ComicTools
             .Where(MetadataEditor.IsSupportedComicFile)
             .ToList();
 
-        var scraperService = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);
+        using var scraperService = new InkTag.Core.Scrapers.MetadataScraperService(settingsService);
         var queueService = new InkTag.Core.Scrapers.BulkScrapeQueueService(scraperService, _editor, settingsService);
         var queue = queueService.CreateQueue(files);
 
