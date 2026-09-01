@@ -272,19 +272,23 @@ The finding is really two smaller things:
 
 ---
 
-## Deferred — open as GitHub issues
+## Deferred — GitHub issues
 
-Per CLAUDE.md §1.4: `gh issue create --title "..." --body "..."`.
+Filed 2026-09-02 against `aurora7795/InkTag`:
 
-- **L2 — `AppLogger` buffered file I/O.** Keep a `StreamWriter` open (or a flush timer) instead of
-  `File.AppendAllText` + `FileInfo` stat per line; rotation must close/reopen the handle.
-- **L1 — Manifest write amplification.** `MetadataBackupService.CreateBackup` rewrites the whole
-  (capped-1000) manifest per edit; move to an append-oriented journal or a batched flush.
-- **M7 (full) — True atomic batch rollback.** Stage every XML rewrite to a temp CBZ, then swap them
-  all with a recovery journal so a mid-run crash leaves either the old or the new state, never a
-  mix.
-- **L8 — CLI arg-parser migration.** Move `src/InkTag.Cli/Program.cs` to `System.CommandLine`;
-  removes ~800 lines and adds `--opt=value` support.
+- [**#19**](https://github.com/aurora7795/InkTag/issues/19) — **L2 · `AppLogger` buffered file I/O.**
+  Keep a `StreamWriter` open (or a flush timer) instead of `File.AppendAllText` + `FileInfo` stat
+  per line; rotation must close/reopen the handle.
+- [**#20**](https://github.com/aurora7795/InkTag/issues/20) — **L1 · Manifest write amplification.**
+  `MetadataBackupService.CreateBackup` rewrites the whole (capped-1000) manifest per edit; move to
+  an append-oriented journal or a batched flush. Pairs with M8 (Phase 5 atomic writes).
+- [**#21**](https://github.com/aurora7795/InkTag/issues/21) — **M7 (full) · True atomic batch
+  rollback.** Stage every XML rewrite to a temp CBZ, then swap them all with a recovery journal so
+  a mid-run crash leaves either the old or the new state, never a mix. (Phase 5 P5-C only fixes the
+  wording.)
+- [**#22**](https://github.com/aurora7795/InkTag/issues/22) — **L8 · CLI arg-parser migration.**
+  Move `src/InkTag.Cli/Program.cs` to `System.CommandLine`; removes ~800 lines and adds
+  `--opt=value` support. Keep the `--json` output contract byte-identical.
 
 ---
 
@@ -297,3 +301,4 @@ Per CLAUDE.md §1.4: `gh issue create --title "..." --body "..."`.
 | 2026-09-01 | Revised M1 / Phase 6 P6-A: v0.13.0 already removed bitmap disposal from `LruImageCache` on purpose (crashed layout passes); scope narrowed to a docstring fix plus an optional ref-counted leak fix. |
 | 2026-09-01 | Phase 2 completed (`refactor/scraper-http-lifecycle`, commit `3e5843a`, merged `5816c8f`). |
 | 2026-09-01 | Out of band (not a review finding): merged a GUI fix so `SaveAllAsync` refreshes the untagged count / filter after a batch save (`fix/save-all-untagged-count-refresh`, commit `b0a1479`, merged `cda3368`). |
+| 2026-09-02 | Filed the 4 deferred items as issues #19 (L2), #20 (L1), #21 (M7 full), #22 (L8). |
