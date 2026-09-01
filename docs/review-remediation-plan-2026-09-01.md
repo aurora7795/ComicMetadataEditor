@@ -24,10 +24,10 @@ the same branch, and open a GitHub issue for every deferred item.
 
 | ID | Sev | Finding | Primary location |
 | :-- | :-- | :-- | :-- |
-| H1 | High | MCP `RemoveComicPage` skips the read-only guard and defaults `dryRun=false` | `src/InkTag.Mcp/ComicTools.cs:199` |
-| H2 | High | MCP server logs to **stdout**, corrupting the JSON-RPC stdio stream | `src/InkTag.Core/Logging/AppLogger.cs:108`, `src/InkTag.Mcp/Program.cs:31` |
+| H1 | High | MCP `RemoveComicPage` skips the read-only guard and defaults `dryRun=false` — ✅ **fixed in Phase 1** | `src/InkTag.Mcp/ComicTools.cs:199` |
+| H2 | High | MCP server logs to **stdout**, corrupting the JSON-RPC stdio stream — ✅ **fixed in Phase 1** | `src/InkTag.Core/Logging/AppLogger.cs:108`, `src/InkTag.Mcp/Program.cs:31` |
 | H3 | High | `HttpClient` created per candidate in the scrape hot path → socket exhaustion | `src/InkTag.Core/Scrapers/MetadataScraperService.cs:189`, `RateLimitedHttpClient.cs:22` |
-| M1 | Med | `LruImageCache` never disposes evicted bitmaps (docstring says it does) | `src/InkTag.Gui/Services/LruImageCache.cs:57` |
+| M1 | Med | `LruImageCache` docstring claims it disposes evicted bitmaps; it does not — and disposal was **deliberately removed in v0.13.0** ("Prevent Premature Bitmap Disposal During Cache Eviction") because it crashed layout passes. Scope is now docstring accuracy + a safe leak fix, not re-adding disposal. | `src/InkTag.Gui/Services/LruImageCache.cs:57` |
 | M2 | Med | Archive repack flattens folders + `Overwrite=true` → silent page loss | `src/InkTag.Core/ArchiveSwapService.cs:70`, `ComicArchiveHandler.cs:482` |
 | M3 | Med | Scraper disk cache never persists for one-shot CLI/MCP runs (2s debounce, no dispose) | `src/InkTag.Core/Scrapers/ScraperCacheService.cs:80`, `MetadataScraperService.cs:32` |
 | M4 | Med | Scrape applies metadata twice with two different merge modes | `src/InkTag.Mcp/ComicTools.cs:318`, `MetadataScraperService.cs:265` |
@@ -51,7 +51,7 @@ the same branch, and open a GitHub issue for every deferred item.
 - XXE-safe XML (`DtdProcessing.Ignore`, null resolver), cached static `XmlSerializer`, regex fallback parser.
 - Multi-tier archive reader (fast seek → `NonSeekableStream` → SharpCompress) with `CancellationToken` threaded throughout.
 - Backup / provenance model: pre-write XML snapshots, cover dHash, match confidence, field diffs, batch grouping.
-- MCP path allow-listing + read-only mode (applied on every tool **except** H1).
+- MCP path allow-listing + read-only mode (was applied on every tool except `RemoveComicPage`; closed in Phase 1).
 - `KomgaClient` uses the correct `HttpClient` + `SocketsHttpHandler` ownership pattern.
 - dHash implementation correct (9×8 → 64 bits, hardware `PopCount`), test-covered.
 
@@ -59,7 +59,7 @@ the same branch, and open a GitHub issue for every deferred item.
 
 ## Staged Execution Status
 
-- [ ] **Phase 1: MCP Safety & Logging Hotfix** — Branch: `fix/mcp-safety-and-logging`
+- [x] **Phase 1: MCP Safety & Logging Hotfix** — Branch: `fix/mcp-safety-and-logging` — **COMPLETED** (commit `2dca93a`; 209 tests passing, MCP handshake smoke-tested)
 - [ ] **Phase 2: Scraper HTTP & Lifecycle** — Branch: `refactor/scraper-http-lifecycle`
 - [ ] **Phase 3: Scrape Merge Semantics** — Branch: `refactor/scrape-merge-semantics`
 - [ ] **Phase 4: Archive Repack Integrity** — Branch: `fix/archive-repack-structure`
@@ -75,29 +75,32 @@ work-stream; Phases 4 and 6 each get a dedicated review; Phases 5 and 7 are quic
 
 ---
 
-## Phase 1 — MCP Safety & Logging Hotfix
+## Phase 1 — MCP Safety & Logging Hotfix ✅ COMPLETED
 
-**Branch:** `fix/mcp-safety-and-logging` — no dependencies, ship first.
+**Branch:** `fix/mcp-safety-and-logging` — no dependencies, ship first. Commit `2dca93a`.
 
 ### P1-A · H1 — Guard `RemoveComicPage`
-- [ ] `src/InkTag.Mcp/ComicTools.cs` (`RemoveComicPage`, ~line 199): change the parameter default to
+- [x] `src/InkTag.Mcp/ComicTools.cs` (`RemoveComicPage`): parameter default changed to
       `bool dryRun = true`.
-- [ ] Add `if (!dryRun) { EnsureWriteAccess("RemoveComicPage"); }` after `ValidatePathAccess(path)`.
-- [ ] Update the `[Description]` string to the "Defaults to dryRun=true (preview only). Set
-      dryRun=false to commit changes." wording used by the other write tools.
-- [ ] Test (`McpSecurityAndBackupTests`): `ReadOnlyOverride = true` + `dryRun: false` throws
-      `UnauthorizedAccessException`; `dryRun: true` still returns a preview.
+- [x] Added `if (!dryRun) { EnsureWriteAccess("RemoveComicPage"); }` right after
+      `ValidatePathAccess(path)` (before the `File.Exists` check, matching the other tools).
+- [x] `[Description]` on the tool and the `dryRun` parameter updated to the "Defaults to
+      dryRun=true (preview only)" wording. Verified in the live `tools/list` schema — `dryRun` now
+      reports `"default": true`.
+- [x] Tests (`McpSecurityAndBackupTests`): `RemoveComicPage_ReadOnlyMode_ThrowsUnauthorizedAccessException_WhenCommitting`
+      and `RemoveComicPage_DefaultsToDryRun_WithoutModifyingArchive`.
 
 ### P1-B · H2 — Logger off the protocol stream
-- [ ] `src/InkTag.Core/Logging/AppLogger.cs` (`Log`, ~line 108): `Console.WriteLine` →
-      `Console.Error.WriteLine`. Diagnostics belong on stderr for the CLI and GUI too; the CLI
-      emits its real output through its own `Console.WriteLine` calls, not `AppLogger`.
-- [ ] `src/InkTag.Mcp/Program.cs` (~line 27): also
-      `builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace)` (or clear
-      providers) as defence against the host's default console logger.
-- [ ] Verify no test in the suite asserts on captured **stdout** log text (`AppLoggerTests` reads
-      the file sink — safe).
-- [ ] Wiki: `docs/wiki/cli_mcp.md` — note stdio purity / stderr logging.
+- [x] `src/InkTag.Core/Logging/AppLogger.cs` (`Log`): `Console.WriteLine` → `Console.Error.WriteLine`.
+- [x] `src/InkTag.Mcp/Program.cs`: `builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold =
+      LogLevel.Trace)` added before `AddMcpServer()`.
+- [x] Confirmed no test asserts on captured stdout (`AppLoggerTests` reads the file sink).
+- [x] Smoke test: `initialize` + `tools/list` handshake — stdout carried **only** the two framed
+      JSON-RPC responses; all `AppLogger` and host log lines on stderr.
+- [x] Docs: CHANGELOG `[Unreleased]`; wiki `cli_mcp.md` (new `remove_comic_page` entry, read-only
+      list, "Protocol Stream Isolation" section) and `architecture.md` logging note.
+
+**Follow-up:** ship as a `0.13.1` patch, or fold into the next minor.
 
 ---
 
@@ -159,8 +162,8 @@ work-stream; Phases 4 and 6 each get a dedicated review; Phases 5 and 7 are quic
 - [ ] Keep the post-extraction zip-slip check; add a per-entry `..` / rooted-path check before
       extraction.
 - [ ] Tests: nested-folder CBZ fixtures — `EditMetadata` round-trip preserves entry structure and
-      page count; `RemoveArchivePages` on a foldered archive removes exactly one page. All 207
-      existing tests stay green.
+      page count; `RemoveArchivePages` on a foldered archive removes exactly one page. The full
+      existing suite stays green.
 
 ### P4-B · L3 — Page-strip provenance & backup naming
 - [ ] In `RemoveArchivePages`: read the existing `ComicInfo.xml` and call
@@ -204,15 +207,35 @@ work-stream; Phases 4 and 6 each get a dedicated review; Phases 5 and 7 are quic
 
 **Branch:** `fix/gui-image-memory` — M1 + M5. Each needs a short investigation first.
 
-### P6-A · M1 — Dispose evicted bitmaps
-- [ ] Investigate cover-bitmap binding in `MainWindowViewModel` / `ComicItemViewModel`: a bitmap
-      bound to a visible `Image.Source` must not be disposed while displayed.
-- [ ] `LruImageCache.Set` eviction and `Clear()`: dispose the removed `Bitmap`. Add a "pinned key"
-      the VM sets for the current on-screen cover, exempt from eviction.
-- [ ] Consider generalising to `LruImageCache<T> where T : IDisposable` so eviction/disposal is
-      unit-testable (the concrete `Avalonia...Bitmap` type cannot be faked).
-- [ ] Tests (`LruImageCacheTests`): eviction disposes the removed value; the pinned key survives an
-      over-capacity insert.
+### P6-A · M1 — `LruImageCache` disposal (revised)
+
+**History:** v0.13.0 shipped *"Prevent Premature Bitmap Disposal During Cache Eviction — removed
+aggressive manual `.Dispose()` invocations on evicted image cache items in `ArchiveCoverService`
+and `LruImageCache`, preventing UI layout passes (`Image.MeasureOverride`) from encountering
+disposed unmanaged handles during browsing and resizing."* So the naive "dispose on eviction" fix
+was already tried and reverted — a bitmap can be evicted from the cache while still bound to a
+visible `Image.Source`. **Do not re-add unconditional disposal.**
+
+The finding is really two smaller things:
+
+- [ ] **Fix the inaccurate docstring first (low-risk; fold into Phase 7 or do standalone).** The
+      `LruImageCache` summary claims it "automatically disposes evicted bitmap instances… Prevents
+      unmanaged memory leaks" — it does not. Reword it to describe the actual behaviour: a bounded
+      cache that drops references and lets the GC/finalizer reclaim the bitmap.
+- [ ] **Then decide whether a real leak fix is worth it.** Evicted-but-still-displayed bitmaps are
+      reclaimed on finalization; the practical exposure is a transient spike during fast scrolling,
+      not an unbounded leak. Options, in order of preference:
+  - Leave it and just fix the docs (recommended unless profiling shows a real problem).
+  - Ref-count: the cache disposes an evicted bitmap only once the last consumer (the bound
+    `Image`) releases it — needs a wrapper type and disciplined release in the VMs.
+  - Pinned-key exemption: the VM marks the on-screen cover key as non-evictable; the cache may
+    dispose anything else on eviction. Simpler than ref-counting but fragile if more than one
+    bitmap is on screen (grid + inspector).
+- [ ] If a fix is pursued, generalise to `LruImageCache<T> where T : IDisposable` so disposal is
+      unit-testable (the concrete `Avalonia...Bitmap` cannot be faked), and add regression coverage
+      that a still-referenced/pinned entry is **not** disposed.
+- [ ] Cross-check `ArchiveCoverService` — it holds its own multi-page bitmap + hash cache and was
+      part of the same v0.13.0 revert.
 
 ### P6-B · M5 — Release cover bytes
 - [ ] After `item.LocalCoverHash` is computed in the producer (and after any intro-page fallback
@@ -263,3 +286,5 @@ Per CLAUDE.md §1.4: `gh issue create --title "..." --body "..."`.
 | Date | Change |
 | :-- | :-- |
 | 2026-09-01 | Initial plan from the `main` @ `79cb9f5` whole-codebase review. |
+| 2026-09-01 | Phase 1 completed (`fix/mcp-safety-and-logging`, commit `2dca93a`). |
+| 2026-09-01 | Revised M1 / Phase 6 P6-A: v0.13.0 already removed bitmap disposal from `LruImageCache` on purpose (crashed layout passes); scope narrowed to a docstring fix plus an optional ref-counted leak fix. |
