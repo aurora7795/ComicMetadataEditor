@@ -105,6 +105,8 @@ Modifying compressed archives uses atomic repackaging:
 
 InkTag includes a centralized, cross-platform thread-safe logging infrastructure (`AppLogger` in `InkTag.Core.Logging`).
 
+Console mirroring goes to **stderr** (`Console.Error`), never stdout. `InkTag.Mcp` speaks JSON-RPC over stdout and `InkTag.Cli` reserves stdout for its own `--json` output, so any log line on stdout would corrupt machine-readable consumers. The file sink is always the authoritative log.
+
 ### Log Locations Across Platforms
 - **Linux**: `~/.local/share/InkTag/logs/InkTag.log`
 - **Windows**: `%LocalAppData%\InkTag\logs\InkTag.log`

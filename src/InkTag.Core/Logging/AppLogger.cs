@@ -105,7 +105,9 @@ public static class AppLogger
         string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
         string formattedLine = $"[{timestamp}] [{level}] {message}";
 
-        Console.WriteLine(formattedLine);
+        // Diagnostics go to stderr, never stdout: the MCP server speaks JSON-RPC over stdout
+        // and the CLI reserves stdout for its own machine-readable output.
+        Console.Error.WriteLine(formattedLine);
         System.Diagnostics.Debug.WriteLine(formattedLine);
 
         try

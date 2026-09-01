@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using InkTag.Core.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
 namespace InkTag.Mcp;
@@ -25,6 +26,10 @@ internal class Program
         }
 
         var builder = Host.CreateApplicationBuilder(args);
+
+        // stdout is the JSON-RPC channel for the stdio transport — force all host logging to stderr
+        // so diagnostic output can never corrupt the protocol stream.
+        builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
 
         builder.Services
             .AddMcpServer()

@@ -87,6 +87,50 @@ public class McpSecurityAndBackupTests : IDisposable
     }
 
     [Fact]
+    public void RemoveComicPage_ReadOnlyMode_ThrowsUnauthorizedAccessException_WhenCommitting()
+    {
+        string cbz = CreateTestCbz();
+        try
+        {
+            ComicTools.ReadOnlyOverride = true;
+
+            var ex = Assert.Throws<UnauthorizedAccessException>(() =>
+                ComicTools.RemoveComicPage(cbz, pageIndex: 0, dryRun: false));
+            Assert.Contains("strict READ-ONLY mode", ex.Message);
+
+            // Dry-run preview must still be allowed in read-only mode.
+            string preview = ComicTools.RemoveComicPage(cbz, pageIndex: 0, dryRun: true);
+            Assert.Contains("\"dryRun\": true", preview);
+        }
+        finally
+        {
+            ComicTools.ReadOnlyOverride = null;
+            if (File.Exists(cbz)) File.Delete(cbz);
+        }
+    }
+
+    [Fact]
+    public void RemoveComicPage_DefaultsToDryRun_WithoutModifyingArchive()
+    {
+        string cbz = CreateTestCbz();
+        try
+        {
+            var editor = new MetadataEditor();
+            int originalPageCount = editor.GetImageEntries(cbz).Count;
+
+            // Invoke without specifying dryRun (should default to dryRun: true).
+            string result = ComicTools.RemoveComicPage(cbz, pageIndex: 0);
+            Assert.Contains("\"dryRun\": true", result);
+
+            Assert.Equal(originalPageCount, editor.GetImageEntries(cbz).Count);
+        }
+        finally
+        {
+            if (File.Exists(cbz)) File.Delete(cbz);
+        }
+    }
+
+    [Fact]
     public void UpdateComicMetadata_DefaultsToDryRun_WithoutModifyingFile()
     {
         string cbz = CreateTestCbz("<ComicInfo><Title>Untouched Title</Title></ComicInfo>");
