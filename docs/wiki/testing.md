@@ -8,11 +8,11 @@ This page details the testing strategy and validation checklists for verifying t
 
 ### 1. Unit & Integration Test Suite (`InkTag.Tests`)
 * **Target Project**: `tests/InkTag.Tests/InkTag.Tests.csproj`
-* **Test Classes & Coverage (184 Tests)**:
+* **Test Classes & Coverage (211 Tests)**:
   * **`McpSecurityAndBackupTests` & `BatchRollbackAndProvenanceTests`**:
     * Automated pre-write `ComicInfo.xml` snapshot creation upon mutating tool invocation.
     * Strict read-only mode (`INKTAG_MCP_READ_ONLY=true` / `--read-only`) preventing all file modifications.
-    * Atomic batch rollback (`RestoreBatchJob`) restoring all files modified in a multi-file batch.
+    * Batch rollback (`RestoreBatchJob`) restoring the files modified in a multi-file batch.
     * Forensic provenance extraction (source SHA-256, cover dHash, matched thumbnail URL, diffs).
     * Snapshot retention management and manifest serialization.
   * **`KomgaClientTests`**:
@@ -57,8 +57,8 @@ This page details the testing strategy and validation checklists for verifying t
     * Top-level vs. recursive directory scanning (`ScanDirectory`) and missing metadata field detection.
     * Single-file and directory metadata updates (`UpdatePath`) with dry-run diff previews and live bulk editing.
   * **`LruImageCacheTests` & `AppLoggerTests`**:
-    * LRU bitmap eviction and disposal of unneeded thumbnails.
-    * Thread-safe log writing and rotation.
+    * `LruImageCache` null/empty-key handling and capacity clamping (smoke coverage).
+    * Thread-safe log writing to a custom path, `LogDebug` gating on `IsDebugEnabled`, and `AppSettings.EnableDebugLogging` synchronization.
   * **`UpdateServiceTests`**:
     * Version tag parsing (`TryParseVersion`) and dynamic `CurrentAppVersion` resolution from executing assembly metadata.
 

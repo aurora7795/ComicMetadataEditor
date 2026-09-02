@@ -22,14 +22,14 @@ The desktop client follows the standard MVVM design pattern:
   * `BulkScrapeQueueViewModel` & `BulkScrapeItemViewModel`: Bulk auto-tag queue orchestrator, managing background item progression, visual thumbnail loading, `VisualMatchLabel`, `VisualMatchTooltip`, `ConfidenceTooltip`, and batch archive updates.
   * `RenamePreviewViewModel` & `RenameItemPreviewViewModel`: File rename preview manager with template presets, custom pattern testing, collision resolution, and batch disk execution.
   * `ComicItemViewModel`: File-level model wrapping `ComicInfo` with property validation and dirty tracking.
-  * `SeriesSearchWizardViewModel` & `SeriesItemViewModel`: Series search query orchestrator and item representations.
-  * `ScraperMatchViewModel` & `CandidateMatchViewModel` / `CandidateItemViewModel`: Issue matching, live perceptual dHash cover similarity calculation, and dynamic top-match re-ranking.
-  * `BulkEditRuleViewModel`: Multi-rule batch modifier.
+  * `SeriesItemViewModel`: Row model for a ComicVine volume result in the Series Search Wizard (`SeriesSearchWizardWindow.axaml.cs` holds the wizard flow itself — there is no dedicated wizard ViewModel).
+  * `CandidateItemViewModel`: Row model for a ComicVine issue candidate with live perceptual dHash cover similarity and visual-match badge state (`ScraperMatchWindow.axaml.cs` holds the matcher flow).
+  * `BulkEditRuleViewModel` & `BulkEditModels`: Multi-rule batch modifier.
 * **Services & Styling**:
   * `App.axaml`: Defines semantic `ThemeDictionaries` (`AppBackgroundBrush`, `AppCardBrush`, `AppSurfaceBrush`, `AppBorderBrush`, `AppTextPrimaryBrush`, `AppTextSecondaryBrush`, `AppTextMutedBrush`, `AppInputBackgroundBrush`, `AppAccentBrush`) supporting `System Default`, `Dark Mode`, and `Light Mode`.
   * `ComicScannerService`: Bounded parallel directory scanner (`Parallel.ForEachAsync` with 2–8 workers, real-time `ScanProgressReport` callbacks reporting active files and sizes, unseekable virtual mount detection, and microsecond cancellation).
   * `ArchiveCoverService`: Asynchronous thumbnail extractor with size-capped LRU bitmap cache.
-  * `LruImageCache`: Thread-safe size-bounded (60-item) LRU bitmap cache with automatic `IDisposable.Dispose()` invocation for evicted web thumbnails in scraper/wizard ViewModels.
+  * `LruImageCache`: Thread-safe size-bounded (default 60-item) LRU bitmap cache for scraper/wizard thumbnails. Evicted bitmaps are dropped for the GC to reclaim — they are **not** proactively disposed, because a bitmap can still be bound to a visible `Image` when it falls out of the cache (the v0.13.0 "Prevent Premature Bitmap Disposal" fix removed the earlier disposal call).
   * `UpdateService`: Dual-mode update manager (Velopack in-place + direct GitHub Releases API fallback) with thread-safe synchronized caching.
 * **Custom Controls**:
   * `HuggingBadgePanel.cs`: Responsive horizontal layout panel for pairing flexible text blocks (with `CharacterEllipsis`) alongside trailing format badges (`CBR`, `CBR ➔ CBZ`), hugging the text when space is ample and preserving badges when space is constrained without fixed width limitations.
@@ -111,6 +111,6 @@ The main workspace area (`Grid.Row="2"`) uses a 3-column layout equipped with an
 |                                                    | l |  |  [Cover Image Thumbnail]  |                          |
 |                                                    | i |  |  Title: [100 Bullets    ] |                          |
 +----------------------------------------------------+---+---------------------------------------------------------+
-| Status Bar: X files loaded | [ProgressBar] Scanning: 45/200 (22%) [✕ Cancel] | UpdateStatus | InkTag v0.9.1      |
+| Status Bar: X files loaded | [ProgressBar] Scanning: 45/200 (22%) [✕ Cancel] | UpdateStatus | InkTag v0.13.0     |
 +------------------------------------------------------------------------------------------------------------------+
 ```
