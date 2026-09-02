@@ -8,15 +8,15 @@ The solution comprises a domain library (`InkTag.Core`), an AI-agent-friendly CL
 
 ## 🚀 Key Features
 
-* **Dual-Format Processing:** Supports reading and writing both `.cbz` (ZIP-based) and `.cbr` (RAR/RAR-like) archives using random-access entry streams via `ArchiveFactory.OpenArchive()`.
+* **Dual-Format Reading, CBZ Writing:** Reads both `.cbz` (ZIP) and `.cbr` (RAR) archives via in-memory random-access streams. All metadata writes repack to `.cbz` — a `.cbr` input is converted to `.cbz` on save.
 * **📚 Bulk Auto-Tagging Pipeline:** High-throughput parallel queue with automatic series volume clustering, chronological ComicVine matching, and perceptual cover art verification (`dHash`).
 * **✏️ Bulk Comic File Renaming Engine:** Pattern-based renaming from embedded metadata (`{Series}`, `#{Number:3}`, `{Year}`, `{Title}`, `{Publisher}`, `{Volume}`, `{ScanInfo}`) with collision protection, atomic renaming, and clean scanner/release tag stripping by default.
-* **👁️ Perceptual Cover Hashing (`dHash`):** 64-bit gradient fingerprinting with SIMD-accelerated (`BitOperations.PopCount`) Hamming distance comparison to automatically identify issues by cover art similarity across thousands of candidates in <1ms.
+* **👁️ Perceptual Cover Hashing (`dHash`):** 64-bit gradient fingerprinting with hardware-accelerated (`BitOperations.PopCount`) Hamming distance, sweeping a precomputed cover hash against thousands of candidate hashes in well under a millisecond.
 * **🌐 ComicVine Metadata Scraper & Live Matching:** Query ComicVine for issue and volume metadata, perform side-by-side field-by-field diff comparison, and apply updates using customizable merge policies (*Fill Missing Only* vs. *Overwrite All*).
 * **🧙 Interactive Series Search Wizard:** 2-step wizard workflow to search series volumes by title, publisher, and year, browse issues in natural numerical order (`#1, #2... #10, #11`), and 1-click apply metadata.
 * **🎯 Year-Weighted Matching & Volume-First Resolution:** Publication year alignment heavily influences candidate ranking with severe cross-decade penalties (`-40%`) to eliminate false volume matches.
 * **🤖 AI Agent Native & Official MCP SDK:** Built-in Model Context Protocol server (`InkTag.Mcp`) using the official **`ModelContextProtocol` C# SDK** (`v2.1.0`) over `stdio`, exposing automated scraping, visual similarity metrics, schema validation, dynamic JSON patching, and bulk renaming to AI assistants (Claude Desktop, Cursor, Antigravity).
-* **🖥️ Cross-Platform MenuBar & NativeMenu:** Full `File`, `Edit`, `View`, `Tools`, and `Help` navigation with hotkeys (`Ctrl+O`, `Ctrl+S`, `Ctrl+M`, `F5`, `Ctrl+Q`) and native macOS screen top MenuBar integration.
+* **🖥️ Cross-Platform MenuBar & NativeMenu:** Full `File`, `Edit`, `View`, `Tools`, and `Help` navigation with hotkeys (`Ctrl+O`, `Ctrl+S`, `Ctrl+A`, `Ctrl+,`, `F5`, `Ctrl+Q`) and native macOS top-of-screen MenuBar integration.
 * **⚡ Velopack Auto-Updater & Fallback:** Seamless auto-updates via Velopack with GitHub Releases API polling fallback for portable builds (Linux AppImages / macOS DMGs).
 * **🛡️ Archive Security & Atomic Swapping:** Strict ZipSlip defense, path containment validation, and atomic archive repacking with automatic `.bak` safety rollbacks.
 
@@ -36,7 +36,7 @@ InkTag/
 │   │   └── MetadataEditor.cs # Bulk editing, cover extraction, & archive repacking
 │   │
 │   ├── InkTag.Cli/           # Command-line interface
-│   │   └── Program.cs        # Subcommands (read, update, scan, cover, scrape, rename, schema)
+│   │   └── Program.cs        # Subcommands (read, update, scan, cover, scrape, rename, strip-intro, remove-page, schema)
 │   │
 │   ├── InkTag.Mcp/           # Model Context Protocol (MCP) Server
 │   │   └── ComicTools.cs     # Stdio JSON-RPC tools for Claude, Cursor, Antigravity
@@ -47,7 +47,7 @@ InkTag/
 │       └── Services/         # ArchiveCoverService, UpdateService
 │
 ├── tests/
-│   └── InkTag.Tests/         # Automated xUnit test suite (94 unit tests)
+│   └── InkTag.Tests/         # Automated xUnit unit & integration test suite (211 tests)
 │
 ├── .agents/skills/           # Agent Skill package definitions
 │   └── comic-metadata-curator/
@@ -60,7 +60,7 @@ InkTag/
 ## 🛠️ Getting Started
 
 ### Prerequisites
-* [.NET SDK 10.0 / 9.0 / 8.0](https://dotnet.microsoft.com/download)
+* [.NET SDK 10.0](https://dotnet.microsoft.com/download) (all projects target `net10.0`)
 
 ### Building the Solution
 ```bash
@@ -73,7 +73,7 @@ dotnet test
 ```
 
 ### macOS App Installation Note
-Because pre-built `.dmg` releases are open-source:
+Because pre-built `.dmg` releases are not notarized:
 1. Drag **InkTag.app** into `/Applications`.
 2. Clear the quarantine attribute via Terminal:
    ```bash
@@ -89,7 +89,7 @@ Because pre-built `.dmg` releases are open-source:
 InkTag includes a high-performance, official **`ModelContextProtocol` C# SDK** (`v2.1.0`) server that connects AI assistants directly to your comic library for automated cataloging, auditing, visual verification, and Komga sync.
 
 #### 🚀 Quick-Start Configuration
-Add the configuration block below to your AI client (**OpenClaw**, **Claude Desktop**, **Cursor**, **Windsurf**, **Cline**, or **Antigravity**):
+Add the configuration block below to your AI client (**Claude Desktop**, **Claude Code**, **Cursor**, **Windsurf**, **Cline**, or **Antigravity**):
 
 <details open>
 <summary><b>🍏 macOS (Bundled with InkTag.app)</b></summary>
@@ -166,26 +166,27 @@ Add the configuration block below to your AI client (**OpenClaw**, **Claude Desk
 #### 🛠️ Available MCP Tools
 
 > [!NOTE]
-> All mutating tools (`update_comic_metadata`, `rename_comic_files`, `scrape_comic_metadata`, `bulk_scrape_directory`) default to **`dryRun: true`** (preview only) for prompt-injection safety. AI agents must explicitly pass `dryRun: false` to write changes to disk. Every write automatically creates a timestamped pre-write backup snapshot in `~/.local/share/InkTag/backups/`.
+> All mutating tools (`update_comic_metadata`, `rename_comic_files`, `scrape_comic_metadata`, `bulk_scrape_directory`, `remove_comic_page`) default to **`dryRun: true`** (preview only) for prompt-injection safety. AI agents must explicitly pass `dryRun: false` to write changes to disk. All write tools — including `restore_comic_backup` and `restore_batch_job` — are also blocked entirely when the server runs in read-only mode (`INKTAG_MCP_READ_ONLY=true` / `--read-only`). Every metadata write automatically creates a timestamped pre-write backup snapshot in `~/.local/share/InkTag/backups/`.
 
 | Tool | Parameters | Description |
 | :--- | :--- | :--- |
-| **`read_comic_metadata`** | `filePath` | Extracts full metadata (`ComicInfo.xml` & legacy CBI) as clean JSON. |
-| **`update_comic_metadata`** | `filePath`, `patch`, `dryRun`, `recursive` | Applies JSON metadata patches (defaults to `dryRun: true`). |
-| **`extract_cover_image`** | `filePath`, `outputPath`, `returnBase64` | Extracts the cover page (supports base64 image return for LLM vision models). |
-| **`scan_comics`** | `directoryPath`, `missingFields`, `recursive`, `onlyUntagged` | Audits libraries for unorganized, untagged, or incomplete archives. |
+| **`read_comic_metadata`** | `path` | Extracts full metadata (`ComicInfo.xml` & legacy CBI) as clean JSON. |
+| **`update_comic_metadata`** | `path`, `patch`, `dryRun`, `recursive` | Applies JSON metadata patches (defaults to `dryRun: true`). |
+| **`extract_cover_image`** | `path`, `pageIndex`, `outputPath`, `returnBase64` | Extracts the cover or a specific page (supports base64 image return for LLM vision models). |
+| **`remove_comic_page`** | `path`, `pageIndex`, `dryRun` | Removes a page (e.g. a provider/scanner intro page) and repacks the archive (defaults to `dryRun: true`). |
+| **`scan_comics`** | `directory`, `missingFields`, `recursive`, `onlyUntagged` | Audits libraries for unorganized, untagged, or incomplete archives. |
 | **`search_external_metadata`** | `series`, `issueNumber`, `year`, `apiKey` | Searches ComicVine volumes and issues with thumbnail URLs and confidence scores. |
-| **`scrape_comic_metadata`** | `path`, `mode`, `dryRun`, `apiKey` | Scrapes ComicVine metadata, verifies cover perceptual hashes, and tags the archive (defaults to `dryRun: true`). |
-| **`bulk_scrape_directory`** | `directory`, `mode`, `dryRun`, `recursive`, `apiKey` | Parallel identification queue with cover visual hashing and batch auto-tagging (defaults to `dryRun: true`). |
+| **`scrape_comic_metadata`** | `path`, `mode`, `coverPageIndex`, `detectIntroPage`, `stripIntroPage`, `dryRun`, `apiKey` | Scrapes ComicVine metadata, verifies cover perceptual hashes, and tags the archive (defaults to `dryRun: true`). |
+| **`bulk_scrape_directory`** | `directory`, `mode`, `detectIntroPage`, `stripIntroPages`, `dryRun`, `recursive`, `apiKey` | Parallel identification queue with cover visual hashing and batch auto-tagging (defaults to `dryRun: true`). |
 | **`rename_comic_files`** | `path`, `template`, `preserveScanInfo`, `dryRun`, `recursive` | Standardizes file names using configurable naming templates (defaults to `dryRun: true`). |
 | **`list_metadata_backups`** | `path`, `limit` | Lists automated pre-write metadata backup snapshots for comic archives. |
 | **`restore_comic_backup`** | `path`, `backupId` | Restores a comic archive's `ComicInfo.xml` metadata from a previous backup snapshot. |
 | **`list_batch_jobs`** | `limit` | Lists recent multi-file batch jobs with total backup counts and affected files. |
-| **`restore_batch_job`** | `batchJobId` | Atomically rolls back an entire multi-file batch job to its pre-batch state. |
+| **`restore_batch_job`** | `batchJobId` | Rolls back every comic archive modified in a multi-file batch job to its pre-batch snapshot (best-effort, per file; see [#21](https://github.com/aurora7795/InkTag/issues/21)). |
 | **`get_backup_provenance`** | `backupId` | Retrieves deep forensic provenance (SHA-256 hash, cover dHash, thumbnail URL, diffs). |
-| **`check_komga_server`** | `serverUrl`, `apiKey` | Tests connectivity, version, and library roots on your Komga server. |
+| **`check_komga_server`** | `serverUrl`, `apiKey` | Tests connectivity and authentication and lists the library roots on your Komga server. |
 | **`sync_komga_book_or_series`** | `path`, `storyArc` | Performs targeted sub-second Komga cache invalidation and Collection synchronization. |
-| **`audit_komga_library`** | `libraryId` | Audits Komga series count, total books, and library path bindings. |
+| **`audit_komga_library`** | `libraryId` | Lists Komga books flagged `UNSUPPORTED` or `ERROR` (unreadable / needing repair or tagging). |
 | **`get_comic_schema`** | *none* | Returns the complete JSON schema for `ComicInfo` fields. |
 
 ---
@@ -259,8 +260,8 @@ bool isMatch = PerceptualHashService.IsVisualMatch(coverHash, onlineCoverHash, t
 
 ## 🗺️ Roadmap & Milestones
 
-* **[x] Bulk Scrape Visual Diagnostics, Multi-Year Volume Scoring & Settings Navigation (`v0.12.2`):** Smart volume lifespan year scoring (preventing false penalties on multi-year series runs), on-demand targeted thumbnail hashing for all matched issues (#51+), informative `Cover Match` badges (`Text Only`, `No Local Cover`, `No Remote Cover`), structured `Confidence` breakdown tooltips, and automatic focus/tab navigation to ComicVine API key settings from prompts.
-* **[x] MCP Security Hardening, Batch Rollbacks & Forensic Provenance (`v0.12.1`):** Strict read-only mode (`INKTAG_MCP_READ_ONLY=true`), safe-by-default dry runs (`dryRun: true`), automated pre-write metadata snapshots in isolated AppData, atomic batch-level transaction rollbacks (`restore_batch_job`), forensic audit trails (source SHA-256, cover dHash, matched thumbnail URL, diffs), and visual match attribution notes.
+* **[x] Bulk Scrape Visual Diagnostics, Multi-Year Volume Scoring & Settings Navigation (`v0.12.2`):** Smart volume lifespan year scoring (preventing false penalties on multi-year series runs), on-demand targeted thumbnail hashing for all matched issues, informative `Cover Match` badges (`Text Only`, `No Local Cover`, `No Remote Cover`), structured `Confidence` breakdown tooltips, and automatic focus/tab navigation to ComicVine API key settings from prompts.
+* **[x] MCP Security Hardening, Batch Rollbacks & Forensic Provenance (`v0.12.1`):** Strict read-only mode (`INKTAG_MCP_READ_ONLY=true`), safe-by-default dry runs (`dryRun: true`), automated pre-write metadata snapshots in isolated AppData, batch-level transaction rollbacks (`restore_batch_job`), forensic audit trails (source SHA-256, cover dHash, matched thumbnail URL, diffs), and visual match attribution notes.
 * **[x] Light Mode, Dark Mode & UI Visual Harmony (`v0.12.0`):** Configurable theme modes (`System Default`, `Dark Mode`, `Light Mode`) with real-time live preview in Settings and menu shortcuts, semantic theme dictionaries, theme-aware pastel/emerald dirty row indicators, unified neutral outline action hierarchy, segmented filter pills, soft framed status bar, and real-time status badge indicators in bulk auto-tag queues.
 * **[x] Komga Media Server REST Sync, Tabbed Settings & Tagging Notes Attribution (`v0.11.1`):** Direct REST API integration with self-hosted Komga media servers with sub-second targeted book/series cache analysis, automatic `<StoryArc>` and `<SeriesGroup>` to Komga Collections synchronization, Docker/NAS path translation, 4-tab modern settings layout, resizable DataGrid columns, and standardized ComicVine tagging attribution notes in the `<Notes>` field.
 * **[x] Hierarchical Path Inference, MCP Sandboxing & Legacy CBI Ingestion (`v0.11.0`):** Smart 2-level ancestor directory metadata inference (resolving series, volume, and year from nested folder structures), strict MCP security root sandboxing (`AllowedRootPaths`), automatic ComicVine rate-limit backoff retry (HTTP 420/429), debounced scraper caching, and legacy ComicBookInfo (CBI) zip comment ingestion with automatic upgrade to ComicInfo.xml v2.1.
@@ -276,7 +277,7 @@ bool isMatch = PerceptualHashService.IsVisualMatch(coverHash, onlineCoverHash, t
 * **[x] Archive Security Hardening:** Strict ZipSlip defense and atomic file swapping with `.bak` rollbacks.
 
 ### Upcoming Milestones
-* **[ ] Komga & Kavita Sync:** Support direct API sync commands to push metadata updates directly to self-hosted Komga and Kavita comic servers.
+* **[ ] Kavita Sync:** Extend the existing self-hosted-server integration (Komga is already supported — see above) with a Kavita adapter.
 * **[ ] Metron & GCD Provider Adapters:** Add Metron and Grand Comics Database (GCD) community scrapers alongside ComicVine.
 * **[ ] NuGet Package Publishing:** Publish `InkTag.Core` to [NuGet.org](https://www.nuget.org).
 * **[ ] Global .NET Tool:** Package `InkTag.Mcp` as a global .NET tool (`dotnet tool install -g InkTag.Mcp`).
