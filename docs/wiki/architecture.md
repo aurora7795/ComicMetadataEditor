@@ -11,7 +11,7 @@ The solution is organized into standard `src/` and `tests/` layers:
    * Provides domain models (`ComicInfo`), schema validation (`ComicInfo.xsd`), dynamic JSON patching, in-memory streaming, and atomic archive repackaging (`MetadataEditor` façade delegating to `ComicArchiveHandler`, `ArchiveSwapService`, and `ComicInfoXmlSanitizer`).
    * Provides domain error classifications under `InkTag.Core.Exceptions` (`InkTagException`, `ComicArchiveException`, `ComicArchiveCorruptException`, `MetadataXmlSanitizationException`, `UnsafeArchiveEntryException`).
    * Provides supplementary domain services:
-     * **`MetadataBackupService`**: Automated pre-write snapshots, atomic multi-file transaction rollbacks (`BatchJobId`), forensic provenance audit trails, and automatic retention management in isolated AppData (`~/.local/share/InkTag/backups/`).
+     * **`MetadataBackupService`**: Automated pre-write snapshots, multi-file batch rollbacks (`BatchJobId`; best-effort per file — see [#21](https://github.com/aurora7795/InkTag/issues/21)), forensic provenance audit trails, and automatic retention management in isolated AppData (`~/.local/share/InkTag/backups/`).
      * **`ComicFilenameParser`**: Smart filename and 2-level ancestor directory metadata inference.
      * **`PerceptualHashService`**: 64-bit difference perceptual image hashing (`dHash`) and visual cover matching.
      * **`MetadataScraperService` & `ComicVineProvider`**: ComicVine REST scraping with smart volume lifespan year scoring, caching, and rate limiting. Both are `IDisposable` and flush the debounced response cache on dispose; all outbound traffic uses the pooled `InkTag.Core.Net.SharedHttpClient` singleton.
@@ -19,9 +19,9 @@ The solution is organized into standard `src/` and `tests/` layers:
      * **`ComicFileRenamer`**: Token-based file renaming engine with collision resolution.
      * **`KomgaClient` & `KomgaSyncService`**: Direct Komga media server REST API synchronization with collections management and Docker/NAS path translation.
 2. **`InkTag.Cli` (Agentic CLI Utility)**: Allows scanning folders, structured `--json` execution, reading, updating, renaming, scraping, cover extraction, and schema exporting from the command line.
-3. **`InkTag.Mcp` (MCP Server)**: Exposes 14 Model Context Protocol stdio tools for AI agents (Claude Desktop, Cursor, Antigravity) with strict read-only mode, safe-by-default dry runs, and forensic backup restoration. Published as a single-file executable (`PublishSingleFile=true`) and bundled inside application packages.
+3. **`InkTag.Mcp` (MCP Server)**: Exposes 18 Model Context Protocol stdio tools for AI agents (Claude Desktop, Claude Code, Cursor, Antigravity) with strict read-only mode, safe-by-default dry runs, and forensic backup restoration. Published as a single-file executable (`PublishSingleFile=true`) and bundled inside application packages.
 4. **`InkTag.Gui` (InkTag Desktop)**: Multi-platform visual spreadsheet and bulk-edit panel built with Avalonia UI. Features dynamic Light/Dark/System theme switching, bounded parallel scanning, Series Search Wizard, Bulk Auto-Tag queue with visual breakdown tooltips, Komga synchronization, and Velopack auto-updating.
-5. **`InkTag.Tests` (Test Suite)**: Comprehensive xUnit test suite (184 unit & integration tests).
+5. **`InkTag.Tests` (Test Suite)**: Comprehensive xUnit unit & integration test suite (211 tests).
 
 ```mermaid
 graph TD

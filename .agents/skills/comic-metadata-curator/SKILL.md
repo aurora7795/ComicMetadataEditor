@@ -129,17 +129,17 @@ dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- update /path/to/comics/
 
 ---
 
-### 6. Atomic Disaster Recovery & Batch Rollback
-If a modification needs to be undone, query history and rollback single files or entire batch jobs:
+### 6. Disaster Recovery & Batch Rollback
+If a modification needs to be undone, query history and roll back single files or entire batch jobs. Single-file restores are safe; a batch rollback is best-effort per file and can leave a batch partially restored if it fails mid-run.
 
 **MCP Rollback Tool Calls:**
 ```json
-// Rollback single file snapshot
+// Rollback single file snapshot (backupId optional — defaults to the most recent snapshot)
 {
   "name": "restore_comic_backup",
   "arguments": {
     "path": "/path/to/comics/issue1.cbz",
-    "timestamp": "2026-08-22T23:30:00Z"
+    "backupId": "a4f910bc2d1e"
   }
 }
 
@@ -151,6 +151,8 @@ If a modification needs to be undone, query history and rollback single files or
   }
 }
 ```
+
+Use `list_metadata_backups` / `list_batch_jobs` first to obtain the IDs.
 
 ---
 

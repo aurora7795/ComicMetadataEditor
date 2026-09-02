@@ -7,7 +7,7 @@ This page documents the API of the `InkTag.Core` domain library, along with the 
 ## 1. `ComicInfo.cs` (Data Model)
 The `ComicInfo` class corresponds to the standard XML schema (`ComicInfo.xml`) used by major comic readers (e.g., ComicRack, YACReader).
 
-### Fields & Schema Schema Properties
+### Fields & Schema Properties
 All properties are nullable to avoid writing default XML tags when optional metadata is omitted:
 
 | Property Name | XML Tag | Data Type | Description |
@@ -84,7 +84,7 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 #### `EditMetadata` / `EditMetadataAsync` / `EditMetadataFromJson`
 * **Signature**: `public void EditMetadata(string filePath, Action<ComicInfo> editAction, string? batchJobId = null, string? changeReason = null, string? coverDHash = null, string? matchedThumbnailUrl = null, double? matchConfidence = null, double? visualSimilarity = null)`
 * **Signature**: `public Task EditMetadataAsync(string filePath, Action<ComicInfo> editAction, string? batchJobId = null, string? changeReason = null, string? coverDHash = null, string? matchedThumbnailUrl = null, double? matchConfidence = null, double? visualSimilarity = null, CancellationToken cancellationToken = default)`
-* **Signature**: `public void EditMetadataFromJson(string filePath, string jsonPatch, string? batchJobId = null, string? changeReason = null)`
+* **Signature**: `public void EditMetadataFromJson(string filePath, string jsonPatch)`
 * **Description**: Takes an automated pre-write metadata backup snapshot via `MetadataBackupService`, unpacks the archive into a temporary folder, deserializes existing metadata or creates a new instance, applies edits (via lambda or dynamic JSON patch), serializes back to XML using cached `XmlSerializer`, compresses to `.tmp`, validates, and performs an atomic backup swap via `ArchiveSwapService`.
 
 #### `BulkEditMetadata` / `BulkEditMetadataAsync` / `BulkEditMetadataFromJson`
@@ -102,12 +102,18 @@ The core engine handles loading, modifying, dynamic JSON patching, cover extract
 * **Description**: Mutates a `ComicInfo` instance in-place by parsing property key-values from a JSON patch string. Returns warnings for unrecognized properties.
 
 #### `ExtractCoverImage` / `ExtractCoverImageBytes` / `ExtractCoverImageBytesAsync` / `GetCoverHash`
-* **Signature**: `public string? ExtractCoverImage(string comicFilePath, string outputFilePath)`
-* **Signature**: `public byte[]? ExtractCoverImageBytes(string filePath)`
-* **Signature**: `public Task<byte[]?> ExtractCoverImageBytesAsync(string filePath, CancellationToken cancellationToken = default)`
-* **Signature**: `public ulong GetCoverHash(string filePath)`
-* **Signature**: `public Task<ulong> GetCoverHashAsync(string filePath, CancellationToken cancellationToken = default)`
-* **Description**: Extracts front cover art or first page image from a `.cbz` or `.cbr` archive in-memory via stream decoding, or computes 64-bit perceptual dHash.
+* **Signature**: `public string? ExtractCoverImage(string comicFilePath, string outputFilePath, int pageIndex = 0)`
+* **Signature**: `public byte[]? ExtractCoverImageBytes(string filePath, int pageIndex = 0)`
+* **Signature**: `public Task<byte[]?> ExtractCoverImageBytesAsync(string filePath, int pageIndex = 0, CancellationToken cancellationToken = default)`
+* **Signature**: `public ulong GetCoverHash(string filePath, int pageIndex = 0)`
+* **Signature**: `public Task<ulong> GetCoverHashAsync(string filePath, int pageIndex = 0, CancellationToken cancellationToken = default)`
+* **Signature**: `public List<(int PageIndex, ulong Hash, byte[] Bytes)> GetCandidateCoverHashes(string filePath, int maxPages = 2)`
+* **Description**: Extracts a 0-based page image (default `0` / front cover) from a `.cbz` or `.cbr` archive in-memory via stream decoding, or computes its 64-bit perceptual dHash. `GetCandidateCoverHashes` returns the first `maxPages` in order for provider-intro-page detection.
+
+#### `StripFirstPage` / `RemoveArchivePages`
+* **Signature**: `public PageRemovalResult StripFirstPage(string filePath)`
+* **Signature**: `public PageRemovalResult RemoveArchivePages(string filePath, IEnumerable<int> pageIndices)`
+* **Description**: Removes one or more 0-based page images (e.g. a provider/scanner intro page) from an archive, decrements `ComicInfo.xml` `PageCount`, renumbers the `Pages` collection, repacks (`.cbr` → `.cbz`), and returns a `PageRemovalResult` with the removed entry names and before/after page counts. Uses a temporary `.bak` for rollback.
 
 #### `IsSupportedComicFile`
 * **Signature**: `public static bool IsSupportedComicFile(string? filePath)`
@@ -136,18 +142,19 @@ All operational and data integrity errors are structured under `InkTag.Core.Exce
 ### `MetadataBackupService.cs` (Disaster Recovery & Rollback Engine)
 * **Namespace**: `InkTag.Core.Backup`
 * **Methods**:
-  * `CreateBackup(string filePath, string? currentXmlContent, byte[]? coverBytes, string? batchJobId, string? changeReason, ...)`: Creates a timestamped pre-write snapshot of `ComicInfo.xml` with source SHA-256 and cover dHash in `~/.local/share/InkTag/backups/`.
-  * `RestoreBackup(string filePath, string timestamp)`: Restores an archive's metadata to a specified snapshot.
-  * `ListBackups(string? filePath = null)`: Returns snapshot history for a file or the entire system.
-  * `ListBatchJobs()`: Lists all recorded multi-file batch operations.
-  * `RestoreBatchJob(string batchJobId)`: Atomically rolls back all files modified in a multi-file batch.
-  * `GetProvenance(string filePath, string timestamp)`: Retrieves forensic audit metadata for a snapshot.
+  * `CreateBackup(string archivePath, string? originalXml, string operationType, string? batchJobId = null, string? sourceFileHash = null, string? coverDHash = null, string? matchedThumbnailUrl = null, double? matchConfidence = null, double? visualSimilarity = null, string? changeReason = null, List<MetadataDiffItem>? fieldDiffs = null)`: Writes a timestamped pre-write snapshot of `ComicInfo.xml` to `~/.local/share/InkTag/backups/` and appends a rich provenance record to `backups_manifest.json`.
+  * `RestoreBackup(string archivePath, string? backupId = null)`: Restores an archive's `ComicInfo.xml` from a specific `backupId`, or the most recent snapshot for that archive when `backupId` is null.
+  * `ListBackups(string? archivePath = null, int limit = 50)`: Returns snapshot history for one archive or the whole store.
+  * `GetBackupEntry(string backupId)` / `GetBackupXml(string backupId)`: Fetch a single provenance record, or its raw snapshot XML.
+  * `ListBatchJobs(int limit = 20)`: Lists recorded multi-file batch operations grouped by `BatchJobId`.
+  * `RestoreBatchJob(string batchJobId)`: Restores every archive in a batch to its pre-batch snapshot, continuing past individual failures (returns a `BatchRollbackReport` with the failure list). Not transactional — see [#21](https://github.com/aurora7795/InkTag/issues/21).
 
 ### `PerceptualHashService.cs` (Perceptual Image Hashing & dHash)
 * **Namespace**: `InkTag.Core.Images`
-* **Methods**:
-  * `ComputeDHash(ReadOnlySpan<byte> imageBytes)`: Computes a 64-bit difference hash (dHash) by downscaling image bytes to 9×8 grayscale and comparing horizontal gradient intensities.
-  * `CalculateSimilarity(ulong hashA, ulong hashB)`: Returns visual similarity score (0.0 to 1.0) based on Hamming distance.
+* **Methods** (all `static`):
+  * `ComputeDHash(byte[] imageBytes)` / `ComputeDHash(Stream imageStream)`: Computes a 64-bit difference hash (dHash) by downscaling the image to 9×8 grayscale and comparing horizontal gradient intensities. Returns `0` if the image cannot be decoded.
+  * `ComputeHammingDistance(ulong hashA, ulong hashB)`: Number of differing bits (`BitOperations.PopCount`).
+  * `CalculateSimilarity(ulong hashA, ulong hashB)`: Visual similarity score (0.0 to 1.0) from Hamming distance; returns `0.0` if either hash is `0`.
   * `IsVisualMatch(ulong hashA, ulong hashB, double threshold = 0.90)`: Fast boolean match check.
 
 ### `ComicBookInfoParser.cs` (Legacy CBI Ingestion)
@@ -157,9 +164,11 @@ All operational and data integrity errors are structured under `InkTag.Core.Exce
 
 ### `KomgaSyncService.cs` & `KomgaClient.cs` (Media Server Integration)
 * **Namespace**: `InkTag.Core.Komga`
-* **Methods**:
-  * `TestConnectionAsync()`: Verifies connectivity and authentication with self-hosted Komga servers.
-  * `SyncComicsAsync(IEnumerable<string> filePaths, KomgaSyncOptions options)`: Analyzes remote Komga book metadata and synchronizes `<StoryArc>` and `<SeriesGroup>` into Komga Collections with Docker/NAS path translation.
+* **`KomgaSyncService`**:
+  * `IsConfigured`: True when a Komga server URL is set (settings or `KOMGA_SERVER_URL`).
+  * `SyncComicFileAsync(string filePath, ComicInfo info)`: Locates the book on Komga (with Docker/NAS path translation), triggers a targeted book/series re-analysis, and syncs `<StoryArc>` into a Komga Collection. Returns a `KomgaSyncReport`.
+  * `SyncMultipleComicsAsync(IEnumerable<(string FilePath, ComicInfo Info)> files)`: Batch form of the above.
+* **`KomgaClient`** (`IDisposable`): `TestConnectionAsync`, `GetLibrariesAsync`, `FindBookByFilePathAsync`, `AnalyzeBookAsync`, `AnalyzeSeriesAsync`, `SyncStoryArcCollectionAsync`, `GetUntaggedOrErrorBooksAsync`, `UpdateSeriesStatusAsync`. Owns its `HttpClient` only when it created it (uses a pooled `SocketsHttpHandler`).
 
 ### `ComicFilenameParser.cs` (Smart Filename & Ancestor Path Parsing)
 * **Namespace**: `InkTag.Core.Parsing`
@@ -193,28 +202,35 @@ All operational and data integrity errors are structured under `InkTag.Core.Exce
 
 ## 5. Interfaces (`InkTag.Mcp` & `InkTag.Cli`)
 
-### Model Context Protocol (`InkTag.Mcp`) Tools (14 Tools)
-* **`read_comic_metadata`**: Reads metadata XML as JSON object (`path`).
-* **`update_comic_metadata`**: Applies JSON patch to archive or folder (`path`, `patch`, `dryRun`).
-* **`extract_cover_image`**: Unpacks front cover art (`path`, `outputPath`, `returnBase64`).
-* **`bulk_scrape_directory`**: Parallel auto-tag queue on directory with volume clustering and visual matching (`directory`, `mode`, `dryRun`).
-* **`scrape_comic_metadata`**: Scrapes and applies metadata from ComicVine to a single local comic archive (`path`, `mode`, `dryRun`).
-* **`rename_comic_files`**: Renames comic archives on disk using configurable metadata templates (`path`, `template`, `preserveScanInfo`, `dryRun`).
-* **`scan_comics`**: Scans directory for archives missing specified metadata tags (`directory`, `missingFields`, `onlyUntagged`).
-* **`get_comic_schema`**: Returns JSON Schema for `ComicInfo`.
-* **`search_external_metadata`**: Searches ComicVine issues matching series, issue, and year (`series`, `issueNumber`, `year`).
-* **`list_metadata_backups`**: Lists pre-write metadata backups (`path`).
-* **`restore_comic_backup`**: Restores archive metadata to a timestamped snapshot (`path`, `timestamp`).
-* **`list_batch_jobs`**: Lists multi-file batch operations available for rollback.
-* **`restore_batch_job`**: Atomically rolls back an entire multi-file batch job (`batchJobId`).
-* **`get_backup_provenance`**: Retrieves deep forensic provenance for a snapshot (`path`, `timestamp`).
+### Model Context Protocol (`InkTag.Mcp`) Tools (18 Tools)
+
+Full parameter specs live in [cli_mcp.md](cli_mcp.md). Summary:
+
+* **`read_comic_metadata`** (`path`): Reads metadata XML as JSON.
+* **`update_comic_metadata`** (`path`, `patch`, `dryRun`, `recursive`): Applies a JSON patch to an archive or folder.
+* **`extract_cover_image`** (`path`, `pageIndex`, `outputPath`, `returnBase64`): Extracts a page image (default cover).
+* **`remove_comic_page`** (`path`, `pageIndex`, `dryRun`): Removes a page and repacks the archive.
+* **`scan_comics`** (`directory`, `missingFields`, `recursive`, `onlyUntagged`): Audits a directory for missing metadata.
+* **`search_external_metadata`** (`series`, `issueNumber`, `year`, `apiKey`): ComicVine candidate search.
+* **`scrape_comic_metadata`** (`path`, `mode`, `coverPageIndex`, `detectIntroPage`, `stripIntroPage`, `dryRun`, `apiKey`): Scrapes and applies metadata to one archive.
+* **`bulk_scrape_directory`** (`directory`, `mode`, `detectIntroPage`, `stripIntroPages`, `dryRun`, `recursive`, `apiKey`): Parallel auto-tag queue.
+* **`rename_comic_files`** (`path`, `template`, `preserveScanInfo`, `dryRun`, `recursive`): Metadata-driven file renaming.
+* **`get_comic_schema`**: Returns the JSON Schema for `ComicInfo`.
+* **`list_metadata_backups`** (`path`, `limit`) / **`get_backup_provenance`** (`backupId`): Backup history & forensic detail.
+* **`restore_comic_backup`** (`path`, `backupId`): Restores one archive's `ComicInfo.xml` from a snapshot.
+* **`list_batch_jobs`** (`limit`) / **`restore_batch_job`** (`batchJobId`): Multi-file batch history & rollback (best-effort per file).
+* **`check_komga_server`** (`serverUrl`, `apiKey`) / **`sync_komga_book_or_series`** (`path`, `storyArc`) / **`audit_komga_library`** (`libraryId`): Komga connectivity, targeted sync, and UNSUPPORTED/ERROR book audit.
+
+All mutating tools default to `dryRun = true` and are blocked entirely under `INKTAG_MCP_READ_ONLY`.
 
 ### Agentic CLI (`InkTag.Cli`) Subcommands
-* **`read <file-path> [--json]`**: Read metadata from an archive.
-* **`update <path> --patch '<json>' [--dry-run] [--json]`**: Update file or directory metadata.
-* **`rename <path> [--template '<pattern>'] [--preserve-scans] [--dry-run] [--json]`**: Rename comic archives based on metadata.
-* **`scan <directory-path> [--missing Writer,Series] [--json]`**: Scan directory for incomplete tags.
-* **`cover <file-path> [--output <path>] [--json]`**: Extract cover art.
-* **`scrape <path> [--api-key KEY] [--mode fill-missing|overwrite] [--dry-run] [--json]`**: Auto-tag metadata from ComicVine.
-* **`schema [--json]`**: Export `ComicInfo` JSON schema.
+* **`read <file> [--json]`**: Read metadata from an archive.
+* **`update <path> --patch '<json>' [--dry-run] [--recursive] [--json]`**: Update file or directory metadata.
+* **`rename <path> [--template '<pattern>'] [--strip-scan-info] [--dry-run] [--recursive] [--json]`**: Rename archives from metadata.
+* **`scan <directory> [--untagged] [--missing Writer,Series] [--recursive] [--json]`**: Scan directory for incomplete tags.
+* **`cover <file> [--page <n>] [--output <path>] [--json]`**: Extract a cover or page image.
+* **`scrape <path> [--api-key KEY] [--mode fill-missing|overwrite] [--cover-page <n>] [--strip-intro-page] [--dry-run] [--recursive] [--json]`**: Auto-tag from ComicVine.
+* **`strip-intro <file|dir> [--recursive] [--dry-run] [--json]`**: Strip the first (provider/scanner) page.
+* **`remove-page <file> --index <n> [--dry-run] [--json]`**: Remove a specific page by 0-based index.
+* **`schema [--json]`**: Export the `ComicInfo` JSON schema.
 

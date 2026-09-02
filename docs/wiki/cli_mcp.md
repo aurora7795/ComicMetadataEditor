@@ -21,8 +21,10 @@ dotnet run --project src/InkTag.Cli/InkTag.Cli.csproj -- <command> [options]
 | `update` | `update <file\|dir> --patch '<json>' [--dry-run] [--recursive]` | Applies JSON property edits to a single archive or all archives in a directory. |
 | `rename` | `rename <file\|dir> [--template '<pattern>'] [--preserve-scans] [--dry-run] [--recursive]` | Renames comic archives on disk based on their embedded metadata. |
 | `scan` | `scan <directory> [--untagged] [--missing Field1,Field2] [--recursive]` | Scans a directory for comic files, untagged archives, and missing metadata fields. |
-| `cover` | `cover <file> [--output <image-path>]` | Extracts front cover image from comic archive. |
-| `scrape` | `scrape <file\|dir> [--api-key KEY] [--mode fill-missing\|overwrite] [--dry-run] [--recursive]` | Auto-tags metadata from ComicVine using cover perceptual dHash visual matching and smart series grouping. |
+| `cover` | `cover <file> [--page <n>] [--output <image-path>]` | Extracts the front cover (or a specific page) image from a comic archive. |
+| `scrape` | `scrape <file\|dir> [--api-key KEY] [--mode fill-missing\|overwrite] [--cover-page <n>] [--strip-intro-page] [--dry-run] [--recursive]` | Auto-tags metadata from ComicVine using cover perceptual dHash visual matching and smart series grouping. |
+| `strip-intro` | `strip-intro <file\|dir> [--recursive] [--dry-run]` | Strips the first page (provider/scanner title page) from archive(s). |
+| `remove-page` | `remove-page <file> --index <n> [--dry-run]` | Removes a specific page by 0-based index from an archive. |
 | `schema` | `schema` | Prints the JSON Schema specification for `ComicInfo` metadata objects. |
 | `help` | `help` / `--help` / `-h` | Displays usage instructions and subcommand options. |
 
@@ -54,9 +56,10 @@ Updates metadata properties in a comic archive or directory using a JSON patch.
   - `recursive` (boolean, optional): If `true`, applies edits to nested subdirectories.
 
 #### 3. `extract_cover_image`
-Extracts front cover art from a comic archive for multimodal vision inspection.
+Extracts the front cover (or a specific page) from a comic archive for multimodal vision inspection.
 - **Parameters**:
   - `path` (string, required): Path to comic archive (.cbz / .cbr).
+  - `pageIndex` (integer, optional): 0-based page index to extract (default `0` / cover).
   - `outputPath` (string, optional): Destination file path.
   - `returnBase64` (boolean, optional): Returns base64 encoded image data.
 
@@ -112,25 +115,25 @@ Lists all historical pre-write metadata backups stored for a specific comic arch
   - `path` (string, optional): Filter history to a specific comic file path.
 
 #### 11. `restore_comic_backup`
-Rolls back a comic archive's metadata to a previous timestamped snapshot from the local backup store.
+Rolls back a comic archive's `ComicInfo.xml` to a previous snapshot from the local backup store.
 - **Parameters**:
   - `path` (string, required): Path to the comic archive to restore.
-  - `timestamp` (string, required): Exact snapshot timestamp or ISO-8601 string to restore.
+  - `backupId` (string, optional): Specific backup snapshot ID. Defaults to the most recent snapshot for this archive.
 
 #### 12. `list_batch_jobs`
-Lists all recorded multi-file batch operations (such as bulk auto-tags or directory updates) available for atomic rollback.
-- **Parameters**: None
+Lists recorded multi-file batch operations (such as bulk auto-tags or directory updates) available for rollback.
+- **Parameters**:
+  - `limit` (integer, optional): Maximum number of batch records to return (default `20`).
 
 #### 13. `restore_batch_job`
-Atomically rolls back all comic archives modified in a multi-file batch job back to their exact pre-write snapshot states.
+Restores every comic archive modified in a multi-file batch job to its pre-batch `ComicInfo.xml` snapshot, continuing past individual failures. Returns a report with the restored files and any failures. **Not transactional** — a mid-run failure can leave the batch partially restored ([#21](https://github.com/aurora7795/InkTag/issues/21)).
 - **Parameters**:
   - `batchJobId` (string, required): Unique batch job identifier (e.g. `batch_20260822_123456_a4f910`).
 
 #### 14. `get_backup_provenance`
 Retrieves forensic provenance metadata for a specific backup snapshot, including pre-write source SHA-256 hash, 64-bit cover visual dHash, matched thumbnail URL, confidence score, and property diffs.
 - **Parameters**:
-  - `path` (string, required): Path to the comic archive.
-  - `timestamp` (string, required): Snapshot timestamp.
+  - `backupId` (string, required): Backup snapshot ID.
 
 #### 15. `remove_comic_page`
 Removes a specific page (or the provider/scanner title page at index `0`) from a comic archive, decrements `ComicInfo.xml` `PageCount`, renumbers the `Pages` collection, and repacks the archive (`.cbr` inputs become `.cbz`).
@@ -138,6 +141,23 @@ Removes a specific page (or the provider/scanner title page at index `0`) from a
   - `path` (string, required): Path to comic archive (.cbz / .cbr).
   - `pageIndex` (integer, optional): 0-based page index to remove (default `0`).
   - `dryRun` (boolean, optional): Previews the removal without modifying files on disk (default: `true`). Set `dryRun = false` to commit; this is a mutating operation and is blocked in strict read-only mode.
+
+#### 16. `check_komga_server`
+Tests connectivity and authentication against a Komga media server and lists its library roots.
+- **Parameters**:
+  - `serverUrl` (string, optional): Server URL override (else `KOMGA_SERVER_URL` / settings).
+  - `apiKey` (string, optional): API key override.
+
+#### 17. `sync_komga_book_or_series`
+Triggers targeted Komga cache invalidation / re-analysis for a local file or folder, with optional StoryArc → Collection sync.
+- **Parameters**:
+  - `path` (string, required): Local file or folder path to synchronize.
+  - `storyArc` (string, optional): StoryArc name to sync into a Komga Collection.
+
+#### 18. `audit_komga_library`
+Lists Komga books flagged `UNSUPPORTED` or `ERROR` (unreadable / needing repair or metadata tagging).
+- **Parameters**:
+  - `libraryId` (string, optional): Restrict the audit to one Komga library.
 
 ---
 
