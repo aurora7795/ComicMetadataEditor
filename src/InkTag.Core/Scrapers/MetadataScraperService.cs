@@ -12,7 +12,16 @@ public class ScrapeResult
 {
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
-    public ComicInfo TargetComic { get; set; } = new();
+
+    /// <summary>
+    /// The raw metadata fetched from the provider for the matched issue. Non-null only when
+    /// <see cref="Success"/> is <c>true</c>. The caller is responsible for merging this into the
+    /// target archive via <see cref="MetadataScraperService.ApplyMetadata"/> with its chosen
+    /// <see cref="ScrapeMergeMode"/> — <see cref="AutoScrapeComicAsync"/> never mutates the
+    /// caller's <see cref="ComicInfo"/>.
+    /// </summary>
+    public ComicInfo? FetchedMetadata { get; set; }
+
     public ComicSearchResult? SelectedCandidate { get; set; }
     public IEnumerable<ComicSearchResult> Candidates { get; set; } = Array.Empty<ComicSearchResult>();
     public bool RequiredUserSelection { get; set; }
@@ -152,6 +161,13 @@ public class MetadataScraperService : IDisposable
         return await _provider.FetchSeriesIssuesAsync(volumeId, apiKey, page, pageSize, query, ct);
     }
 
+    /// <summary>
+    /// Searches the provider for the best match for <paramref name="existingComic"/> (optionally
+    /// disambiguated by cover perceptual hash) and, on a confident match, fetches that issue's
+    /// metadata. <paramref name="existingComic"/> is only read (for the search query) — it is never
+    /// mutated. The fetched metadata is returned on <see cref="ScrapeResult.FetchedMetadata"/>; the
+    /// caller merges it into the archive with its own <see cref="ScrapeMergeMode"/>.
+    /// </summary>
     public async Task<ScrapeResult> AutoScrapeComicAsync(
         ComicInfo existingComic,
         ulong? localCoverHash = null,
@@ -178,8 +194,7 @@ public class MetadataScraperService : IDisposable
             return new ScrapeResult
             {
                 Success = false,
-                Message = $"No matching results found for '{query}' on {_provider.ProviderName}.",
-                TargetComic = existingComic
+                Message = $"No matching results found for '{query}' on {_provider.ProviderName}."
             };
         }
 
@@ -272,18 +287,17 @@ public class MetadataScraperService : IDisposable
         if (topMatch.MatchConfidence >= autoThreshold)
         {
             var fetchedMetadata = await FetchMetadataAsync(topMatch.IssueId, ct);
-            ApplyMetadata(existingComic, fetchedMetadata, _settingsService.Settings.DefaultMergeMode);
 
             string introNote = detectedIntroPage ? " [Intro Page Detected; Matched on Page 2 Cover]" : "";
-            string visualNote = topMatch.VisualSimilarity.HasValue && topMatch.VisualSimilarity.Value >= 0.70 
-                ? $" [Cover Match: {(int)Math.Round(topMatch.VisualSimilarity.Value * 100)}%]" 
+            string visualNote = topMatch.VisualSimilarity.HasValue && topMatch.VisualSimilarity.Value >= 0.70
+                ? $" [Cover Match: {(int)Math.Round(topMatch.VisualSimilarity.Value * 100)}%]"
                 : "";
 
             return new ScrapeResult
             {
                 Success = true,
                 Message = $"Successfully scraped metadata from '{topMatch.SeriesTitle} #{topMatch.IssueNumber}'{introNote}{visualNote} (Confidence: {(int)Math.Round(topMatch.MatchConfidence * 100)}%).",
-                TargetComic = existingComic,
+                FetchedMetadata = fetchedMetadata,
                 SelectedCandidate = topMatch,
                 Candidates = candidates,
                 DetectedIntroPage = detectedIntroPage,
@@ -295,7 +309,6 @@ public class MetadataScraperService : IDisposable
         {
             Success = false,
             Message = $"Low confidence match ({(int)Math.Round(topMatch.MatchConfidence * 100)}% < threshold {(int)Math.Round(autoThreshold * 100)}%). Manual candidate selection required.",
-            TargetComic = existingComic,
             Candidates = candidates,
             RequiredUserSelection = true,
             DetectedIntroPage = detectedIntroPage,
