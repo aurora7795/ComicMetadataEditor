@@ -3,7 +3,7 @@
 **Generated:** 2026-09-01
 **Source:** Whole-codebase review of `main` @ `79cb9f5` (v0.13.0)
 **Audience:** AI coding agent (or maintainer) implementing the fixes
-**Build baseline:** `dotnet build InkTag.slnx` (0 warnings) · `dotnet test` (207 passing at time of review; **211 on `main` after Phases 1–2**)
+**Build baseline:** `dotnet build InkTag.slnx` (0 warnings) · `dotnet test` (207 passing at time of review; **212 on `main` after Phases 1–3**)
 
 ---
 
@@ -30,7 +30,7 @@ the same branch, and open a GitHub issue for every deferred item.
 | M1 | Med | `LruImageCache` docstring claims it disposes evicted bitmaps; it does not — and disposal was **deliberately removed in v0.13.0** ("Prevent Premature Bitmap Disposal During Cache Eviction") because it crashed layout passes. Scope is now docstring accuracy + a safe leak fix, not re-adding disposal. | `src/InkTag.Gui/Services/LruImageCache.cs:57` |
 | M2 | Med | Archive repack flattens folders + `Overwrite=true` → silent page loss | `src/InkTag.Core/ArchiveSwapService.cs:70`, `ComicArchiveHandler.cs:482` |
 | M3 | Med | Scraper disk cache never persists for one-shot CLI/MCP runs (2s debounce, no dispose) — ✅ **fixed in Phase 2** | `src/InkTag.Core/Scrapers/ScraperCacheService.cs:80`, `MetadataScraperService.cs:32` |
-| M4 | Med | Scrape applies metadata twice with two different merge modes | `src/InkTag.Mcp/ComicTools.cs:318`, `MetadataScraperService.cs:265` |
+| M4 | Med | Scrape applies metadata twice with two different merge modes — ✅ **fixed in Phase 3** | `src/InkTag.Mcp/ComicTools.cs:318`, `MetadataScraperService.cs:265` |
 | M5 | Med | Bulk scrape retains every cover image in memory for the whole run | `src/InkTag.Core/Scrapers/BulkScrapeQueueService.cs:38` |
 | M6 | Med | ComicVine / Komga secrets written to `settings.json` in plaintext, default perms | `src/InkTag.Core/Configuration/AppSettings.cs:166` |
 | M7 | Med | `RestoreBatchJob` documented as "atomic" but is a best-effort file-by-file loop | `src/InkTag.Core/Backup/MetadataBackupService.cs:291` |
@@ -61,7 +61,7 @@ the same branch, and open a GitHub issue for every deferred item.
 
 - [x] **Phase 1: MCP Safety & Logging Hotfix** — Branch: `fix/mcp-safety-and-logging` — **COMPLETED** (commit `2dca93a`, merged `df4f02e`; MCP handshake smoke-tested)
 - [x] **Phase 2: Scraper HTTP & Lifecycle** — Branch: `refactor/scraper-http-lifecycle` — **COMPLETED** (commit `3e5843a`, merged `5816c8f`; 211 tests passing, MCP handshake re-smoke-tested)
-- [ ] **Phase 3: Scrape Merge Semantics** — Branch: `refactor/scrape-merge-semantics`
+- [x] **Phase 3: Scrape Merge Semantics** — Branch: `refactor/scrape-merge-semantics` — **COMPLETED** (commit `d2ef910`, merged `9e89dab`; 212 tests passing, MCP handshake re-smoke-tested)
 - [ ] **Phase 4: Archive Repack Integrity** — Branch: `fix/archive-repack-structure`
 - [ ] **Phase 5: Persistence Durability** — Branch: `fix/persistence-durability`
 - [ ] **Phase 6: GUI Image Memory** — Branch: `fix/gui-image-memory`
@@ -140,18 +140,28 @@ dependency.
 
 ---
 
-## Phase 3 — Scrape Merge Semantics
+## Phase 3 — Scrape Merge Semantics ✅ COMPLETED
 
-**Branch:** `refactor/scrape-merge-semantics` — M4. Ready now (Phase 2 stabilised the file; this is the larger blast radius).
+**Branch:** `refactor/scrape-merge-semantics` — M4. Commit `d2ef910`, merged `9e89dab`.
 
-- [ ] `MetadataScraperService.AutoScrapeComicAsync`: stop mutating the caller's `ComicInfo`.
-      Populate a new `ScrapeResult.FetchedMetadata` and leave all merging to the single
-      `ApplyMetadata` call performed at write time (which owns the merge mode).
-- [ ] Audit and update callers of `AutoScrapeComicAsync` / `ScrapeResult.TargetComic`:
-      CLI `HandleScrapeCommand`, MCP `ScrapeComicMetadata`, GUI `ScraperMatchWindow` /
-      `MainWindowViewModel`, `ScraperTests`.
-- [ ] Tests: explicit `fill-missing` vs `overwrite` assertions on the applied result; a
-      "Notes attribution line is not appended twice" case.
+- [x] `MetadataScraperService.AutoScrapeComicAsync` no longer mutates the caller's `ComicInfo`; it
+      only reads it to build the search query. New `ScrapeResult.FetchedMetadata` carries the raw
+      fetched issue metadata (non-null only on `Success`). The unused `ScrapeResult.TargetComic`
+      was removed.
+- [x] Callers updated to merge exactly once at write time under the requested mode: CLI
+      `HandleScrapeCommand` and MCP `ScrapeComicMetadata`. (The GUI `ScraperMatchWindow` /
+      `MainWindow` scrape paths never used `AutoScrapeComicAsync` — they already call
+      `ApplyMetadata` once directly, so no change needed.) Dry-run previews merge against a clone;
+      real writes re-read the on-disk result for the JSON report. CLI now also records
+      `changeReason` / cover dHash / match provenance, matching the MCP tool.
+- [x] Test `AutoScrapeComicAsync_DoesNotMutateInput_AndReturnsFetchedMetadataForCallerToMerge` —
+      input untouched, `FetchedMetadata` exposed, `fill-missing` vs `overwrite` diverge, and the
+      `<Notes>` attribution line is merged exactly once.
+
+**Behaviour change:** `scrape … --mode overwrite` (CLI) / `mode: "overwrite"` (MCP) now genuinely
+overwrites populated local fields with ComicVine data. Previously the internal first pass ran under
+`Settings.DefaultMergeMode` (fill-missing), so local values survived even with `overwrite`. The
+default `fill-missing` behaviour is unchanged.
 
 ---
 
@@ -302,3 +312,5 @@ Filed 2026-09-02 against `aurora7795/InkTag`:
 | 2026-09-01 | Phase 2 completed (`refactor/scraper-http-lifecycle`, commit `3e5843a`, merged `5816c8f`). |
 | 2026-09-01 | Out of band (not a review finding): merged a GUI fix so `SaveAllAsync` refreshes the untagged count / filter after a batch save (`fix/save-all-untagged-count-refresh`, commit `b0a1479`, merged `cda3368`). |
 | 2026-09-02 | Filed the 4 deferred items as issues #19 (L2), #20 (L1), #21 (M7 full), #22 (L8). |
+| 2026-09-02 | Accuracy passes over `README.md` and the Layer 2 wiki + curator skill (test/tool counts, method signatures, removed inaccurate claims). |
+| 2026-09-03 | Phase 3 completed (`refactor/scrape-merge-semantics`, commit `d2ef910`, merged `9e89dab`). |
