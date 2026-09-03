@@ -513,21 +513,40 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
             enableIntroPageFallback: !noIntroFallback,
             targetCoverPageIndex: coverPageIndex).GetAwaiter().GetResult();
 
-        if (result.Success && !isDryRun)
-        {
-            if (stripIntroPage && result.DetectedIntroPage)
-            {
-                var stripResult = editor.StripFirstPage(targetPath);
-                if (stripResult.Success)
-                {
-                    targetPath = stripResult.FilePath;
-                }
-            }
+        // The comic we report on: the fetched metadata merged onto the existing archive under the
+        // requested merge mode. For a real write we re-read the resulting on-disk state.
+        var reportComic = comic;
+        var fetched = result.FetchedMetadata;
 
-            editor.EditMetadata(targetPath, existing =>
+        if (result.Success && fetched != null)
+        {
+            if (!isDryRun)
             {
-                scraperService.ApplyMetadata(existing, comic, mergeMode);
-            });
+                if (stripIntroPage && result.DetectedIntroPage)
+                {
+                    var stripResult = editor.StripFirstPage(targetPath);
+                    if (stripResult.Success)
+                    {
+                        targetPath = stripResult.FilePath;
+                    }
+                }
+
+                editor.EditMetadata(
+                    targetPath,
+                    existing => scraperService.ApplyMetadata(existing, fetched, mergeMode),
+                    changeReason: "Scraped ComicVine metadata",
+                    coverDHash: coverHash != 0 ? coverHash.ToString("X16") : null,
+                    matchedThumbnailUrl: result.SelectedCandidate?.SmallCoverUrl ?? result.SelectedCandidate?.CoverUrl,
+                    matchConfidence: result.SelectedCandidate?.MatchConfidence,
+                    visualSimilarity: result.SelectedCandidate?.VisualSimilarity);
+
+                reportComic = editor.ReadMetadata(targetPath);
+            }
+            else
+            {
+                reportComic = comic.Clone();
+                scraperService.ApplyMetadata(reportComic, fetched, mergeMode);
+            }
         }
 
         if (isJson)
@@ -538,10 +557,10 @@ static void HandleScrapeCommand(string[] args, List<string> positionalArgs, bool
                 message = result.Message,
                 dryRun = isDryRun,
                 file = targetPath,
-                series = comic.Series,
-                number = comic.Number,
-                title = comic.Title,
-                writer = comic.Writer,
+                series = reportComic.Series,
+                number = reportComic.Number,
+                title = reportComic.Title,
+                writer = reportComic.Writer,
                 detectedIntroPage = result.DetectedIntroPage,
                 trueCoverPageIndex = result.TrueCoverPageIndex
             };

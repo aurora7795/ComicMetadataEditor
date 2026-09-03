@@ -760,6 +760,88 @@ public class ScraperTests
         Assert.True(confidence >= 0.95, $"Expected confidence >= 0.95 for issue 1969 in volume 1963, got {confidence}");
     }
 
+    private sealed class StubScraperProvider : IMetadataScraperProvider
+    {
+        public string ProviderName => "Stub";
+        public bool RequiresApiKey => true;
+        public bool SupportsSeriesSearch => true;
+        public List<ComicSearchResult> SearchResults { get; } = new();
+        public ComicInfo Fetched { get; set; } = new();
+
+        public Task<IEnumerable<ComicSearchResult>> SearchAsync(ComicSearchQuery query, string apiKey, CancellationToken ct = default)
+            => Task.FromResult<IEnumerable<ComicSearchResult>>(SearchResults);
+        public Task<ComicInfo> FetchComicMetadataAsync(string issueId, string apiKey, CancellationToken ct = default)
+            => Task.FromResult(Fetched);
+        public Task<IEnumerable<SeriesSearchResult>> SearchSeriesAsync(string seriesTitle, string apiKey, CancellationToken ct = default)
+            => Task.FromResult<IEnumerable<SeriesSearchResult>>(new List<SeriesSearchResult>());
+        public Task<IEnumerable<ComicSearchResult>> FetchSeriesIssuesAsync(string volumeId, string apiKey, int page = 1, int pageSize = 50, ComicSearchQuery? query = null, CancellationToken ct = default)
+            => Task.FromResult<IEnumerable<ComicSearchResult>>(new List<ComicSearchResult>());
+    }
+
+    [Fact]
+    public async Task AutoScrapeComicAsync_DoesNotMutateInput_AndReturnsFetchedMetadataForCallerToMerge()
+    {
+        string tempSettings = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json");
+        try
+        {
+            var settings = new AppSettingsService(tempSettings);
+            settings.Settings.ComicVineApiKey = "test-key";
+            settings.Settings.WriteTaggingAttributionToNotes = true;
+
+            var provider = new StubScraperProvider
+            {
+                Fetched = new ComicInfo
+                {
+                    Series = "Saga",
+                    Number = "1",
+                    Title = "Chapter One",
+                    Writer = "Brian K. Vaughan",
+                    Notes = "Tagged with InkTag 0.13.0 using info from Comic Vine on 2026-09-03 10:00:00. [Issue ID 1]"
+                }
+            };
+            provider.SearchResults.Add(new ComicSearchResult
+            {
+                IssueId = "1",
+                SeriesTitle = "Saga",
+                IssueNumber = "1",
+                MatchConfidence = 0.95
+            });
+
+            using var service = new MetadataScraperService(settings, provider);
+
+            var existing = new ComicInfo { Series = "saga", Writer = "Existing Writer", Notes = "My personal note" };
+            var result = await service.AutoScrapeComicAsync(existing, localCoverHash: null, filePath: null, enableIntroPageFallback: false);
+
+            Assert.True(result.Success);
+            Assert.NotNull(result.FetchedMetadata);
+
+            // The caller's ComicInfo must be untouched.
+            Assert.Equal("saga", existing.Series);
+            Assert.Equal("Existing Writer", existing.Writer);
+            Assert.Null(existing.Title);
+            Assert.Equal("My personal note", existing.Notes);
+
+            // fill-missing keeps the existing Writer, fills the missing Title.
+            var fillMissing = existing.Clone();
+            service.ApplyMetadata(fillMissing, result.FetchedMetadata!, ScrapeMergeMode.FillMissingOnly);
+            Assert.Equal("Existing Writer", fillMissing.Writer);
+            Assert.Equal("Chapter One", fillMissing.Title);
+
+            // overwrite replaces the Writer.
+            var overwrite = existing.Clone();
+            service.ApplyMetadata(overwrite, result.FetchedMetadata!, ScrapeMergeMode.OverwriteAll);
+            Assert.Equal("Brian K. Vaughan", overwrite.Writer);
+
+            // A single apply merges the attribution note exactly once (no duplication).
+            Assert.Equal(1, (fillMissing.Notes ?? "").Split("Tagged with InkTag").Length - 1);
+            Assert.Contains("My personal note", fillMissing.Notes);
+        }
+        finally
+        {
+            if (File.Exists(tempSettings)) File.Delete(tempSettings);
+        }
+    }
+
     private class CustomMockHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> _handler;

@@ -329,25 +329,39 @@ public static class ComicTools
             enableIntroPageFallback: detectIntroPage,
             targetCoverPageIndex: coverPageIndex).GetAwaiter().GetResult();
 
-        if (result.Success && !dryRun)
+        var mergeMode = string.Equals(mode, "overwrite", StringComparison.OrdinalIgnoreCase)
+            ? InkTag.Core.Scrapers.ScrapeMergeMode.OverwriteAll
+            : InkTag.Core.Scrapers.ScrapeMergeMode.FillMissingOnly;
+
+        // Report the fetched metadata merged under the requested mode; re-read after a real write.
+        var reportComic = comic;
+        var fetched = result.FetchedMetadata;
+
+        if (result.Success && fetched != null)
         {
-            if (stripIntroPage && result.DetectedIntroPage)
+            if (!dryRun)
             {
-                _editor.StripFirstPage(path);
+                if (stripIntroPage && result.DetectedIntroPage)
+                {
+                    _editor.StripFirstPage(path);
+                }
+
+                _editor.EditMetadata(
+                    path,
+                    existing => service.ApplyMetadata(existing, fetched, mergeMode),
+                    changeReason: "Scraped ComicVine metadata",
+                    coverDHash: coverHash != 0 ? coverHash.ToString("X16") : null,
+                    matchedThumbnailUrl: !string.IsNullOrEmpty(result.SelectedCandidate?.SmallCoverUrl) ? result.SelectedCandidate.SmallCoverUrl : result.SelectedCandidate?.CoverUrl,
+                    matchConfidence: result.SelectedCandidate?.MatchConfidence,
+                    visualSimilarity: result.SelectedCandidate?.VisualSimilarity);
+
+                reportComic = _editor.ReadMetadata(path);
             }
-
-            var mergeMode = string.Equals(mode, "overwrite", StringComparison.OrdinalIgnoreCase)
-                ? InkTag.Core.Scrapers.ScrapeMergeMode.OverwriteAll
-                : InkTag.Core.Scrapers.ScrapeMergeMode.FillMissingOnly;
-
-            _editor.EditMetadata(
-                path,
-                existing => service.ApplyMetadata(existing, comic, mergeMode),
-                changeReason: "Scraped ComicVine metadata",
-                coverDHash: coverHash != 0 ? coverHash.ToString("X16") : null,
-                matchedThumbnailUrl: !string.IsNullOrEmpty(result.SelectedCandidate?.SmallCoverUrl) ? result.SelectedCandidate.SmallCoverUrl : result.SelectedCandidate?.CoverUrl,
-                matchConfidence: result.SelectedCandidate?.MatchConfidence,
-                visualSimilarity: result.SelectedCandidate?.VisualSimilarity);
+            else
+            {
+                reportComic = comic.Clone();
+                service.ApplyMetadata(reportComic, fetched, mergeMode);
+            }
         }
 
         return JsonSerializer.Serialize(new
@@ -358,9 +372,9 @@ public static class ComicTools
             trueCoverPageIndex = result.TrueCoverPageIndex,
             dryRun,
             path,
-            title = comic.Title,
-            series = comic.Series,
-            writer = comic.Writer
+            title = reportComic.Title,
+            series = reportComic.Series,
+            writer = reportComic.Writer
         }, new JsonSerializerOptions { WriteIndented = true });
     }
 
